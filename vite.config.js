@@ -1,0 +1,110 @@
+import { defineConfig, loadEnv } from "vite";
+import vue from "@vitejs/plugin-vue";
+import path from "path";
+import fs from "fs";
+import externalGlobals from "rollup-plugin-external-globals";
+
+// https://www.npmjs.com/package/rollup-plugin-external-globals
+
+/**
+ * Get the library name from package.json
+ */
+function getLibName() {
+	try {
+		const packageJsonPath = path.resolve(process.cwd(), "package.json");
+		if (fs.existsSync(packageJsonPath)) {
+			const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+			// Convert package name to a valid JS identifier
+			// e.g., "@company/my-plugin" -> "MyPlugin"
+			const name = packageJson.name || "Plugin";
+			return name
+				.replace(/[@\/\-]/g, " ")
+				.replace(/\b\w/g, (l) => l.toUpperCase())
+				.replace(/\s/g, "");
+		}
+	} catch (error) {
+		console.warn("Could not read package.json, using default lib name");
+	}
+	return "Plugin";
+}
+
+/**
+ * Setup HTTPS configuration if certificates are available
+ */
+function getHttpsConfig(env) {
+	const useHttps = env.USE_HTTPS === "true";
+	const certPath = env.CERT_PATH;
+	const keyPath = env.KEY_PATH;
+
+	if (!useHttps || !certPath || !keyPath) {
+		return false;
+	}
+
+	// Resolve paths relative to project root
+	const resolvedCertPath = path.resolve(process.cwd(), certPath);
+	const resolvedKeyPath = path.resolve(process.cwd(), keyPath);
+
+	// Check if certificate files exist
+	if (!fs.existsSync(resolvedCertPath) || !fs.existsSync(resolvedKeyPath)) {
+		console.warn("⚠ SSL certificate files not found, falling back to HTTP");
+		return false;
+	}
+
+	try {
+		return {
+			key: fs.readFileSync(resolvedKeyPath),
+			cert: fs.readFileSync(resolvedCertPath),
+		};
+	} catch (error) {
+		console.warn("⚠ Failed to read SSL certificates, falling back to HTTP");
+		return false;
+	}
+}
+
+export default defineConfig(({ mode }) => {
+	// Load environment variables
+	const env = loadEnv(mode, process.cwd(), "");
+
+	// Get lib name from package.json
+	const libName = getLibName();
+
+	return {
+		plugins: [
+			vue(),
+			externalGlobals(
+				{
+					vue: "Vue",
+				},
+				{
+					include: ["src/**"],
+				}
+			),
+		],
+		logLevel: env.NODE_LOG_LEVEL || "error",
+		clearScreen: false,
+		server: {
+			port: parseInt(env.NODE_PORT) || 3000,
+			strictPort: true,
+			https: getHttpsConfig(env),
+			hmr: {
+				clientPort:
+					parseInt(env.CLIENT_PORT) || parseInt(env.NODE_PORT) || 3000,
+			},
+			host: true, // Allow access from network
+		},
+		build: {
+			lib: {
+				entry: [env.COMPONENT_PATH || "./src/Plugin.vue"],
+				name: libName,
+				fileName: (format) => `plugin.${format}.js`,
+				formats: ["es"],
+			},
+		},
+		base: env.ENDPOINT ? "/dev-tunnel/" + env.ENDPOINT : "/",
+		resolve: {
+			alias: {
+				"@": path.resolve(__dirname, "src"),
+			},
+		},
+	};
+});
