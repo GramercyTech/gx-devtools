@@ -9,7 +9,7 @@ A CLI toolkit for creating and managing GxP platform projects with modern develo
 npm install -g @gramercytech/gx-tools
 
 # Create new project
-gxgo init my-project
+gxto init my-project
 
 # Start development
 cd my-project
@@ -30,36 +30,36 @@ npm install --save-dev @gramercytech/gx-tools
 
 ## Commands
 
-### `gxgo init [name]`
+### `gxto init [name]`
 Creates a new project or updates an existing one with all required dependencies and configurations.
 
 ```bash
-gxgo init                    # Interactive mode
-gxgo init my-project         # Create "my-project" directory
-gxgo init                    # Update existing project (in project directory)
+gxto init                    # Interactive mode
+gxto init my-project         # Create "my-project" directory
+gxto init                    # Update existing project (in project directory)
 ```
 
-### `gxgo dev`
+### `gxto dev`
 Starts the development server with HTTPS by default.
 
 ```bash
-gxgo dev                     # HTTPS on port 3000
-gxgo dev --port 4000         # Custom port
-gxgo dev --no-https          # HTTP mode
+gxto dev                     # HTTPS on port 3000
+gxto dev --port 4000         # Custom port
+gxto dev --no-https          # HTTP mode
 ```
 
-### `gxgo build`
+### `gxto build`
 Builds the plugin for production.
 
 ```bash
-gxgo build
+gxto build
 ```
 
-### `gxgo setup-ssl`
+### `gxto setup-ssl`
 Generates SSL certificates for HTTPS development.
 
 ```bash
-gxgo setup-ssl
+gxto setup-ssl
 ```
 
 ## Project Structure
@@ -112,7 +112,7 @@ cp .env.example .env
 ### Configuration Priority
 1. Command line arguments
 2. Environment variables (`.env`)
-3. Global config (`~/gxgo-default-config.json`)
+3. Global config (`~/gxto-default-config.json`)
 
 ## Dependencies
 
@@ -129,11 +129,11 @@ Added to your `package.json`:
 ```json
 {
   "scripts": {
-    "dev": "gxgo dev",
-    "dev-http": "gxgo dev --no-https", 
-    "build": "gxgo build",
-    "dev-socket": "concurrently 'gxgo dev' 'nodemon server.js'",
-    "setup-ssl": "gxgo setup-ssl"
+    "dev": "gxto dev",
+    "dev-http": "gxto dev --no-https", 
+    "build": "gxto build",
+    "dev-socket": "concurrently 'gxto dev' 'nodemon server.js'",
+    "setup-ssl": "gxto setup-ssl"
   }
 }
 ```
@@ -142,7 +142,7 @@ Added to your `package.json`:
 
 **New Project**
 ```bash
-gxgo init my-plugin
+gxto init my-plugin
 cd my-plugin
 cp .env.example .env
 npm run dev
@@ -151,14 +151,14 @@ npm run dev
 **Update Existing Project**
 ```bash
 # In project directory
-gxgo init
+gxto init
 npm run dev
 ```
 
 **Custom Configuration**
 ```bash
 # Command line
-gxgo dev --port 4000 --component-path ./components/Main.vue
+gxto dev --port 4000 --component-path ./components/Main.vue
 
 # Environment file (.env)
 NODE_PORT=4000

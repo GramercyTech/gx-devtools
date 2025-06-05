@@ -14,7 +14,7 @@
     "url": "git+ssh://git@github.com/GramercyTech/gx-tools.git"
   },
   "bin": {
-    "gxgo": "bin/gx-tools.js"
+    "gxto": "bin/gx-tools.js"
   },
   "keywords": [
     "tunnel",

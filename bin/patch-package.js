@@ -25,12 +25,12 @@ if (!packageJson.scripts) {
 
 // Add or update scripts
 const scriptsToAdd = {
-	gxgo: "gxgo",
-	init: "gxgo init",
-	dev: "gxgo dev",
-	build: "gxgo build",
-	tunnel: "gxgo tunnel",
-	"generate-config": "gxgo generate-config",
+	gxto: "gxto",
+	init: "gxto init",
+	dev: "gxto dev",
+	build: "gxto build",
+	tunnel: "gxto tunnel",
+	"generate-config": "gxto generate-config",
 };
 
 Object.assign(packageJson.scripts, scriptsToAdd);

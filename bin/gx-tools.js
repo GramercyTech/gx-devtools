@@ -92,7 +92,7 @@ function resolveGxPaths() {
  * Loads global configuration if available
  */
 function loadGlobalConfig() {
-	const globalConfigPath = path.join(os.homedir(), "gxgo-default-config.json");
+	const globalConfigPath = path.join(os.homedir(), "gxto-default-config.json");
 	if (fs.existsSync(globalConfigPath)) {
 		try {
 			return JSON.parse(fs.readFileSync(globalConfigPath, "utf-8"));
@@ -236,11 +236,11 @@ function createPackageJson(projectPath, projectName) {
 			type: "commonjs",
 			main: "main.js",
 			scripts: {
-				dev: "gxgo dev",
-				"dev-http": "gxgo dev --no-https",
-				build: "gxgo build",
-				"dev-socket": "concurrently 'gxgo dev' 'nodemon server.js'",
-				"setup-ssl": "gxgo setup-ssl",
+				dev: "gxto dev",
+				"dev-http": "gxto dev --no-https",
+				build: "gxto build",
+				"dev-socket": "concurrently 'gxto dev' 'nodemon server.js'",
+				"setup-ssl": "gxto setup-ssl",
 			},
 			dependencies: REQUIRED_DEPENDENCIES,
 			devDependencies: REQUIRED_DEV_DEPENDENCIES,
@@ -311,11 +311,11 @@ function updateExistingProject(projectPath) {
 			// Add missing scripts
 			if (!packageJson.scripts) packageJson.scripts = {};
 			const requiredScripts = {
-				dev: "gxgo dev",
-				"dev-http": "gxgo dev --no-https",
-				build: "gxgo build",
-				"dev-socket": "concurrently 'gxgo dev' 'nodemon server.js'",
-				"setup-ssl": "gxgo setup-ssl",
+				dev: "gxto dev",
+				"dev-http": "gxto dev --no-https",
+				build: "gxto build",
+				"dev-socket": "concurrently 'gxto dev' 'nodemon server.js'",
+				"setup-ssl": "gxto setup-ssl",
 			};
 
 			Object.entries(requiredScripts).forEach(([script, command]) => {
