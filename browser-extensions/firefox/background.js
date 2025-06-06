@@ -48,13 +48,13 @@ async function initializeExtension() {
 
 // Update toolbar icon based on state
 function updateIcon() {
-	const iconPath = isProxyEnabled ? "icons/icon-on" : "icons/icon-off";
+	const iconPath = isProxyEnabled ? "icons/gx_on" : "icons/gx_off";
 	browser.browserAction.setIcon({
 		path: {
-			16: `${iconPath}-16.png`,
-			32: `${iconPath}-32.png`,
-			48: `${iconPath}-48.png`,
-			128: `${iconPath}-128.png`,
+			16: `${iconPath}_16.png`,
+			32: `${iconPath}_32.png`,
+			48: `${iconPath}_48.png`,
+			128: `${iconPath}_128.png`,
 		},
 	});
 
@@ -194,7 +194,7 @@ function showProxyNotification(from, to, requestType = "") {
 
 	browser.notifications.create(notificationId, {
 		type: "basic",
-		iconUrl: "icons/icon-on-48.png",
+		iconUrl: "icons/gx_on_48.png",
 		title: "Traffic Proxied",
 		message: `${from} → ${to}${typeText}`,
 	});
