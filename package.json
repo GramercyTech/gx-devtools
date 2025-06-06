@@ -7,7 +7,13 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite dev",
     "dev-socket-io": "concurrently 'vite dev' 'nodemon server.js'",
-    "postinstall": "node bin/patch-package.js"
+    "postinstall": "node bin/patch-package.js",
+    "ext:firefox": "web-ext run --source-dir browser-extensions/firefox",
+    "ext:firefox-build": "web-ext build --source-dir browser-extensions/firefox --artifacts-dir dist/firefox",
+    "ext:chrome": "node scripts/launch-chrome.js",
+    "ext:chrome-pack": "node scripts/pack-chrome.js",
+    "ext:install": "npm run ext:firefox & npm run ext:chrome",
+    "ext:build": "npm run ext:firefox-build && npm run ext:chrome-pack"
   },
   "repository": {
     "type": "git",
@@ -47,5 +53,9 @@
     "vite": "^5.4.8",
     "vue": "^3.5.8",
     "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "web-ext": "^8.2.0",
+    "chrome-launcher": "^1.1.2"
   }
 }

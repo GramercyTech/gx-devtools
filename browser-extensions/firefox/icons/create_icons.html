@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Extension Icons</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .icon-container { margin: 20px 0; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Traffic Proxy Extension Icons</h1>
+    <p>Click the buttons below to download the icon files:</p>
+    
+    <div class="icon-container">
+        <h3>OFF State (Red)</h3>
+        <canvas id="off16" width="16" height="16"></canvas>
+        <canvas id="off32" width="32" height="32"></canvas>
+        <canvas id="off48" width="48" height="48"></canvas>
+        <canvas id="off128" width="128" height="128"></canvas>
+        <br>
+        <button onclick="downloadIcon('off16', 'icon-off-16.png')">Download 16px</button>
+        <button onclick="downloadIcon('off32', 'icon-off-32.png')">Download 32px</button>
+        <button onclick="downloadIcon('off48', 'icon-off-48.png')">Download 48px</button>
+        <button onclick="downloadIcon('off128', 'icon-off-128.png')">Download 128px</button>
+    </div>
+    
+    <div class="icon-container">
+        <h3>ON State (Green)</h3>
+        <canvas id="on16" width="16" height="16"></canvas>
+        <canvas id="on32" width="32" height="32"></canvas>
+        <canvas id="on48" width="48" height="48"></canvas>
+        <canvas id="on128" width="128" height="128"></canvas>
+        <br>
+        <button onclick="downloadIcon('on16', 'icon-on-16.png')">Download 16px</button>
+        <button onclick="downloadIcon('on32', 'icon-on-32.png')">Download 32px</button>
+        <button onclick="downloadIcon('on48', 'icon-on-48.png')">Download 48px</button>
+        <button onclick="downloadIcon('on128', 'icon-on-128.png')">Download 128px</button>
+    </div>
+
+    <script>
+        function drawIcon(canvasId, size, color) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Background circle
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2 - 1, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // White arrow/proxy symbol
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = Math.max(1, size/16);
+            
+            // Draw arrow/redirect symbol
+            const centerX = size/2;
+            const centerY = size/2;
+            const arrowSize = size/4;
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX - arrowSize, centerY);
+            ctx.lineTo(centerX + arrowSize, centerY);
+            ctx.moveTo(centerX + arrowSize - arrowSize/3, centerY - arrowSize/3);
+            ctx.lineTo(centerX + arrowSize, centerY);
+            ctx.lineTo(centerX + arrowSize - arrowSize/3, centerY + arrowSize/3);
+            ctx.stroke();
+        }
+        
+        function downloadIcon(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        // Generate all icons on page load
+        window.onload = function() {
+            // Red icons (OFF state)
+            drawIcon('off16', 16, '#dc3545');
+            drawIcon('off32', 32, '#dc3545');
+            drawIcon('off48', 48, '#dc3545');
+            drawIcon('off128', 128, '#dc3545');
+            
+            // Green icons (ON state)
+            drawIcon('on16', 16, '#28a745');
+            drawIcon('on32', 32, '#28a745');
+            drawIcon('on48', 48, '#28a745');
+            drawIcon('on128', 128, '#28a745');
+        };
+    </script>
+</body>
+</html> 

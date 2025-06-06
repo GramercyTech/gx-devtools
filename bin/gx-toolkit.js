@@ -440,6 +440,38 @@ async function initCommand(argv) {
 		safeCopyFile(srcPath, destPath, file.desc);
 	});
 
+	// Copy extension management scripts for new projects
+	if (!hasPackageJson || argv.name) {
+		const scriptsDir = path.join(projectPath, "scripts");
+		if (!fs.existsSync(scriptsDir)) {
+			fs.mkdirSync(scriptsDir, { recursive: true });
+		}
+
+		// Copy launch-chrome.js script
+		const launchChromeSource = path.join(
+			paths.configDir,
+			"../scripts/launch-chrome.js"
+		);
+		const launchChromeDest = path.join(scriptsDir, "launch-chrome.js");
+		if (fs.existsSync(launchChromeSource)) {
+			safeCopyFile(
+				launchChromeSource,
+				launchChromeDest,
+				"Chrome launcher script"
+			);
+		}
+
+		// Copy pack-chrome.js script
+		const packChromeSource = path.join(
+			paths.configDir,
+			"../scripts/pack-chrome.js"
+		);
+		const packChromeDest = path.join(scriptsDir, "pack-chrome.js");
+		if (fs.existsSync(packChromeSource)) {
+			safeCopyFile(packChromeSource, packChromeDest, "Chrome packaging script");
+		}
+	}
+
 	// Setup SSL certificates for new projects
 	if (!hasPackageJson || argv.name) {
 		console.log("\nSetting up HTTPS development environment...");
@@ -560,6 +592,66 @@ function buildCommand(argv) {
 	shell.exec(command);
 }
 
+/**
+ * Launch Firefox with extension command
+ */
+function extensionFirefoxCommand() {
+	const projectPath = findProjectRoot();
+	const extensionPath = path.join(projectPath, "browser-extensions", "firefox");
+
+	if (!fs.existsSync(extensionPath)) {
+		console.error("❌ Firefox extension directory not found:", extensionPath);
+		console.log("💡 Make sure you have a browser-extensions/firefox directory");
+		process.exit(1);
+	}
+
+	console.log("🦊 Launching Firefox with extension...");
+	shell.exec(`npx web-ext run --source-dir "${extensionPath}"`);
+}
+
+/**
+ * Launch Chrome with extension command
+ */
+function extensionChromeCommand() {
+	const projectPath = findProjectRoot();
+	const scriptPath = path.join(projectPath, "scripts", "launch-chrome.js");
+
+	if (!fs.existsSync(scriptPath)) {
+		console.error(
+			"❌ Chrome launcher script not found. Run 'gxto init' to create it."
+		);
+		process.exit(1);
+	}
+
+	console.log("🚀 Launching Chrome with extension...");
+	shell.exec(`node "${scriptPath}"`);
+}
+
+/**
+ * Build extensions command
+ */
+function extensionBuildCommand() {
+	const projectPath = findProjectRoot();
+
+	console.log("📦 Building browser extensions...");
+
+	// Build Firefox extension
+	const firefoxPath = path.join(projectPath, "browser-extensions", "firefox");
+	if (fs.existsSync(firefoxPath)) {
+		console.log("🦊 Building Firefox extension...");
+		shell.exec(
+			`npx web-ext build --source-dir "${firefoxPath}" --artifacts-dir dist/firefox`
+		);
+	}
+
+	// Build Chrome extension
+	const chromeScriptPath = path.join(projectPath, "scripts", "pack-chrome.js");
+	if (fs.existsSync(chromeScriptPath)) {
+		console.log("🚀 Building Chrome extension...");
+		shell.exec(`node "${chromeScriptPath}"`);
+	}
+}
+
 // Load global configuration
 const globalConfig = loadGlobalConfig();
 
@@ -627,6 +719,24 @@ const argv = yargs
 			},
 		},
 		buildCommand
+	)
+	.command(
+		"ext:firefox",
+		"Launch Firefox with browser extension",
+		{},
+		extensionFirefoxCommand
+	)
+	.command(
+		"ext:chrome",
+		"Launch Chrome with browser extension",
+		{},
+		extensionChromeCommand
+	)
+	.command(
+		"ext:build",
+		"Build browser extensions for distribution",
+		{},
+		extensionBuildCommand
 	)
 	.demandCommand(1, "Please provide a valid command")
 	.help("h")

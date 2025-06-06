@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Gramercy.cloud Regex Pattern</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 2px solid #ddd; border-radius: 8px; }
+        .success { border-color: #28a745; background: #f8fff8; }
+        .warning { border-color: #ffc107; background: #fffbf0; }
+        .code { background: #e9ecef; padding: 8px; font-family: monospace; margin: 8px 0; word-break: break-all; }
+        .results { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Gramercy.cloud Regex Test</h1>
+    
+    <div class="test-section success">
+        <h2>✅ Your Regex Pattern</h2>
+        <div class="code">([a-zA-Z0-9-]+\.)gramercy\.cloud\/uploads</div>
+        <p><strong>Target URL:</strong></p>
+        <div class="code">https://hilton-pop-art-cytz-dani-martin-hueg.gramercy.cloud/uploads/assets/5233/file_name/nU01Ln1738011172.png?URLPrefix=...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 Regex Testing</h2>
+        <button onclick="testRegex()">Test Regex Match</button>
+        <button onclick="testActualRequest()">Test Actual XHR Request</button>
+        <div id="testResults" class="results"></div>
+    </div>
+
+    <div class="test-section warning">
+        <h2>⚙️ Extension Setup Required</h2>
+        <ol>
+            <li>Open the Traffic Proxy extension popup</li>
+            <li>Add a new rule:</li>
+            <ul>
+                <li><strong>Pattern:</strong> <code>([a-zA-Z0-9-]+\.)gramercy\.cloud\/uploads</code></li>
+                <li><strong>Redirect To:</strong> <code>your-proxy-server.com</code></li>
+            </ul>
+            <li>Enable the proxy (green button)</li>
+            <li>Click "Test Actual XHR Request" below</li>
+        </ol>
+    </div>
+
+    <script>
+        function log(message) {
+            const results = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            results.innerHTML += `<div>${timestamp}: ${message}</div>`;
+        }
+
+        function testRegex() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '';
+            
+            const pattern = /([a-zA-Z0-9-]+\.)gramercy\.cloud\/uploads/i;
+            const testUrls = [
+                'https://hilton-pop-art-cytz-dani-martin-hueg.gramercy.cloud/uploads/assets/5233/file_name/nU01Ln1738011172.png',
+                'hilton-pop-art-cytz-dani-martin-hueg.gramercy.cloud', // hostname only
+                'hilton-pop-art-cytz-dani-martin-hueg.gramercy.cloud/uploads', // hostname + path
+                'other-subdomain.gramercy.cloud/uploads/test.jpg',
+                'gramercy.cloud/uploads', // should NOT match (no subdomain)
+                'hilton-pop-art-cytz-dani-martin-hueg.gramercy.cloud/downloads' // should NOT match (wrong path)
+            ];
+
+            log('🧪 Testing regex pattern against various URLs:');
+            
+            testUrls.forEach(url => {
+                const matches = pattern.test(url);
+                const icon = matches ? '✅' : '❌';
+                log(`${icon} ${url} - ${matches ? 'MATCHES' : 'NO MATCH'}`);
+            });
+
+            log('');
+            log('📝 Summary: Your regex will match URLs with:');
+            log('   • Any subdomain of gramercy.cloud');
+            log('   • Path starting with /uploads');
+            log('   • Case insensitive matching');
+        }
+
+        async function testActualRequest() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '';
+            
+            log('🌐 Testing actual XHR request to gramercy.cloud...');
+            
+            // The exact URL from your example
+            const testUrl = 'https://hilton-pop-art-cytz-dani-martin-hueg.gramercy.cloud/uploads/assets/5233/file_name/nU01Ln1738011172.png?URLPrefix=aHR0cHM6Ly9oaWx0b24tcG9wLWFydC1jeXR6LWRhbmktbWFydGluLWh1ZWcuZ3JhbWVyY3kuY2xvdWQvdXBsb2Fkcy9hc3NldHMvNTIzMy9maWxlX25hbWU=&Expires=1749745178&KeyName=uploads-backend-key&Signature=s1rfbFVLZWNdagigcQxbRacOa4k=';
+            
+            try {
+                log('📡 Making XHR request...');
+                
+                const xhr = new XMLHttpRequest();
+                xhr.onload = function() {
+                    log(`✅ XHR Success: ${xhr.status} ${xhr.statusText}`);
+                    log(`📏 Response size: ${xhr.responseText.length} bytes`);
+                    log('🔍 Check browser Network tab to see if request was intercepted');
+                    log('🔔 You should see a proxy notification if extension is working');
+                };
+                
+                xhr.onerror = function() {
+                    log('❌ XHR failed - this might be expected if proxy redirected');
+                    log('🔍 Check browser Network tab to see actual destination');
+                };
+                
+                xhr.ontimeout = function() {
+                    log('⏰ XHR timed out');
+                };
+                
+                xhr.open('GET', testUrl);
+                xhr.timeout = 10000; // 10 second timeout
+                xhr.send();
+                
+            } catch (error) {
+                log(`❌ Error making request: ${error.message}`);
+            }
+        }
+
+        // Auto-run regex test on page load
+        window.addEventListener('load', function() {
+            testRegex();
+        });
+    </script>
+</body>
+</html> 

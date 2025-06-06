@@ -62,6 +62,29 @@ Generates SSL certificates for HTTPS development.
 gxto setup-ssl
 ```
 
+### Browser Extension Commands
+
+### `gxto ext:firefox`
+Launches Firefox with your browser extension loaded for testing.
+
+```bash
+gxto ext:firefox
+```
+
+### `gxto ext:chrome`
+Launches Chrome with your browser extension loaded for testing.
+
+```bash
+gxto ext:chrome
+```
+
+### `gxto ext:build`
+Builds both Firefox and Chrome extensions for distribution.
+
+```bash
+gxto ext:build
+```
+
 ## Project Structure
 
 ```
@@ -75,6 +98,12 @@ my-project/
 ├── index.html                # HTML template
 ├── app-manifest.json         # Plugin manifest
 ├── .certs/                   # SSL certificates (auto-generated)
+├── browser-extensions/       # Browser extensions
+│   ├── chrome/               # Chrome extension
+│   └── firefox/              # Firefox extension
+├── scripts/                  # Extension management scripts
+│   ├── launch-chrome.js      # Chrome extension launcher
+│   └── pack-chrome.js        # Chrome extension packager
 └── src/
     └── Plugin.vue            # Main plugin component
 ```
@@ -133,7 +162,10 @@ Added to your `package.json`:
     "dev-http": "gxto dev --no-https", 
     "build": "gxto build",
     "dev-socket": "concurrently 'gxto dev' 'nodemon server.js'",
-    "setup-ssl": "gxto setup-ssl"
+    "setup-ssl": "gxto setup-ssl",
+    "ext:firefox": "gxto ext:firefox",
+    "ext:chrome": "gxto ext:chrome",
+    "ext:build": "gxto ext:build"
   }
 }
 ```
@@ -164,6 +196,18 @@ gxto dev --port 4000 --component-path ./components/Main.vue
 NODE_PORT=4000
 COMPONENT_PATH=./components/Main.vue
 NODE_LOG_LEVEL=debug
+```
+
+**Browser Extension Development**
+```bash
+# Test Firefox extension
+npm run ext:firefox
+
+# Test Chrome extension  
+npm run ext:chrome
+
+# Build extensions for distribution
+npm run ext:build
 ```
 
 ## Troubleshooting

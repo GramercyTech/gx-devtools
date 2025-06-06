@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Proxy Errors</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1000px; }
+        .section { margin: 20px 0; padding: 20px; border: 2px solid #ddd; border-radius: 8px; }
+        .error { border-color: #dc3545; background: #fff5f5; }
+        .success { border-color: #28a745; background: #f8fff8; }
+        .warning { border-color: #ffc107; background: #fffbf0; }
+        .info { border-color: #17a2b8; background: #f0f9ff; }
+        .code { background: #e9ecef; padding: 8px; font-family: monospace; margin: 8px 0; word-break: break-all; }
+        .results { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; max-height: 300px; overflow-y: auto; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        .error-btn { background: #dc3545; }
+        .success-btn { background: #28a745; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>🐛 Debug Proxy Errors</h1>
+    
+    <div class="section error">
+        <h2>❌ Common Firefox Errors</h2>
+        <table>
+            <tr>
+                <th>Error</th>
+                <th>Meaning</th>
+                <th>Common Causes</th>
+            </tr>
+            <tr>
+                <td><code>ns_binding_aborted</code></td>
+                <td>Network request was cancelled</td>
+                <td>Redirect loops, Invalid redirects, Extension conflicts</td>
+            </tr>
+            <tr>
+                <td><code>ns_error_corrupted_content</code></td>
+                <td>Content corruption or invalid response</td>
+                <td>Header issues, CORS problems, Content-encoding conflicts</td>
+            </tr>
+            <tr>
+                <td><code>ns_error_net_reset</code></td>
+                <td>Connection was reset</td>
+                <td>Server rejection, Proxy server issues</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section warning">
+        <h2>⚠️ Quick Fixes</h2>
+        <ol>
+            <li><strong>Check for redirect loops:</strong> Make sure your redirect target doesn't match your pattern</li>
+            <li><strong>Use redirect mode first:</strong> Disable "Mask URL" to test basic functionality</li>
+            <li><strong>Test with simple domains:</strong> Try redirecting to a known working server first</li>
+            <li><strong>Check proxy server:</strong> Ensure your target server can handle the requests</li>
+        </ol>
+    </div>
+
+    <div class="section info">
+        <h2>🔍 Diagnostic Tests</h2>
+        <button onclick="checkExtensionStatus()">Check Extension Status</button>
+        <button onclick="testSimpleRedirect()">Test Simple Redirect</button>
+        <button onclick="testProblematicURL()">Test Problematic URL</button>
+        <button onclick="analyzeRules()">Analyze Rules for Loops</button>
+        <button class="error-btn" onclick="clearLogs()">Clear Logs</button>
+        <div id="diagnosticResults" class="results"></div>
+    </div>
+
+    <div class="section success">
+        <h2>✅ Troubleshooting Steps</h2>
+        <div id="troubleshootingSteps">
+            <h3>Step 1: Verify Extension State</h3>
+            <button onclick="runTroubleshootingStep(1)">Run Step 1</button>
+            <div id="step1Results" class="results"></div>
+            
+            <h3>Step 2: Test Without Masking</h3>
+            <button onclick="runTroubleshootingStep(2)">Run Step 2</button>
+            <div id="step2Results" class="results"></div>
+            
+            <h3>Step 3: Check for Redirect Loops</h3>
+            <button onclick="runTroubleshootingStep(3)">Run Step 3</button>
+            <div id="step3Results" class="results"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            element.innerHTML += `<div>${timestamp} ${icon} ${message}</div>`;
+        }
+
+        function clearLogs() {
+            const logElements = ['diagnosticResults', 'step1Results', 'step2Results', 'step3Results'];
+            logElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) element.innerHTML = '';
+            });
+        }
+
+        async function checkExtensionStatus() {
+            log('diagnosticResults', 'Checking extension status...');
+            
+            try {
+                if (typeof browser === 'undefined') {
+                    log('diagnosticResults', 'Browser API not available - extension not loaded', 'error');
+                    return;
+                }
+                
+                const state = await browser.runtime.sendMessage({ action: 'getState' });
+                log('diagnosticResults', `Extension enabled: ${state.enabled}`, 'success');
+                log('diagnosticResults', `Number of rules: ${state.rules.length}`, 'info');
+                
+                state.rules.forEach((rule, index) => {
+                    log('diagnosticResults', `Rule ${index + 1}: ${rule.pattern} → ${rule.redirect} (Mask: ${rule.maskUrl || false})`, 'info');
+                });
+                
+            } catch (error) {
+                log('diagnosticResults', `Extension communication failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSimpleRedirect() {
+            log('diagnosticResults', 'Testing simple redirect with known good server...');
+            
+            try {
+                // Test with a simple, reliable endpoint
+                const response = await fetch('https://httpbin.org/get?test=simple');
+                const data = await response.json();
+                log('diagnosticResults', `Simple test successful: ${response.status}`, 'success');
+                log('diagnosticResults', `Response URL: ${data.url}`, 'info');
+            } catch (error) {
+                log('diagnosticResults', `Simple test failed: ${error.message}`, 'error');
+                log('diagnosticResults', 'This suggests a configuration issue with your rules', 'warning');
+            }
+        }
+
+        async function testProblematicURL() {
+            log('diagnosticResults', 'Testing the problematic gramercy.cloud URL...');
+            
+            const testUrl = 'https://hilton-pop-art-cytz-dani-martin-hueg.gramercy.cloud/uploads/assets/test.png';
+            
+            try {
+                const response = await fetch(testUrl);
+                log('diagnosticResults', `Gramercy test: ${response.status} ${response.statusText}`, 'success');
+            } catch (error) {
+                log('diagnosticResults', `Gramercy test failed: ${error.message}`, 'error');
+                
+                if (error.message.includes('ns_binding_aborted')) {
+                    log('diagnosticResults', '→ Likely cause: Redirect loop or invalid redirect target', 'warning');
+                } else if (error.message.includes('ns_error_corrupted_content')) {
+                    log('diagnosticResults', '→ Likely cause: Header modification issues or server response problems', 'warning');
+                }
+            }
+        }
+
+        async function analyzeRules() {
+            log('diagnosticResults', 'Analyzing rules for potential problems...');
+            
+            try {
+                const state = await browser.runtime.sendMessage({ action: 'getState' });
+                const rules = state.rules;
+                
+                if (rules.length === 0) {
+                    log('diagnosticResults', 'No rules configured', 'warning');
+                    return;
+                }
+                
+                // Check for redirect loops
+                rules.forEach((rule, index) => {
+                    const pattern = new RegExp(rule.pattern, 'i');
+                    
+                    // Check if redirect target matches the pattern
+                    if (pattern.test(rule.redirect)) {
+                        log('diagnosticResults', `⚠️ LOOP DETECTED: Rule ${index + 1} redirects to a domain that matches its own pattern!`, 'error');
+                        log('diagnosticResults', `   Pattern: ${rule.pattern}`, 'error');
+                        log('diagnosticResults', `   Redirect: ${rule.redirect}`, 'error');
+                    }
+                    
+                    // Check if redirect target matches other patterns
+                    rules.forEach((otherRule, otherIndex) => {
+                        if (index !== otherIndex) {
+                            const otherPattern = new RegExp(otherRule.pattern, 'i');
+                            if (otherPattern.test(rule.redirect)) {
+                                log('diagnosticResults', `⚠️ CHAIN DETECTED: Rule ${index + 1} redirects to domain that matches Rule ${otherIndex + 1}`, 'warning');
+                            }
+                        }
+                    });
+                });
+                
+                log('diagnosticResults', 'Rule analysis complete', 'success');
+                
+            } catch (error) {
+                log('diagnosticResults', `Rule analysis failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function runTroubleshootingStep(step) {
+            const resultId = `step${step}Results`;
+            
+            switch (step) {
+                case 1:
+                    log(resultId, 'Verifying extension state...');
+                    await checkExtensionStatus();
+                    break;
+                    
+                case 2:
+                    log(resultId, 'Testing redirect mode (non-masking)...');
+                    log(resultId, '1. Disable all "Mask URL" checkboxes in extension popup', 'info');
+                    log(resultId, '2. Disable "URL Masking Mode" toggle', 'info');
+                    log(resultId, '3. Try your request again', 'info');
+                    log(resultId, '4. If it works, the issue is with masking mode', 'warning');
+                    break;
+                    
+                case 3:
+                    log(resultId, 'Checking for redirect loops...');
+                    await analyzeRules();
+                    break;
+            }
+        }
+
+        // Auto-run extension check on page load
+        window.addEventListener('load', checkExtensionStatus);
+    </script>
+</body>
+</html> 

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug HTTPS Traffic Interception</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 15px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Debug HTTPS Traffic Interception</h1>
+    
+    <div class="test-section">
+        <h3>Step 1: Extension Status Check</h3>
+        <button onclick="checkExtension()">Check Extension</button>
+        <div id="extensionStatus" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Step 2: Test Different Request Types</h3>
+        <button onclick="testFetch()">Test Fetch</button>
+        <button onclick="testXHR()">Test XHR</button>
+        <button onclick="testDynamicImport()">Test Dynamic Import</button>
+        <button onclick="testImageLoad()">Test Image Load</button>
+        <div id="requestResults" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Step 3: Console Logs</h3>
+        <p>Open DevTools Console to see detailed logs from:</p>
+        <ul>
+            <li><strong>Background Script:</strong> Look for "[Traffic Proxy]" messages</li>
+            <li><strong>Content Script:</strong> Look for "[Traffic Proxy Content]" messages</li>
+        </ul>
+        <p><strong>Expected test domains:</strong> httpbin.org, api.github.com, cdn.jsdelivr.net</p>
+    </div>
+
+    <script>
+        function log(elementId, message) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            element.innerHTML += `<div>${timestamp}: ${message}</div>`;
+        }
+
+        async function checkExtension() {
+            const status = document.getElementById('extensionStatus');
+            status.innerHTML = '';
+            
+            log('extensionStatus', '🔍 Checking extension status...');
+            
+            // Check if browser API is available
+            if (typeof browser === 'undefined') {
+                log('extensionStatus', '❌ Browser API not available - extension not loaded properly');
+                return;
+            }
+            
+            try {
+                // Try to communicate with background script
+                const response = await browser.runtime.sendMessage({ action: 'getState' });
+                log('extensionStatus', `✅ Extension responding: Enabled=${response.enabled}, Rules=${response.rules.length}`);
+                
+                if (response.rules.length === 0) {
+                    log('extensionStatus', '⚠️ No proxy rules configured. Add some rules to test interception.');
+                }
+            } catch (error) {
+                log('extensionStatus', `❌ Failed to communicate with extension: ${error.message}`);
+            }
+        }
+
+        async function testFetch() {
+            log('requestResults', '🧪 Testing fetch to httpbin.org...');
+            try {
+                const response = await fetch('https://httpbin.org/get?test=fetch');
+                log('requestResults', `✅ Fetch successful: ${response.status} ${response.statusText}`);
+            } catch (error) {
+                log('requestResults', `❌ Fetch failed: ${error.message}`);
+            }
+        }
+
+        async function testXHR() {
+            log('requestResults', '🧪 Testing XHR to api.github.com...');
+            const xhr = new XMLHttpRequest();
+            xhr.onload = () => log('requestResults', `✅ XHR successful: ${xhr.status} ${xhr.statusText}`);
+            xhr.onerror = () => log('requestResults', `❌ XHR failed`);
+            xhr.open('GET', 'https://api.github.com/zen');
+            xhr.send();
+        }
+
+        async function testDynamicImport() {
+            log('requestResults', '🧪 Testing dynamic import from cdn.jsdelivr.net...');
+            try {
+                const module = await import('https://cdn.jsdelivr.net/npm/lodash@4.17.21/isNull.js');
+                log('requestResults', `✅ Dynamic import successful`);
+            } catch (error) {
+                log('requestResults', `❌ Dynamic import failed: ${error.message}`);
+            }
+        }
+
+        function testImageLoad() {
+            log('requestResults', '🧪 Testing image load from httpbin.org...');
+            const img = new Image();
+            img.onload = () => log('requestResults', `✅ Image load successful`);
+            img.onerror = () => log('requestResults', `❌ Image load failed`);
+            img.src = 'https://httpbin.org/image/png';
+        }
+
+        // Auto-run extension check on page load
+        window.addEventListener('load', checkExtension);
+    </script>
+</body>
+</html> 
