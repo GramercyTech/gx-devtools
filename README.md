@@ -1,4 +1,4 @@
-# GxTools
+# GxToolkit
 
 A CLI toolkit for creating and managing GxP platform projects with modern development features.
 
@@ -6,7 +6,7 @@ A CLI toolkit for creating and managing GxP platform projects with modern develo
 
 ```bash
 # Install globally
-npm install -g @gramercytech/gx-tools
+npm install -g @gramercytech/gx-toolkit
 
 # Create new project
 gxto init my-project
@@ -20,12 +20,12 @@ npm run dev
 
 **Global (Recommended)**
 ```bash
-npm install -g @gramercytech/gx-tools
+npm install -g @gramercytech/gx-toolkit
 ```
 
 **Local Development Dependency**
 ```bash
-npm install --save-dev @gramercytech/gx-tools
+npm install --save-dev @gramercytech/gx-toolkit
 ```
 
 ## Commands
@@ -81,7 +81,7 @@ my-project/
 
 ## HTTPS Development
 
-GxTools automatically sets up HTTPS using [mkcert](https://github.com/FiloSottile/mkcert) for:
+GxToolkit automatically sets up HTTPS using [mkcert](https://github.com/FiloSottile/mkcert) for:
 - Modern web API compatibility (Camera, Geolocation, etc.)
 - Production-like environment
 - Secure context testing
@@ -169,7 +169,7 @@ NODE_LOG_LEVEL=debug
 ## Troubleshooting
 
 **Command not found**
-- Verify global installation: `npm install -g @gramercytech/gx-tools`
+- Verify global installation: `npm install -g @gramercytech/gx-toolkit`
 - Check npm global path in your shell
 
 **SSL Certificate Issues**

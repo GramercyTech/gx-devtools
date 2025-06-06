@@ -1,6 +1,6 @@
 {
-  "name": "@gramercytech/gx-tools",
-  "version": "1.0.59",
+  "name": "@gramercytech/gx-toolkit",
+  "version": "1.0.60",
   "description": "Dev tools for create platform plugins",
   "type": "commonjs",
   "scripts": {
@@ -11,10 +11,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/GramercyTech/gx-tools.git"
+    "url": "git+ssh://git@github.com/GramercyTech/gx-toolkit.git"
   },
   "bin": {
-    "gxto": "bin/gx-tools.js"
+    "gxto": "bin/gx-toolkit.js"
   },
   "keywords": [
     "tunnel",
@@ -25,12 +25,12 @@
   "author": "Peek",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/GramercyTech/gx-tools/issues"
+    "url": "https://github.com/GramercyTech/gx-toolkit/issues"
   },
   "publishConfig": {
     "@gramercytech:registry": "https://npm.pkg.github.com"
   },
-  "homepage": "https://github.com/GramercyTech/gx-tools#readme",
+  "homepage": "https://github.com/GramercyTech/gx-toolkit#readme",
   "dependencies": {
     "@fal-works/esbuild-plugin-global-externals": "^2.1.2",
     "@vitejs/plugin-vue": "^5.1.4",

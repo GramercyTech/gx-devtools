@@ -8,7 +8,7 @@ const os = require("os");
 const readline = require("readline");
 
 /**
- * GxTools CLI
+ * GxToolkit CLI
  *
  * This tool works both as a globally installed npm package and as a local dependency.
  * It provides commands for creating new GxP projects and updating existing ones.
@@ -31,7 +31,7 @@ const REQUIRED_DEPENDENCIES = {
 };
 
 const REQUIRED_DEV_DEPENDENCIES = {
-	"@gramercytech/gx-tools": "^1.0.58",
+	"@gramercytech/gx-toolkit": "^1.0.58",
 	nodemon: "^3.1.7",
 	concurrently: "^9.0.1",
 	mkcert: "^3.2.0",
@@ -63,11 +63,11 @@ function findProjectRoot() {
 }
 
 /**
- * Resolves paths for gx-tools resources based on installation context
+ * Resolves paths for gx-toolkit resources based on installation context
  */
 function resolveGxPaths() {
 	const projectRoot = findProjectRoot();
-	const packageName = "@gramercytech/gx-tools";
+	const packageName = "@gramercytech/gx-toolkit";
 
 	// Try local installation first
 	const localNodeModules = path.join(projectRoot, "node_modules", packageName);
@@ -232,7 +232,7 @@ function createPackageJson(projectPath, projectName) {
 		const packageJson = {
 			name: projectName,
 			version: "1.0.0",
-			description: "GxP project created with @gramercytech/gx-tools",
+			description: "GxP project created with @gramercytech/gx-toolkit",
 			type: "commonjs",
 			main: "main.js",
 			scripts: {
