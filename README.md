@@ -33,6 +33,10 @@ npm install --save-dev @gramercytech/gx-toolkit
 ### `gxto init [name]`
 Creates a new project or updates an existing one with all required dependencies and configurations.
 
+During initialization, you'll be prompted to:
+- Include GxP Datastore (optional Pinia-based state management)
+- Set up SSL certificates for HTTPS development
+
 ```bash
 gxto init                    # Interactive mode
 gxto init my-project         # Create "my-project" directory
@@ -115,7 +119,7 @@ GxToolkit automatically sets up HTTPS using [mkcert](https://github.com/FiloSott
 - Production-like environment
 - Secure context testing
 
-**Automatic Setup**: SSL certificates are generated when creating new projects.
+**Interactive Setup**: You'll be prompted to set up SSL certificates when creating new projects.
 
 **Manual Setup**: Run `npm run setup-ssl` to regenerate certificates.
 

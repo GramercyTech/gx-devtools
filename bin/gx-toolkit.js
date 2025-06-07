@@ -408,6 +408,7 @@ async function initCommand(argv) {
 	let projectPath = currentDir;
 	let projectName;
 	let useDatastore = false;
+	let sslSetup = false;
 
 	if (!hasPackageJson && !argv.name) {
 		// New project - prompt for name
@@ -575,9 +576,22 @@ async function initCommand(argv) {
 
 	// Setup SSL certificates for new projects
 	if (!hasPackageJson || argv.name) {
-		console.log("\nSetting up HTTPS development environment...");
-		ensureMkcertInstalled();
-		generateSSLCertificates(projectPath);
+		// Ask user if they want to set up SSL certificates
+		const sslChoice = await promptUser(
+			"Do you want to set up SSL certificates for HTTPS development? (Y/n): "
+		);
+		sslSetup =
+			sslChoice.toLowerCase() !== "n" && sslChoice.toLowerCase() !== "no";
+
+		if (sslSetup) {
+			console.log("\n🔒 Setting up HTTPS development environment...");
+			ensureMkcertInstalled();
+			generateSSLCertificates(projectPath);
+		} else {
+			console.log(
+				"\n⚠️  Skipping SSL setup. You can set it up later with: npm run setup-ssl"
+			);
+		}
 	}
 
 	console.log("✅ Project setup complete!");
@@ -594,9 +608,15 @@ async function initCommand(argv) {
 		console.log(`📁 Navigate to your project: cd ${projectName}`);
 	}
 	console.log("⚙️ Configure environment: cp .env.example .env");
-	console.log("🔒 Start HTTPS development: npm run dev");
-	console.log("🌐 Start HTTP development: npm run dev-http");
-	console.log("🔧 Setup SSL certificates: npm run setup-ssl");
+
+	if (sslSetup) {
+		console.log("🔒 Start HTTPS development: npm run dev");
+		console.log("🌐 Start HTTP development: npm run dev-http");
+	} else {
+		console.log("🌐 Start development: npm run dev-http");
+		console.log("🔧 Setup SSL certificates: npm run setup-ssl");
+		console.log("🔒 Then use HTTPS development: npm run dev");
+	}
 	console.log("");
 	console.log("📖 Templates available:");
 	console.log(
