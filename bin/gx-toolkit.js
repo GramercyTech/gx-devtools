@@ -18,6 +18,20 @@ const readline = require("readline");
 const isWin = process.platform === "win32";
 const exportCmd = isWin ? "set" : "export";
 
+/**
+ * Gets the appropriate gx-componentkit dependency reference
+ */
+function getGxUikitDependency() {
+	// Check if gx-componentkit exists locally (for development)
+	const localGxUikit = path.resolve(__dirname, "../../gx-componentkit");
+	if (fs.existsSync(localGxUikit)) {
+		return `file:${localGxUikit}`;
+	}
+
+	// Default to npm package (when published)
+	return "^1.0.0";
+}
+
 // Required dependencies for GxP projects
 const REQUIRED_DEPENDENCIES = {
 	"@vitejs/plugin-vue": "^5.1.4",
@@ -28,6 +42,14 @@ const REQUIRED_DEPENDENCIES = {
 	"socket.io": "^4.8.0",
 	"socket.io-client": "^4.8.0",
 	dotenv: "^16.4.5",
+	"@gramercytech/gx-componentkit": getGxUikitDependency(),
+};
+
+// Dependencies for GxP projects with datastore
+const REQUIRED_DATASTORE_DEPENDENCIES = {
+	...REQUIRED_DEPENDENCIES,
+	pinia: "^2.1.7",
+	axios: "^1.6.0",
 };
 
 const REQUIRED_DEV_DEPENDENCIES = {
@@ -223,38 +245,42 @@ function safeCopyFile(src, dest, description) {
 }
 
 /**
- * Creates a package.json for a new project
+ * Creates package.json for new projects
  */
-function createPackageJson(projectPath, projectName) {
+function createPackageJson(projectPath, projectName, useDatastore = false) {
 	const packageJsonPath = path.join(projectPath, "package.json");
+	const globalConfig = loadGlobalConfig();
 
-	if (!fs.existsSync(packageJsonPath)) {
-		const packageJson = {
-			name: projectName,
-			version: "1.0.0",
-			description: "GxP project created with @gramercytech/gx-toolkit",
-			type: "commonjs",
-			main: "main.js",
-			scripts: {
-				dev: "gxto dev",
-				"dev-http": "gxto dev --no-https",
-				build: "gxto build",
-				"dev-socket": "concurrently 'gxto dev' 'nodemon server.js'",
-				"setup-ssl": "gxto setup-ssl",
-			},
-			dependencies: REQUIRED_DEPENDENCIES,
-			devDependencies: REQUIRED_DEV_DEPENDENCIES,
-			keywords: ["gxp", "eventfinity"],
-			author: "",
-			license: "ISC",
-		};
+	const packageJson = {
+		name: projectName,
+		version: "1.0.0",
+		description: `GxP Plugin: ${projectName}`,
+		main: "main.js",
+		scripts: {
+			dev: "concurrently 'vite' 'nodemon server.js'",
+			"dev-http": "HTTPS=false concurrently 'vite' 'nodemon server.js'",
+			build: "vite build",
+			preview: "vite preview",
+			"setup-ssl": "gxto ssl",
+			"gxto-dev": "gxto dev",
+			"gxto-build": "gxto build",
+			...(useDatastore && {
+				"datastore:list": "gxto datastore list",
+				"datastore:add": "gxto datastore add",
+				"datastore:scan": "gxto datastore scan-strings",
+				"datastore:config": "gxto datastore config",
+			}),
+		},
+		dependencies: useDatastore
+			? REQUIRED_DATASTORE_DEPENDENCIES
+			: REQUIRED_DEPENDENCIES,
+		devDependencies: REQUIRED_DEV_DEPENDENCIES,
+		author: globalConfig.author || "Your Name",
+		license: "ISC",
+	};
 
-		console.log("Creating package.json");
-		fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-		return true;
-	}
-
-	return false;
+	fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+	console.log("✓ Created package.json");
 }
 
 /**
@@ -298,6 +324,14 @@ function updateExistingProject(projectPath) {
 					console.log(`Adding dependency: ${dep}`);
 				}
 			});
+
+			// Add gx-componentkit if missing
+			if (!packageJson.dependencies["@gramercytech/gx-componentkit"]) {
+				packageJson.dependencies["@gramercytech/gx-componentkit"] =
+					getGxUikitDependency();
+				updated = true;
+				console.log("Adding dependency: @gramercytech/gx-componentkit");
+			}
 
 			// Add missing dev dependencies
 			Object.entries(REQUIRED_DEV_DEPENDENCIES).forEach(([dep, version]) => {
@@ -373,6 +407,7 @@ async function initCommand(argv) {
 	const hasPackageJson = fs.existsSync(path.join(currentDir, "package.json"));
 	let projectPath = currentDir;
 	let projectName;
+	let useDatastore = false;
 
 	if (!hasPackageJson && !argv.name) {
 		// New project - prompt for name
@@ -382,6 +417,14 @@ async function initCommand(argv) {
 			process.exit(1);
 		}
 
+		// Ask about datastore integration
+		const datastoreChoice = await promptUser(
+			"Do you want to include GxP Datastore? (y/N): "
+		);
+		useDatastore =
+			datastoreChoice.toLowerCase() === "y" ||
+			datastoreChoice.toLowerCase() === "yes";
+
 		// Create project directory
 		projectPath = path.join(currentDir, projectName);
 		if (fs.existsSync(projectPath)) {
@@ -390,10 +433,13 @@ async function initCommand(argv) {
 		}
 
 		console.log(`Creating new project: ${projectName}`);
+		if (useDatastore) {
+			console.log("✓ Including GxP Datastore with Pinia integration");
+		}
 		fs.mkdirSync(projectPath, { recursive: true });
 
 		// Create package.json
-		createPackageJson(projectPath, projectName);
+		createPackageJson(projectPath, projectName, useDatastore);
 
 		// Install dependencies
 		installDependencies(projectPath);
@@ -404,6 +450,15 @@ async function initCommand(argv) {
 	} else if (argv.name) {
 		// New project with provided name
 		projectName = argv.name;
+
+		// Ask about datastore integration
+		const datastoreChoice = await promptUser(
+			"Do you want to include GxP Datastore? (y/N): "
+		);
+		useDatastore =
+			datastoreChoice.toLowerCase() === "y" ||
+			datastoreChoice.toLowerCase() === "yes";
+
 		projectPath = path.join(currentDir, projectName);
 
 		if (fs.existsSync(projectPath)) {
@@ -412,19 +467,39 @@ async function initCommand(argv) {
 		}
 
 		console.log(`Creating new project: ${projectName}`);
+		if (useDatastore) {
+			console.log("✓ Including GxP Datastore with Pinia integration");
+		}
 		fs.mkdirSync(projectPath, { recursive: true });
-		createPackageJson(projectPath, projectName);
+		createPackageJson(projectPath, projectName, useDatastore);
 		installDependencies(projectPath);
 	}
 
 	// Copy template files
 	const paths = resolveGxPaths();
 	const filesToCopy = [
-		{ src: "main.js", dest: "main.js", desc: "main.js" },
+		{
+			src: useDatastore ? "main-datastore.js" : "main.js",
+			dest: "main.js",
+			desc: "main.js",
+		},
 		{ src: "server.js", dest: "server.js", desc: "server.js" },
-		{ src: "App.vue", dest: "App.vue", desc: "App.vue" },
+		{
+			src: useDatastore ? "App-datastore.vue" : "App.vue",
+			dest: "App.vue",
+			desc: "App.vue",
+		},
+		{
+			src: "KioskApp.vue",
+			dest: "KioskApp.vue",
+			desc: "KioskApp.vue (Advanced kiosk template)",
+		},
 		{ src: "index.html", dest: "index.html", desc: "index.html" },
-		{ src: "Plugin.vue", dest: "src/Plugin.vue", desc: "Plugin.vue" },
+		{
+			src: useDatastore ? "Plugin-datastore.vue" : "Plugin.vue",
+			dest: "src/Plugin.vue",
+			desc: "Plugin.vue",
+		},
 		{
 			src: "app-manifest.json",
 			dest: "app-manifest.json",
@@ -432,7 +507,33 @@ async function initCommand(argv) {
 		},
 		{ src: ".gitignore", dest: ".gitignore", desc: ".gitignore" },
 		{ src: "env.example", dest: ".env.example", desc: ".env.example" },
+		{
+			src: "README.md",
+			dest: "README.md",
+			desc: "README.md (Project documentation)",
+		},
 	];
+
+	// Add datastore-specific files if enabled
+	if (useDatastore) {
+		filesToCopy.push(
+			{
+				src: "store/index.js",
+				dest: "src/store/index.js",
+				desc: "Pinia store setup",
+			},
+			{
+				src: "store/gxp-store.js",
+				dest: "src/store/gxp-store.js",
+				desc: "GxP datastore",
+			},
+			{
+				src: "store/test-data.json",
+				dest: "src/store/test-data.json",
+				desc: "Test data configuration",
+			}
+		);
+	}
 
 	filesToCopy.forEach((file) => {
 		const srcPath = path.join(paths.configDir, file.src);
@@ -480,6 +581,15 @@ async function initCommand(argv) {
 	}
 
 	console.log("✅ Project setup complete!");
+	console.log(
+		"🎨 GX UIKit component library included for rapid kiosk development!"
+	);
+	if (useDatastore) {
+		console.log("🗃️ GxP Datastore included with Pinia integration!");
+		console.log("📊 Manage test data with: npm run datastore:add");
+		console.log("🔍 Scan components for strings: npm run datastore:scan");
+		console.log("📋 List all store variables: npm run datastore:list");
+	}
 	if (!hasPackageJson) {
 		console.log(`📁 Navigate to your project: cd ${projectName}`);
 	}
@@ -487,6 +597,13 @@ async function initCommand(argv) {
 	console.log("🔒 Start HTTPS development: npm run dev");
 	console.log("🌐 Start HTTP development: npm run dev-http");
 	console.log("🔧 Setup SSL certificates: npm run setup-ssl");
+	console.log("");
+	console.log("📖 Templates available:");
+	console.log(
+		"   • App.vue - Basic 3-page flow with gx-componentkit integration"
+	);
+	console.log("   • KioskApp.vue - Advanced kiosk template (full workflow)");
+	console.log("📚 Check README.md for detailed usage instructions");
 }
 
 /**
@@ -766,6 +883,420 @@ function extensionBuildCommand() {
 	}
 }
 
+/**
+ * Datastore commands for managing test data
+ */
+function datastoreCommand(argv) {
+	const action = argv.action;
+
+	switch (action) {
+		case "list":
+			listDatastoreVariables();
+			break;
+		case "add":
+			addDatastoreVariable(argv);
+			break;
+		case "scan-strings":
+			scanComponentStrings(argv);
+			break;
+		case "config":
+			switchDatastoreConfig(argv);
+			break;
+		case "init":
+			initDatastoreInExistingProject();
+			break;
+		default:
+			console.log("Available datastore commands:");
+			console.log("  list              - List all store variables");
+			console.log("  add               - Add a new variable to the store");
+			console.log(
+				"  scan-strings      - Scan components for hardcoded strings"
+			);
+			console.log("  config [name]     - Switch between test configurations");
+			console.log("  init              - Add datastore to existing project");
+	}
+}
+
+function listDatastoreVariables() {
+	const projectPath = findProjectRoot();
+	const testDataPath = path.join(projectPath, "src/store/test-data.json");
+
+	if (!fs.existsSync(testDataPath)) {
+		console.error('❌ No datastore found. Run "gxto datastore init" first.');
+		return;
+	}
+
+	try {
+		const testData = JSON.parse(fs.readFileSync(testDataPath, "utf-8"));
+
+		console.log("📊 GxP Datastore Variables:");
+		console.log("");
+
+		if (testData.pluginVars && Object.keys(testData.pluginVars).length > 0) {
+			console.log("🔧 Plugin Variables:");
+			Object.entries(testData.pluginVars).forEach(([key, value]) => {
+				console.log(`  ${key}: ${JSON.stringify(value)}`);
+			});
+			console.log("");
+		}
+
+		if (testData.stringsList && Object.keys(testData.stringsList).length > 0) {
+			console.log("📝 Strings:");
+			Object.entries(testData.stringsList).forEach(([key, value]) => {
+				console.log(`  ${key}: "${value}"`);
+			});
+			console.log("");
+		}
+
+		if (testData.assetList && Object.keys(testData.assetList).length > 0) {
+			console.log("🖼️ Assets:");
+			Object.entries(testData.assetList).forEach(([key, value]) => {
+				console.log(`  ${key}: ${value}`);
+			});
+			console.log("");
+		}
+
+		if (
+			testData.dependencyList &&
+			Object.keys(testData.dependencyList).length > 0
+		) {
+			console.log("🔗 Dependencies:");
+			Object.entries(testData.dependencyList).forEach(([key, value]) => {
+				console.log(`  ${key}: ${value}`);
+			});
+			console.log("");
+		}
+	} catch (error) {
+		console.error("❌ Error reading test data:", error.message);
+	}
+}
+
+async function addDatastoreVariable(argv) {
+	if (argv.type && argv.key && argv.value) {
+		// Use provided arguments
+		addVariable(argv.type, argv.key, argv.value);
+	} else {
+		// Interactive mode
+		console.log("Add a new variable to the datastore:");
+		console.log("1. string   - Text content for UI");
+		console.log("2. setting  - Configuration variable");
+		console.log("3. asset    - Asset URL or path");
+		console.log("");
+
+		const type = await promptUser(
+			"What type of variable? (string/setting/asset): "
+		);
+		const key = await promptUser("Variable key/name: ");
+		const value = await promptUser("Default value: ");
+
+		addVariable(type, key, value);
+	}
+}
+
+function addVariable(type, key, value) {
+	const projectPath = findProjectRoot();
+	const testDataPath = path.join(projectPath, "src/store/test-data.json");
+
+	if (!fs.existsSync(testDataPath)) {
+		console.error(
+			"❌ No datastore found. Initialize project with datastore first."
+		);
+		return;
+	}
+
+	try {
+		const testData = JSON.parse(fs.readFileSync(testDataPath, "utf-8"));
+
+		switch (type.toLowerCase()) {
+			case "string":
+				testData.stringsList = testData.stringsList || {};
+				testData.stringsList[key] = value;
+				console.log(`✓ Added string: ${key} = "${value}"`);
+				break;
+			case "setting":
+				testData.pluginVars = testData.pluginVars || {};
+				// Try to parse as JSON for numbers/booleans, fallback to string
+				try {
+					testData.pluginVars[key] = JSON.parse(value);
+				} catch {
+					testData.pluginVars[key] = value;
+				}
+				console.log(
+					`✓ Added setting: ${key} = ${JSON.stringify(
+						testData.pluginVars[key]
+					)}`
+				);
+				break;
+			case "asset":
+				testData.assetList = testData.assetList || {};
+				testData.assetList[key] = value;
+				console.log(`✓ Added asset: ${key} = ${value}`);
+				break;
+			default:
+				console.error("❌ Invalid type. Use: string, setting, or asset");
+				return;
+		}
+
+		fs.writeFileSync(testDataPath, JSON.stringify(testData, null, 2));
+		console.log("💾 Datastore updated successfully!");
+	} catch (error) {
+		console.error("❌ Error updating datastore:", error.message);
+	}
+}
+
+async function scanComponentStrings(argv) {
+	const projectPath = findProjectRoot();
+	const componentPath =
+		argv.component ||
+		(await promptUser("Component file path (e.g., src/Plugin.vue): "));
+	const fullPath = path.join(projectPath, componentPath);
+
+	if (!fs.existsSync(fullPath)) {
+		console.error(`❌ Component not found: ${componentPath}`);
+		return;
+	}
+
+	try {
+		const content = fs.readFileSync(fullPath, "utf-8");
+
+		// Extract strings from template section
+		const templateMatch = content.match(/<template>([\s\S]*?)<\/template>/);
+		if (!templateMatch) {
+			console.log("❌ No template section found");
+			return;
+		}
+
+		const template = templateMatch[1];
+
+		// Find text content within HTML elements (simplified regex)
+		const stringMatches = template.match(/>\s*([^<>]+[a-zA-Z][^<>]*)\s*</g);
+
+		if (!stringMatches || stringMatches.length === 0) {
+			console.log("ℹ️ No hardcoded strings found in template");
+			return;
+		}
+
+		console.log(
+			`🔍 Found ${stringMatches.length} potential strings in ${componentPath}:`
+		);
+		console.log("");
+
+		const testDataPath = path.join(projectPath, "src/store/test-data.json");
+		let testData = {};
+
+		if (fs.existsSync(testDataPath)) {
+			testData = JSON.parse(fs.readFileSync(testDataPath, "utf-8"));
+		}
+
+		testData.stringsList = testData.stringsList || {};
+
+		for (const match of stringMatches) {
+			const text = match.replace(/>\s*/, "").replace(/\s*</, "").trim();
+
+			if (text.length > 2 && !text.includes("{{") && !text.includes("v-")) {
+				const key = text
+					.toLowerCase()
+					.replace(/[^a-z0-9\s]/g, "")
+					.replace(/\s+/g, "_")
+					.substring(0, 30);
+
+				if (!testData.stringsList[key]) {
+					const add = await promptUser(`Add "${text}" as "${key}"? (y/N): `);
+					if (add.toLowerCase() === "y" || add.toLowerCase() === "yes") {
+						testData.stringsList[key] = text;
+						console.log(`✓ Added: ${key} = "${text}"`);
+					}
+				}
+			}
+		}
+
+		fs.writeFileSync(testDataPath, JSON.stringify(testData, null, 2));
+		console.log("💾 Scan complete!");
+	} catch (error) {
+		console.error("❌ Error scanning component:", error.message);
+	}
+}
+
+async function switchDatastoreConfig(argv) {
+	const projectPath = findProjectRoot();
+	const storeDir = path.join(projectPath, "src/store");
+
+	if (!fs.existsSync(storeDir)) {
+		console.error(
+			"❌ No datastore found. Initialize project with datastore first."
+		);
+		return;
+	}
+
+	if (argv.config) {
+		// Switch to specified config
+		const configPath = path.join(storeDir, `test-data-${argv.config}.json`);
+		const defaultPath = path.join(storeDir, "test-data.json");
+
+		if (fs.existsSync(configPath)) {
+			fs.copyFileSync(configPath, defaultPath);
+			console.log(`✓ Switched to configuration: ${argv.config}`);
+		} else {
+			console.error(`❌ Configuration not found: ${argv.config}`);
+		}
+	} else {
+		// List available configurations
+		const files = fs
+			.readdirSync(storeDir)
+			.filter((f) => f.startsWith("test-data-") && f.endsWith(".json"))
+			.map((f) => f.replace("test-data-", "").replace(".json", ""));
+
+		if (files.length === 0) {
+			console.log("ℹ️ No additional configurations found");
+			console.log(
+				"💡 Create a new config: cp src/store/test-data.json src/store/test-data-production.json"
+			);
+		} else {
+			console.log("Available configurations:");
+			files.forEach((config) => console.log(`  ${config}`));
+			console.log("");
+			console.log("Switch with: gxto datastore config <name>");
+		}
+	}
+}
+
+async function initDatastoreInExistingProject() {
+	const projectPath = findProjectRoot();
+	const packageJsonPath = path.join(projectPath, "package.json");
+
+	if (!fs.existsSync(packageJsonPath)) {
+		console.error(
+			"❌ No package.json found. Make sure you are in a GxP project directory."
+		);
+		return;
+	}
+
+	const storeDir = path.join(projectPath, "src/store");
+	if (fs.existsSync(storeDir)) {
+		console.error("❌ Datastore already exists in this project.");
+		return;
+	}
+
+	console.log("🗃️ Adding GxP Datastore to existing project...");
+
+	try {
+		// Read current package.json
+		const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+
+		// Add Pinia and axios dependencies
+		if (!packageJson.dependencies) {
+			packageJson.dependencies = {};
+		}
+
+		packageJson.dependencies.pinia = "^2.1.7";
+		packageJson.dependencies.axios = "^1.6.0";
+
+		// Add datastore scripts
+		if (!packageJson.scripts) {
+			packageJson.scripts = {};
+		}
+
+		packageJson.scripts["datastore:list"] = "gxto datastore list";
+		packageJson.scripts["datastore:add"] = "gxto datastore add";
+		packageJson.scripts["datastore:scan"] = "gxto datastore scan-strings";
+		packageJson.scripts["datastore:config"] = "gxto datastore config";
+
+		// Write updated package.json
+		fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+		console.log("✓ Updated package.json");
+
+		// Create store directory
+		fs.mkdirSync(storeDir, { recursive: true });
+
+		// Copy store files
+		const paths = resolveGxPaths();
+		const storeFiles = [
+			{
+				src: "store/index.js",
+				dest: "src/store/index.js",
+				desc: "Pinia store setup",
+			},
+			{
+				src: "store/gxp-store.js",
+				dest: "src/store/gxp-store.js",
+				desc: "GxP datastore",
+			},
+			{
+				src: "store/test-data.json",
+				dest: "src/store/test-data.json",
+				desc: "Test data configuration",
+			},
+		];
+
+		storeFiles.forEach((file) => {
+			const srcPath = path.join(paths.configDir, file.src);
+			const destPath = path.join(projectPath, file.dest);
+			safeCopyFile(srcPath, destPath, file.desc);
+		});
+
+		// Update main.js to include Pinia
+		const mainJsPath = path.join(projectPath, "main.js");
+		if (fs.existsSync(mainJsPath)) {
+			let mainJsContent = fs.readFileSync(mainJsPath, "utf-8");
+
+			// Add Pinia import
+			if (!mainJsContent.includes("pinia")) {
+				const importLine = 'import { pinia } from "./src/store/index.js";';
+				const importIndex = mainJsContent.indexOf("import * as Vue");
+				if (importIndex !== -1) {
+					mainJsContent =
+						mainJsContent.slice(0, importIndex) +
+						importLine +
+						"\n" +
+						mainJsContent.slice(importIndex);
+				} else {
+					mainJsContent = importLine + "\n" + mainJsContent;
+				}
+
+				// Add Pinia use
+				if (!mainJsContent.includes("app.use(pinia)")) {
+					const useIndex = mainJsContent.indexOf("app.use(GxUikit);");
+					if (useIndex !== -1) {
+						const endOfLine = mainJsContent.indexOf("\n", useIndex);
+						mainJsContent =
+							mainJsContent.slice(0, endOfLine) +
+							"\napp.use(pinia);" +
+							mainJsContent.slice(endOfLine);
+					}
+				}
+
+				fs.writeFileSync(mainJsPath, mainJsContent);
+				console.log("✓ Updated main.js");
+			}
+		}
+
+		// Install new dependencies
+		console.log("📦 Installing dependencies...");
+		const result = shell.exec("npm install", {
+			cwd: projectPath,
+			silent: false,
+		});
+
+		if (result.code === 0) {
+			console.log("✅ GxP Datastore added successfully!");
+			console.log("");
+			console.log("📊 Manage test data with: npm run datastore:add");
+			console.log("🔍 Scan components for strings: npm run datastore:scan");
+			console.log("📋 List all store variables: npm run datastore:list");
+			console.log("");
+			console.log("💡 Update your components to use the store:");
+			console.log('   import { useGxpStore } from "/src/store/gxp-store.js"');
+			console.log("   const gxpStore = useGxpStore()");
+		} else {
+			console.error(
+				'❌ Failed to install dependencies. Please run "npm install" manually.'
+			);
+		}
+	} catch (error) {
+		console.error("❌ Error adding datastore:", error.message);
+	}
+}
+
 // Load global configuration
 const globalConfig = loadGlobalConfig();
 
@@ -833,6 +1364,37 @@ const argv = yargs
 			},
 		},
 		buildCommand
+	)
+	.command(
+		"datastore <action>",
+		"Manage GxP datastore",
+		{
+			action: {
+				describe: "Action to perform",
+				choices: ["list", "add", "scan-strings", "config", "init"],
+			},
+			type: {
+				describe: "Variable type (for add command)",
+				choices: ["string", "setting", "asset"],
+			},
+			key: {
+				describe: "Variable key/name (for add command)",
+				type: "string",
+			},
+			value: {
+				describe: "Variable value (for add command)",
+				type: "string",
+			},
+			component: {
+				describe: "Component path (for scan-strings command)",
+				type: "string",
+			},
+			config: {
+				describe: "Configuration name (for config command)",
+				type: "string",
+			},
+		},
+		datastoreCommand
 	)
 	.command(
 		"ext:firefox",

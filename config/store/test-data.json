@@ -1,0 +1,85 @@
+{
+  "pluginVars": {
+    "primary_color": "#FFD600",
+    "projectId": 39,
+    "apiPageAuthId": "46|j7vCLmx2KG70Ig8R5mtUcNMFcHExvFPZEOv31kKGe1033f2b",
+    "apiBaseUrl": "https://api.efcloud.app",
+    "idle_timeout": "30",
+    "background_color": "#ffffff",
+    "text_color": "#333333",
+    "start_background_color": "#000596",
+    "start_text_color": "#FFFFFF",
+    "final_background_color": "#4CAF50",
+    "final_text_color": "#ffffff",
+    "loading_spinner_color": "#dedede",
+    "loading_spinner_accent_color": "#000596",
+    "error_modal_background_color": "#FFFFFF",
+    "error_modal_text_color": "#000596"
+  },
+  "stringsList": {
+    "start_line_one": "Welcome to Your App!",
+    "start_line_two": "Touch to begin your experience",
+    "start_touch_start": "Get started by touching the button below",
+    "final_line_one": "Thank You!",
+    "final_line_two": "Your experience has been completed successfully",
+    "final_line_three": "Touch anywhere to start over",
+    "welcome_text": "Hello World",
+    "loading_text": "Loading...",
+    "error_title": "Oops!",
+    "error_message": "Something went wrong. Please try again.",
+    "continue_button": "Continue",
+    "back_button": "Back",
+    "retry_button": "Try Again"
+  },
+  "assetList": {
+    "main_logo": "https://dashboard.eventfinity.test/storage/assets/69/2HyPwh1692319982.png",
+    "background_image": "https://dashboard.eventfinity.test/storage/assets/69/2HyPwh1692319982.png",
+    "icon_success": "/images/success-icon.svg",
+    "icon_error": "/images/error-icon.svg",
+    "loading_animation": "/images/loading.gif"
+  },
+  "dependencyList": {
+    "project_location": 4,
+    "user_management": 12,
+    "analytics": 8
+  },
+  "permissionFlags": [
+    "can_access_camera",
+    "can_save_data",
+    "can_share_content"
+  ],
+  "auth": {
+    "token": "test-token-12345",
+    "user_id": "test-user-67890",
+    "expires_at": "2024-12-31T23:59:59Z"
+  },
+  "userSession": {
+    "session_id": "session-abc123",
+    "started_at": "2024-01-01T00:00:00Z",
+    "ip_address": "127.0.0.1",
+    "user_agent": "Test Browser"
+  },
+  "pluginData": {
+    "plugin_id": "test-plugin-123",
+    "version": "1.0.0",
+    "environment": "development"
+  },
+  "portalAssets": {
+    "favicon": "/portal/favicon.ico",
+    "logo": "/portal/logo.png",
+    "theme_css": "/portal/theme.css"
+  },
+  "portal": {
+    "name": "Test Portal",
+    "theme_colors": {
+      "primary": "#FFD600",
+      "secondary": "#000596",
+      "accent": "#4CAF50"
+    },
+    "custom_settings": {
+      "allow_guest_access": true,
+      "session_timeout": 1800,
+      "max_file_size": "10MB"
+    }
+  }
+} 
