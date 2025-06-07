@@ -8,8 +8,12 @@ const shell = require("shelljs");
  * Packages Chrome extension into a distributable format
  */
 function packChromeExtension() {
-	const extensionPath = path.resolve(__dirname, "../browser-extensions/chrome");
-	const distPath = path.resolve(__dirname, "../dist/chrome");
+	const extensionPath =
+		process.env.CHROME_EXTENSION_PATH ||
+		path.resolve(__dirname, "../browser-extensions/chrome");
+	const distPath =
+		process.env.CHROME_BUILD_OUTPUT ||
+		path.resolve(__dirname, "../dist/chrome");
 
 	console.log("📦 Packaging Chrome extension...");
 

@@ -8,7 +8,10 @@ const fs = require("fs");
  * Launches Chrome with the browser extension loaded
  */
 async function launchChromeWithExtension() {
-	const extensionPath = path.resolve(__dirname, "../browser-extensions/chrome");
+	// Use environment variable if set (from CLI), otherwise use default path
+	const extensionPath =
+		process.env.CHROME_EXTENSION_PATH ||
+		path.resolve(__dirname, "../browser-extensions/chrome");
 
 	// Verify extension directory exists
 	if (!fs.existsSync(extensionPath)) {
