@@ -505,7 +505,7 @@ async function initCommand(argv) {
 			dest: "app-manifest.json",
 			desc: "app-manifest.json",
 		},
-		{ src: ".gitignore", dest: ".gitignore", desc: ".gitignore" },
+		{ src: "gitignore", dest: ".gitignore", desc: ".gitignore" },
 		{ src: "env.example", dest: ".env.example", desc: ".env.example" },
 		{
 			src: "README.md",
