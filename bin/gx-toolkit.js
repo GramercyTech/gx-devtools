@@ -1537,6 +1537,7 @@ function listDevelopmentAssets() {
 		console.log("💡 Run 'gxto assets init' to set up development assets");
 		return;
 	}
+	const finalPort = argv.port || process.env.NODE_PORT || 3000;
 
 	console.log("📁 Development Assets:");
 	console.log("");
@@ -1553,7 +1554,7 @@ function listDevelopmentAssets() {
 					const size = (stats.size / 1024).toFixed(1);
 					console.log(`   • ${file} (${size} KB)`);
 					console.log(
-						`     URL: http://localhost:3069/dev-assets/${dir}/${file}`
+						`     URL: https://localhost:${finalPort}/dev-assets/${dir}/${file}`
 					);
 				});
 				console.log("");
@@ -1564,7 +1565,7 @@ function listDevelopmentAssets() {
 	console.log("💡 Usage:");
 	console.log("   Add assets to your store:");
 	console.log(
-		'   gxpStore.updateAsset("my_image", "http://localhost:3069/dev-assets/images/my-image.jpg")'
+		`   gxpStore.updateAsset("my_image", "https://localhost:${finalPort}/dev-assets/images/my-image.jpg")`
 	);
 }
 
@@ -1586,6 +1587,7 @@ async function generatePlaceholderImage(argv) {
 
 	// Use magick command (ImageMagick 7) or convert (ImageMagick 6)
 	const magickCmd = shell.which("magick") ? "magick" : "convert";
+	const finalPort = argv.port || process.env.NODE_PORT || 3000;
 
 	const generatedAssets = [];
 
@@ -1615,7 +1617,7 @@ async function generatePlaceholderImage(argv) {
 			generatedAssets.push({
 				name: count > 1 ? `${name}_${i + 1}` : name,
 				filename,
-				url: `http://localhost:3069/dev-assets/images/${filename}`,
+				url: `https://localhost:${finalPort}/dev-assets/images/${filename}`,
 				color,
 				style: style.name,
 			});
@@ -1898,6 +1900,7 @@ async function sendSocketEvent(eventName, identifier) {
 	const paths = resolveGxPaths();
 	const eventsDir = path.join(paths.configDir, "socket-events");
 	const eventPath = path.join(eventsDir, `${eventName}.json`);
+	const socketIoPort = process.env.SOCKET_IO_PORT || 3069;
 
 	if (!fs.existsSync(eventPath)) {
 		console.error(`❌ Event file not found: ${eventName}.json`);
@@ -1920,7 +1923,7 @@ async function sendSocketEvent(eventName, identifier) {
 		}
 
 		// Send the event via HTTP to the Socket.IO server
-		const socketUrl = "http://localhost:3069";
+		const socketUrl = `http://localhost:${socketIoPort}`;
 
 		console.log(`📡 Sending socket event: ${eventData.event}`);
 		console.log(`📺 Channel: ${eventData.channel}`);
@@ -1988,7 +1991,6 @@ const argv = yargs
 			port: {
 				describe: "Development server port",
 				type: "number",
-				default: 3000,
 			},
 			"node-log-level": {
 				describe: "Node log level",
