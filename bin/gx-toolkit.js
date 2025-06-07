@@ -440,6 +440,38 @@ async function initCommand(argv) {
 		safeCopyFile(srcPath, destPath, file.desc);
 	});
 
+	// Copy extension management scripts for new projects
+	if (!hasPackageJson || argv.name) {
+		const scriptsDir = path.join(projectPath, "scripts");
+		if (!fs.existsSync(scriptsDir)) {
+			fs.mkdirSync(scriptsDir, { recursive: true });
+		}
+
+		// Copy launch-chrome.js script
+		const launchChromeSource = path.join(
+			paths.configDir,
+			"../scripts/launch-chrome.js"
+		);
+		const launchChromeDest = path.join(scriptsDir, "launch-chrome.js");
+		if (fs.existsSync(launchChromeSource)) {
+			safeCopyFile(
+				launchChromeSource,
+				launchChromeDest,
+				"Chrome launcher script"
+			);
+		}
+
+		// Copy pack-chrome.js script
+		const packChromeSource = path.join(
+			paths.configDir,
+			"../scripts/pack-chrome.js"
+		);
+		const packChromeDest = path.join(scriptsDir, "pack-chrome.js");
+		if (fs.existsSync(packChromeSource)) {
+			safeCopyFile(packChromeSource, packChromeDest, "Chrome packaging script");
+		}
+	}
+
 	// Setup SSL certificates for new projects
 	if (!hasPackageJson || argv.name) {
 		console.log("\nSetting up HTTPS development environment...");
@@ -560,6 +592,180 @@ function buildCommand(argv) {
 	shell.exec(command);
 }
 
+/**
+ * Launch Firefox with extension command
+ */
+function extensionFirefoxCommand() {
+	const projectPath = findProjectRoot();
+	let extensionPath = path.join(projectPath, "browser-extensions", "firefox");
+
+	// If local extension doesn't exist, try to use the toolkit's own extensions
+	if (!fs.existsSync(extensionPath)) {
+		const paths = resolveGxPaths();
+		const toolkitExtensionPath = path.join(
+			path.dirname(paths.configDir),
+			"browser-extensions",
+			"firefox"
+		);
+
+		if (fs.existsSync(toolkitExtensionPath)) {
+			console.log("🔍 Using GxToolkit's built-in Firefox extension");
+			extensionPath = toolkitExtensionPath;
+		} else {
+			console.error("❌ Firefox extension directory not found");
+			console.log(
+				"📁 Looking for extensions in:",
+				path.join(projectPath, "browser-extensions", "firefox")
+			);
+			console.log(
+				"💡 Run 'gxto init' to create a project with browser extensions"
+			);
+			process.exit(1);
+		}
+	} else {
+		console.log("🔍 Using project's Firefox extension");
+	}
+
+	console.log("🦊 Launching Firefox with extension...");
+	console.log("📁 Extension path:", extensionPath);
+	shell.exec(`npx web-ext run --source-dir "${extensionPath}"`);
+}
+
+/**
+ * Launch Chrome with extension command
+ */
+function extensionChromeCommand() {
+	const projectPath = findProjectRoot();
+	let extensionPath = path.join(projectPath, "browser-extensions", "chrome");
+	let scriptPath = path.join(projectPath, "scripts", "launch-chrome.js");
+
+	// Check if we have a local extension first
+	if (!fs.existsSync(extensionPath)) {
+		const paths = resolveGxPaths();
+		const toolkitExtensionPath = path.join(
+			path.dirname(paths.configDir),
+			"browser-extensions",
+			"chrome"
+		);
+
+		if (fs.existsSync(toolkitExtensionPath)) {
+			console.log("🔍 Using GxToolkit's built-in Chrome extension");
+			extensionPath = toolkitExtensionPath;
+			// Use the toolkit's script instead
+			scriptPath = path.join(
+				path.dirname(paths.configDir),
+				"scripts",
+				"launch-chrome.js"
+			);
+		} else {
+			console.error("❌ Chrome extension directory not found");
+			console.log(
+				"📁 Looking for extensions in:",
+				path.join(projectPath, "browser-extensions", "chrome")
+			);
+			console.log(
+				"💡 Run 'gxto init' to create a project with browser extensions"
+			);
+			process.exit(1);
+		}
+	} else {
+		console.log("🔍 Using project's Chrome extension");
+	}
+
+	// Verify script exists
+	if (!fs.existsSync(scriptPath)) {
+		console.error(
+			"❌ Chrome launcher script not found. Run 'gxto init' to create it."
+		);
+		process.exit(1);
+	}
+
+	console.log("🚀 Launching Chrome with extension...");
+	console.log("📁 Extension path:", extensionPath);
+
+	// Set the extension path as an environment variable for the script
+	process.env.CHROME_EXTENSION_PATH = extensionPath;
+	shell.exec(`node "${scriptPath}"`);
+}
+
+/**
+ * Build extensions command
+ */
+function extensionBuildCommand() {
+	const projectPath = findProjectRoot();
+	const paths = resolveGxPaths();
+
+	console.log("📦 Building browser extensions...");
+
+	// Build Firefox extension
+	let firefoxPath = path.join(projectPath, "browser-extensions", "firefox");
+	let useProjectExtensions = true;
+
+	if (!fs.existsSync(firefoxPath)) {
+		// Try toolkit's extensions
+		const toolkitFirefoxPath = path.join(
+			path.dirname(paths.configDir),
+			"browser-extensions",
+			"firefox"
+		);
+		if (fs.existsSync(toolkitFirefoxPath)) {
+			firefoxPath = toolkitFirefoxPath;
+			useProjectExtensions = false;
+			console.log("🔍 Using GxToolkit's built-in Firefox extension");
+		}
+	}
+
+	if (fs.existsSync(firefoxPath)) {
+		console.log("🦊 Building Firefox extension...");
+		const outputDir = useProjectExtensions
+			? "dist/firefox"
+			: path.join(projectPath, "dist/firefox");
+		shell.exec(
+			`npx web-ext build --source-dir "${firefoxPath}" --artifacts-dir "${outputDir}"`
+		);
+	} else {
+		console.log("⚠️ No Firefox extension found to build");
+	}
+
+	// Build Chrome extension
+	let chromeScriptPath = path.join(projectPath, "scripts", "pack-chrome.js");
+	let chromeExtensionPath = path.join(
+		projectPath,
+		"browser-extensions",
+		"chrome"
+	);
+
+	if (!fs.existsSync(chromeScriptPath) || !fs.existsSync(chromeExtensionPath)) {
+		// Try toolkit's scripts and extensions
+		const toolkitScriptPath = path.join(
+			path.dirname(paths.configDir),
+			"scripts",
+			"pack-chrome.js"
+		);
+		const toolkitChromePath = path.join(
+			path.dirname(paths.configDir),
+			"browser-extensions",
+			"chrome"
+		);
+
+		if (fs.existsSync(toolkitScriptPath) && fs.existsSync(toolkitChromePath)) {
+			chromeScriptPath = toolkitScriptPath;
+			chromeExtensionPath = toolkitChromePath;
+			console.log("🔍 Using GxToolkit's built-in Chrome extension");
+		}
+	}
+
+	if (fs.existsSync(chromeScriptPath)) {
+		console.log("🚀 Building Chrome extension...");
+		// Set environment variable for the script to know where the extension is
+		process.env.CHROME_EXTENSION_PATH = chromeExtensionPath;
+		process.env.CHROME_BUILD_OUTPUT = path.join(projectPath, "dist/chrome");
+		shell.exec(`node "${chromeScriptPath}"`);
+	} else {
+		console.log("⚠️ No Chrome extension found to build");
+	}
+}
+
 // Load global configuration
 const globalConfig = loadGlobalConfig();
 
@@ -627,6 +833,24 @@ const argv = yargs
 			},
 		},
 		buildCommand
+	)
+	.command(
+		"ext:firefox",
+		"Launch Firefox with browser extension",
+		{},
+		extensionFirefoxCommand
+	)
+	.command(
+		"ext:chrome",
+		"Launch Chrome with browser extension",
+		{},
+		extensionChromeCommand
+	)
+	.command(
+		"ext:build",
+		"Build browser extensions for distribution",
+		{},
+		extensionBuildCommand
 	)
 	.demandCommand(1, "Please provide a valid command")
 	.help("h")

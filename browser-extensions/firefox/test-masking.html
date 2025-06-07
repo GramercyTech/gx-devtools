@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test URL Masking vs Redirection</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; }
+        .mode-section { margin: 20px 0; padding: 20px; border: 2px solid #ddd; border-radius: 8px; }
+        .redirect-mode { border-color: #dc3545; background: #fff5f5; }
+        .masking-mode { border-color: #28a745; background: #f8fff8; }
+        .test-buttons { margin: 15px 0; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .redirect-btn { background: #dc3545; color: white; border: none; border-radius: 4px; }
+        .masking-btn { background: #28a745; color: white; border: none; border-radius: 4px; }
+        .results { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .code { background: #e9ecef; padding: 8px; font-family: monospace; margin: 8px 0; }
+    </style>
+</head>
+<body>
+    <h1>URL Masking vs Redirection Test</h1>
+    
+    <div class="mode-section redirect-mode">
+        <h2>🔴 Redirect Mode (Traditional)</h2>
+        <p><strong>How it works:</strong> Browser URL bar changes to show the new destination</p>
+        <div class="code">
+            Original URL: https://api.example.com/data<br>
+            Browser shows: https://api.alternative.com/data
+        </div>
+        <p><strong>Use case:</strong> When you want users to see they're being redirected</p>
+        
+        <div class="test-buttons">
+            <button class="redirect-btn" onclick="testRedirect()">Test Redirect Mode</button>
+        </div>
+        <div id="redirectResults" class="results"></div>
+    </div>
+
+    <div class="mode-section masking-mode">
+        <h2>🟢 Masking Mode (Transparent Proxy)</h2>
+        <p><strong>How it works:</strong> Browser URL bar shows original URL, but request goes to proxy server</p>
+        <div class="code">
+            Original URL: https://api.example.com/data<br>
+            Browser shows: https://api.example.com/data<br>
+            Actual request goes to: https://api.alternative.com/data<br>
+            Headers include: X-Proxy-Original-Host: api.example.com
+        </div>
+        <p><strong>Use case:</strong> Transparent proxying without changing visible URLs</p>
+        
+        <div class="test-buttons">
+            <button class="masking-btn" onclick="testMasking()">Test Masking Mode</button>
+        </div>
+        <div id="maskingResults" class="results"></div>
+    </div>
+
+    <div class="mode-section">
+        <h2>📋 Setup Instructions</h2>
+        <ol>
+            <li><strong>For Redirect Mode:</strong>
+                <ul>
+                    <li>Add rule: Pattern <code>httpbin\.org</code> → Redirect <code>postman-echo.com</code></li>
+                    <li>Leave "Mask URL" checkbox unchecked</li>
+                    <li>Leave "URL Masking Mode" unchecked</li>
+                </ul>
+            </li>
+            <li><strong>For Masking Mode:</strong>
+                <ul>
+                    <li>Add rule: Pattern <code>httpbin\.org</code> → Redirect <code>postman-echo.com</code></li>
+                    <li>Check "Mask URL" checkbox for the rule, OR</li>
+                    <li>Check "URL Masking Mode" for global masking</li>
+                </ul>
+            </li>
+        </ol>
+        
+        <h3>🔧 Server Requirements for Masking</h3>
+        <p>Your proxy server needs to:</p>
+        <ul>
+            <li>Accept the original Host header</li>
+            <li>Read <code>X-Proxy-Original-Host</code> and <code>X-Proxy-Original-URL</code> headers</li>
+            <li>Route requests based on these headers</li>
+            <li>Return appropriate CORS headers if needed</li>
+        </ul>
+    </div>
+
+    <script>
+        function log(elementId, message) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            element.innerHTML += `<div>${timestamp}: ${message}</div>`;
+        }
+
+        async function testRedirect() {
+            const results = document.getElementById('redirectResults');
+            results.innerHTML = '';
+            
+            log('redirectResults', '🧪 Testing redirect mode...');
+            log('redirectResults', '📝 Make sure extension is in REDIRECT mode (Mask URL unchecked)');
+            
+            try {
+                const response = await fetch('https://httpbin.org/get?test=redirect');
+                const data = await response.json();
+                log('redirectResults', `✅ Request successful to: ${data.url}`);
+                log('redirectResults', `📍 Check browser URL bar - should show redirected domain`);
+            } catch (error) {
+                log('redirectResults', `❌ Request failed: ${error.message}`);
+            }
+        }
+
+        async function testMasking() {
+            const results = document.getElementById('maskingResults');
+            results.innerHTML = '';
+            
+            log('maskingResults', '🧪 Testing masking mode...');
+            log('maskingResults', '📝 Make sure extension is in MASKING mode (Mask URL checked)');
+            
+            try {
+                const response = await fetch('https://httpbin.org/get?test=masking');
+                const data = await response.json();
+                log('maskingResults', `✅ Request successful`);
+                log('maskingResults', `📍 Check browser URL bar - should show original domain`);
+                log('maskingResults', `🔍 Check Network tab for actual destination`);
+                
+                // Check if proxy headers were included
+                if (data.headers && data.headers['X-Proxy-Original-Host']) {
+                    log('maskingResults', `✅ Proxy headers detected: ${data.headers['X-Proxy-Original-Host']}`);
+                } else {
+                    log('maskingResults', `⚠️ No proxy headers detected - check masking configuration`);
+                }
+            } catch (error) {
+                log('maskingResults', `❌ Request failed: ${error.message}`);
+                log('maskingResults', `💡 This might be expected if proxy server doesn't support masking`);
+            }
+        }
+
+        // Auto-check extension status
+        window.addEventListener('load', async function() {
+            try {
+                if (typeof browser !== 'undefined') {
+                    const state = await browser.runtime.sendMessage({ action: 'getState' });
+                    console.log('Extension state:', state);
+                } else {
+                    console.log('Extension not detected');
+                }
+            } catch (error) {
+                console.log('Extension communication failed:', error);
+            }
+        });
+    </script>
+</body>
+</html> 
