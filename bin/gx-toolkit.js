@@ -650,7 +650,23 @@ async function initCommand(argv) {
 			}
 		);
 	}
-
+	filesToCopy.push(
+		{
+			src: "socket-events/AiSessionMessageCreated.json",
+			dest: "src/socket-events/AiSessionMessageCreated.json",
+			desc: "Socket event: AiSessionMessageCreated",
+		},
+		{
+			src: "socket-events/SocialStreamPostCreated.json",
+			dest: "src/socket-events/SocialStreamPostCreated.json",
+			desc: "Socket event: SocialStreamPostCreated",
+		},
+		{
+			src: "socket-events/SocialStreamPostVariantCompleted.json",
+			dest: "src/socket-events/SocialStreamPostVariantCompleted.json",
+			desc: "Socket event: SocialStreamPostVariantCompleted",
+		}
+	);
 	filesToCopy.forEach((file) => {
 		const srcPath = path.join(paths.configDir, file.src);
 		const destPath = path.join(projectPath, file.dest);
