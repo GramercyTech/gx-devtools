@@ -8,8 +8,8 @@
     "type": "completion",
     "metadata": {
       "processing_time": 2.3,
-      "input_image": "http://localhost:3069/dev-assets/images/product-placeholder.jpg",
-      "output_image": "http://localhost:3069/dev-assets/images/background-placeholder.jpg",
+      "input_image": "/dev-assets/images/product-placeholder.jpg",
+      "output_image": "/dev-assets/images/background-placeholder.jpg",
       "confidence": 0.95
     },
     "created_at": "2024-01-15T10:30:00Z",

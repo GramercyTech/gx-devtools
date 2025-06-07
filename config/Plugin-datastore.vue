@@ -404,7 +404,9 @@ function listAllAssets() {
 
 function updateLogo() {
   // Example of updating a specific asset
-  const newLogoUrl = 'http://localhost:3069/dev-assets/images/logo-placeholder.png';
+  const appPort = window.location.port || 3000;
+  const appProtocol = window.location.protocol || 'http';
+  const newLogoUrl = `${appProtocol}://localhost:${appPort}/dev-assets/images/logo-placeholder.png`;
   gxpStore.updateAsset('main_logo', newLogoUrl);
   console.log('Updated logo asset');
   listAllAssets();

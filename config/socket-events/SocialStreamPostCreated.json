@@ -8,12 +8,12 @@
     "author": {
       "id": 456,
       "name": "John Doe",
-      "avatar": "http://localhost:3069/dev-assets/images/avatar-placeholder.png"
+      "avatar": "/dev-assets/images/avatar-placeholder.png"
     },
     "media": {
       "type": "image",
-      "url": "http://localhost:3069/dev-assets/images/product-placeholder.jpg",
-      "thumbnail": "http://localhost:3069/dev-assets/images/thumbnail-placeholder.jpg"
+      "url": "/dev-assets/images/product-placeholder.jpg",
+      "thumbnail": "/dev-assets/images/thumbnail-placeholder.jpg"
     },
     "hashtags": ["#event", "#photography", "#memories"],
     "likes_count": 0,

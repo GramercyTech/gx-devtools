@@ -97,7 +97,7 @@ import {
 
 // Use the same protocol as the current page for Socket.IO connection
 const socketProtocol = window.location.protocol === 'https:' ? 'https' : 'http';
-const socket = io(`${socketProtocol}://localhost:3069`);
+const socket = io(`${socketProtocol}://localhost:${process.env.SOCKET_IO_PORT || 3069}`);
 
 // Composables
 const { errorMessages, addError, clearErrors } = useErrors();

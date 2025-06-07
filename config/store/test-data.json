@@ -38,13 +38,13 @@
     "retry_button": "Try Again"
   },
   "assetList": {
-    "main_logo": "http://localhost:3069/dev-assets/images/logo-placeholder.png",
-    "background_image": "http://localhost:3069/dev-assets/images/background-placeholder.jpg",
-    "product_image": "http://localhost:3069/dev-assets/images/product-placeholder.jpg",
-    "avatar_placeholder": "http://localhost:3069/dev-assets/images/avatar-placeholder.png",
-    "icon_placeholder": "http://localhost:3069/dev-assets/images/icon-placeholder.png",
-    "thumbnail": "http://localhost:3069/dev-assets/images/thumbnail-placeholder.jpg",
-    "banner_image": "http://localhost:3069/dev-assets/images/banner-placeholder.jpg"
+    "main_logo": "/dev-assets/images/logo-placeholder.png",
+    "background_image": "/dev-assets/images/background-placeholder.jpg",
+    "product_image": "/dev-assets/images/product-placeholder.jpg",
+    "avatar_placeholder": "/dev-assets/images/avatar-placeholder.png",
+    "icon_placeholder": "/dev-assets/images/icon-placeholder.png",
+    "thumbnail": "/dev-assets/images/thumbnail-placeholder.jpg",
+    "banner_image": "/dev-assets/images/banner-placeholder.jpg"
   },
   "dependencyList": [
     {

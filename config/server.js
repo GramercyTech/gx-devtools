@@ -130,8 +130,12 @@ app.get("/health", (req, res) => {
 	});
 });
 
-server.listen(3069, () => {
-	console.log(`🔗 Socket.IO server running on ${protocol} at port 3069`);
+let socketIoPort = process.env.SOCKET_IO_PORT || 3069;
+
+server.listen(socketIoPort, () => {
+	console.log(
+		`🔗 Socket.IO server running on ${protocol} at port ${socketIoPort}`
+	);
 	if (protocol === "HTTPS") {
 		console.log("🔒 Using SSL certificates for secure WebSocket connections");
 	}

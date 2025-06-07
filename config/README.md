@@ -235,15 +235,15 @@ dev-assets/
 ### Using Assets in Your Store
 ```javascript
 // Add assets to your GxP store (if using datastore)
-gxpStore.updateAsset("main_logo", "http://localhost:3069/dev-assets/images/logo-placeholder.png");
+gxpStore.updateAsset("main_logo", "/dev-assets/images/logo-placeholder.png");
 
 // Access in components
 const logoUrl = gxpStore.getAsset("main_logo");
 
 // Or use directly in templates
 const assetList = {
-    "main_logo": "http://localhost:3069/dev-assets/images/logo-placeholder.png",
-    "background_image": "http://localhost:3069/dev-assets/images/background-placeholder.jpg"
+    "main_logo": "/dev-assets/images/logo-placeholder.png",
+    "background_image": "/dev-assets/images/background-placeholder.jpg"
 };
 ```
 
