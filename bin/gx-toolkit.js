@@ -875,15 +875,16 @@ function devCommand(argv) {
 		// Use concurrently to run both servers
 		const viteCommand = [
 			...envVars,
-			`vite dev --config "${paths.viteConfigPath}"`,
+			`npx vite dev --config "${paths.viteConfigPath}"`,
 		].join(" && ");
 
-		command = `concurrently --names "VITE,SOCKET" --prefix-colors "cyan,green" "${viteCommand}" "nodemon server.js"`;
+		command = `npx concurrently --names "VITE,SOCKET" --prefix-colors "cyan,green" "${viteCommand}" "npx nodemon server.js"`;
 	} else {
 		// Just run Vite dev server
-		command = [...envVars, `vite dev --config "${paths.viteConfigPath}"`].join(
-			" && "
-		);
+		command = [
+			...envVars,
+			`npx vite dev --config "${paths.viteConfigPath}"`,
+		].join(" && ");
 	}
 
 	shell.exec(command);
@@ -913,7 +914,7 @@ function buildCommand(argv) {
 
 	const command = [
 		...envVars,
-		`vite build --config "${paths.viteConfigPath}"`,
+		`npx vite build --config "${paths.viteConfigPath}"`,
 	].join(" && ");
 
 	shell.exec(command);
