@@ -242,6 +242,7 @@
 </style>
 <script setup>
 import { ref } from 'vue';
+import "@gramercytech/gx-componentkit/style.css";
 import {
 	GxThemeWrapper,
 	GxCountdown,

@@ -43,7 +43,7 @@ const REQUIRED_DEPENDENCIES = {
 	"socket.io": "^4.8.0",
 	"socket.io-client": "^4.8.0",
 	dotenv: "^16.4.5",
-	"@gramercytech/gx-componentkit": getGxUikitDependency(),
+	"@gramercytech/gx-componentkit": "^1.0.0",
 };
 
 // Dependencies for GxP projects with datastore
