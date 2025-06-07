@@ -19,6 +19,24 @@
           alt="Main Logo" 
           class="logo"
         />
+        <div class="asset-controls">
+          <button @click="addDevAssets" class="action-btn secondary small">
+            Add Dev Assets
+          </button>
+          <button @click="listAllAssets" class="action-btn secondary small">
+            List Assets
+          </button>
+          <button @click="updateLogo" class="action-btn secondary small">
+            Update Logo
+          </button>
+        </div>
+        <div v-if="currentAssets" class="asset-preview">
+          <h3>Current Assets:</h3>
+          <div v-for="(url, key) in currentAssets" :key="key" class="asset-item">
+            <strong>{{ key }}:</strong> 
+            <a :href="url" target="_blank" class="asset-link">{{ url }}</a>
+          </div>
+        </div>
       </div>
 
       <div class="actions-section">
@@ -59,11 +77,33 @@
 
       <div class="dependencies-section">
         <h2>Available Dependencies</h2>
-        <ul>
-          <li v-for="(id, key) in gxpStore.dependencyList" :key="key">
-            {{ key }}: {{ id }}
-          </li>
-        </ul>
+        <div v-if="Array.isArray(gxpStore.dependencyList)">
+          <div v-for="dependency in gxpStore.dependencyList" :key="dependency.identifier" class="dependency-item">
+            <h3>{{ dependency.identifier }}</h3>
+            <p><strong>Model:</strong> {{ dependency.model }}</p>
+            <p><strong>Events:</strong> {{ Object.keys(dependency.events || {}).join(', ') || 'None' }}</p>
+            <button 
+              @click="testDependencyAPI(dependency.identifier)" 
+              class="action-btn secondary small"
+            >
+              Test API
+            </button>
+            <button 
+              v-if="dependency.events && Object.keys(dependency.events).length > 0"
+              @click="setupDependencyListeners(dependency)" 
+              class="action-btn secondary small"
+            >
+              Listen for Events
+            </button>
+          </div>
+        </div>
+        <div v-else>
+          <ul>
+            <li v-for="(id, key) in gxpStore.dependencyList" :key="key">
+              {{ key }}: {{ id }}
+            </li>
+          </ul>
+        </div>
       </div>
 
       <!-- Example of how to use socket listeners -->
@@ -186,6 +226,25 @@ h2 {
   margin-top: 10px;
 }
 
+.dependency-item {
+  background: #f8f9fa;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 4px;
+  border-left: 4px solid #007bff;
+}
+
+.dependency-item h3 {
+  margin: 0 0 10px 0;
+  color: #007bff;
+}
+
+.action-btn.small {
+  padding: 8px 16px;
+  font-size: 14px;
+  margin: 2px;
+}
+
 ul {
   list-style-type: none;
   padding: 0;
@@ -198,6 +257,40 @@ li {
 
 li:last-child {
   border-bottom: none;
+}
+
+.asset-controls {
+  margin: 15px 0;
+}
+
+.asset-preview {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 4px;
+  margin-top: 15px;
+}
+
+.asset-preview h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.asset-item {
+  margin: 8px 0;
+  padding: 8px;
+  background: white;
+  border-radius: 4px;
+  border-left: 3px solid #007bff;
+}
+
+.asset-link {
+  color: #007bff;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.asset-link:hover {
+  text-decoration: underline;
 }
 </style>
 
@@ -214,6 +307,7 @@ const gxpStore = useGxpStore();
 // Local state
 const socketMessages = ref([]);
 const socketUnsubscribers = ref([]);
+const currentAssets = ref(null);
 
 // Example API call using the store
 async function handleApiCall() {
@@ -233,15 +327,45 @@ async function handleApiCall() {
   }
 }
 
-// Example dependency API call
-async function handleDependencyCall() {
+// Example dependency API call using new methods
+async function testDependencyAPI(identifier) {
   try {
-    // Example of calling a dependency API
-    // const result = await gxpStore.getDependencyData('project_location', 'locations');
-    console.log('Dependency API call would be made here');
+    console.log(`Testing API for dependency: ${identifier}`);
+    
+    // Example of the new getList method
+    // const result = await gxpStore.getList(identifier, { page: 1, limit: 10 });
+    // console.log(`API Result for ${identifier}:`, result);
+    
+    // For demo purposes, simulate API call
+    socketMessages.value.unshift(`API call simulated for ${identifier}`);
+    
   } catch (error) {
-    console.error('Dependency API call failed:', error);
+    console.error(`API call failed for ${identifier}:`, error);
+    socketMessages.value.unshift(`API call failed for ${identifier}: ${error.message}`);
   }
+}
+
+// Set up socket listeners for a specific dependency
+function setupDependencyListeners(dependency) {
+  console.log(`Setting up listeners for ${dependency.identifier}`);
+  
+  // Set up listeners for each event type
+  Object.keys(dependency.events || {}).forEach(eventType => {
+    const eventName = dependency.events[eventType];
+    
+    if (gxpStore.sockets[dependency.identifier] && gxpStore.sockets[dependency.identifier][eventType]) {
+      const unsubscribe = gxpStore.sockets[dependency.identifier][eventType].listen((data) => {
+        console.log(`Received ${eventType} event for ${dependency.identifier}:`, data);
+        socketMessages.value.unshift(
+          `${dependency.identifier}.${eventType}: ${data.message || JSON.stringify(data).substring(0, 50)}...`
+        );
+      });
+      
+      socketUnsubscribers.value.push(unsubscribe);
+    }
+  });
+  
+  socketMessages.value.unshift(`Listening for events on ${dependency.identifier}`);
 }
 
 // Example socket functionality
@@ -259,6 +383,31 @@ function emitTestEvent() {
   });
   
   socketMessages.value.unshift(`Sent: Test message at ${timestamp}`);
+}
+
+// Asset management methods
+function addDevAssets() {
+  // Add some development assets using the convenience method
+  gxpStore.addDevAsset('main_logo', 'logo-placeholder.png');
+  gxpStore.addDevAsset('background_image', 'background-placeholder.jpg');
+  gxpStore.addDevAsset('product_image', 'product-placeholder.jpg');
+  gxpStore.addDevAsset('avatar_placeholder', 'avatar-placeholder.png');
+  
+  console.log('Added development assets');
+  listAllAssets();
+}
+
+function listAllAssets() {
+  currentAssets.value = gxpStore.listAssets();
+  console.log('Listed all assets');
+}
+
+function updateLogo() {
+  // Example of updating a specific asset
+  const newLogoUrl = 'http://localhost:3069/dev-assets/images/logo-placeholder.png';
+  gxpStore.updateAsset('main_logo', newLogoUrl);
+  console.log('Updated logo asset');
+  listAllAssets();
 }
 
 // Set up socket listeners when component mounts

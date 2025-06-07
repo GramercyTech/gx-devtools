@@ -95,7 +95,9 @@ import {
     useErrors
 } from "@gramercytech/gx-componentkit";
 
-const socket = io("http://localhost:3069");
+// Use the same protocol as the current page for Socket.IO connection
+const socketProtocol = window.location.protocol === 'https:' ? 'https' : 'http';
+const socket = io(`${socketProtocol}://localhost:3069`);
 
 // Composables
 const { errorMessages, addError, clearErrors } = useErrors();

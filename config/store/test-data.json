@@ -32,17 +32,99 @@
     "retry_button": "Try Again"
   },
   "assetList": {
-    "main_logo": "https://dashboard.eventfinity.test/storage/assets/69/2HyPwh1692319982.png",
-    "background_image": "https://dashboard.eventfinity.test/storage/assets/69/2HyPwh1692319982.png",
-    "icon_success": "/images/success-icon.svg",
-    "icon_error": "/images/error-icon.svg",
-    "loading_animation": "/images/loading.gif"
+    "main_logo": "http://localhost:3069/dev-assets/images/logo-placeholder.png",
+    "background_image": "http://localhost:3069/dev-assets/images/background-placeholder.jpg",
+    "product_image": "http://localhost:3069/dev-assets/images/product-placeholder.jpg",
+    "avatar_placeholder": "http://localhost:3069/dev-assets/images/avatar-placeholder.png",
+    "icon_placeholder": "http://localhost:3069/dev-assets/images/icon-placeholder.png",
+    "thumbnail": "http://localhost:3069/dev-assets/images/thumbnail-placeholder.jpg",
+    "banner_image": "http://localhost:3069/dev-assets/images/banner-placeholder.jpg"
   },
-  "dependencyList": {
-    "project_location": 4,
-    "user_management": 12,
-    "analytics": 8
-  },
+  "dependencyList": [
+    {
+      "model": "AiInterface",
+      "events": {
+        "created": "AiSessionMessageCreated",
+        "updated": "AiSessionMessageUpdated"
+      },
+      "identifier": "ai_interface_background_remover",
+      "permissions": [
+        "manage_ai_interfaces",
+        "view_ai_interfaces",
+        "view_ai_sessions",
+        "view_ai_session_messages"
+      ]
+    },
+    {
+      "model": "AiInterface",
+      "events": {
+        "created": "AiSessionMessageCreated",
+        "updated": "AiSessionMessageUpdated"
+      },
+      "identifier": "ai_interface_background_generator",
+      "permissions": [
+        "manage_ai_interfaces",
+        "view_ai_interfaces",
+        "view_ai_sessions",
+        "view_ai_session_messages"
+      ]
+    },
+    {
+      "model": "AiInterface",
+      "events": {
+        "created": "AiSessionMessageCreated",
+        "updated": "AiSessionMessageUpdated"
+      },
+      "identifier": "ai_interface",
+      "permissions": [
+        "manage_ai_interfaces",
+        "view_ai_interfaces",
+        "view_ai_sessions",
+        "view_ai_session_messages"
+      ]
+    },
+    {
+      "model": "SocialStream",
+      "events": {
+        "created": "SocialStreamPostCreated",
+        "deleted": "SocialStreamPostDeleted",
+        "updated": "SocialStreamPostUpdated",
+        "variantCompleted": "SocialStreamPostVariantCompleted"
+      },
+      "identifier": "social_stream",
+      "permissions": [
+        "view_social_streams",
+        "view_social_stream_posts",
+        "create_social_stream_posts",
+        "manage_social_stream_posts"
+      ]
+    },
+    {
+      "model": "SocialStreamPost",
+      "identifier": "social_stream_posts",
+      "permissions": [
+        "view_social_stream_posts:viewAny"
+      ]
+    },
+    {
+      "key": "slug",
+      "model": "Group",
+      "events": [],
+      "identifier": "groups",
+      "permissions": [
+        "view_groups",
+        "view_attendees"
+      ]
+    },
+    {
+      "model": "Attendee",
+      "identifier": "attendees",
+      "permissions": [
+        "create_attendees:viewAny",
+        "view_attendees:viewAny"
+      ]
+    }
+  ],
   "permissionFlags": [
     "can_access_camera",
     "can_save_data",

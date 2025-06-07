@@ -120,12 +120,15 @@ GxToolkit automatically sets up HTTPS using [mkcert](https://github.com/FiloSott
 - Modern web API compatibility (Camera, Geolocation, etc.)
 - Production-like environment
 - Secure context testing
+- Secure WebSocket connections (Socket.IO)
 
 **Interactive Setup**: You'll be prompted to set up SSL certificates when creating new projects.
 
 **Manual Setup**: Run `npm run setup-ssl` to regenerate certificates.
 
 **HTTP Fallback**: Use `npm run dev-http` if HTTPS issues occur.
+
+**Socket.IO SSL**: When SSL certificates are present, both the main server and Socket.IO server automatically use HTTPS for secure connections.
 
 ## Environment Configuration
 

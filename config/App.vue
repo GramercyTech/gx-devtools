@@ -17,7 +17,7 @@
             :plugin-vars="pluginVars"
             :dependency-list="dependencyList"
             :asset-urls="assetList"
-            :sockets="sockets"
+
             :strings-list="stringsList"
             :permission-flags="permissionFlags"
             :theme="theme"
@@ -53,15 +53,12 @@
 
 <script setup>
 import { ref } from "vue";
-import { io } from "socket.io-client";
 import Plugin from "/src/Plugin.vue";
 import {
     GxPageStart,
     GxPageFinal,
     GxPageLoading
 } from "@gramercytech/gx-componentkit";
-
-const socket = io("http://localhost:3069");
 
 // App state management
 const currentPage = ref('start');
@@ -131,34 +128,8 @@ const dependencyList = {
 //Update permissionFlags with all the permissions that will be set through the custom admin panel in dashboard, GxP will generate this array of flags based on settings set in the dashboard
 const permissionFlags = [];
 
-//Do Not Edit Below
-const sockets = {};
-sockets['primary'] = {
-    broadcast: function (event, data) {
-        socket.emit(event, data);
-    },
-    listen: function (event, callback) {
-        return socket.on(event, callback);
-    },
-};
-//add additional sockets here
-sockets['project_location'] = {
-    created: {
-        listen: function (event, data) {
-            return {};
-        },
-    },
-    updated: {
-        listen: function (event, callback) {
-            return {};
-        },
-    },
-    deleted: {
-        listen: function (event, callback) {
-            return {};
-        },
-    },
-};
+// Socket handling is now managed by the GxP datastore
+// Access sockets via: const gxpStore = useGxpStore(); gxpStore.sockets
 
 // Expose functions for use in Plugin component
 defineExpose({

@@ -151,6 +151,37 @@ function isMkcertInstalled() {
 }
 
 /**
+ * Checks if ImageMagick is available globally
+ */
+function isImageMagickInstalled() {
+	return shell.which("magick") !== null || shell.which("convert") !== null;
+}
+
+/**
+ * Ensures ImageMagick is available for placeholder generation
+ */
+function ensureImageMagickInstalled() {
+	if (isImageMagickInstalled()) {
+		console.log("✓ ImageMagick is available");
+		return true;
+	}
+
+	console.log("⚠️  ImageMagick not found");
+	console.log("📦 ImageMagick is required for generating placeholder images");
+	console.log("");
+	console.log("🍎 macOS: brew install imagemagick");
+	console.log("🐧 Ubuntu/Debian: sudo apt-get install imagemagick");
+	console.log(
+		"🟦 Windows: Download from https://imagemagick.org/script/download.php#windows"
+	);
+	console.log("");
+	console.log("💡 After installation, you can generate placeholders with:");
+	console.log("   gxto assets generate --size 400x300 --name my-placeholder");
+	console.log("   gxto assets generate --name icons --count 3 --size 64x64");
+	return false;
+}
+
+/**
  * Installs mkcert globally if not already installed
  */
 function ensureMkcertInstalled() {
@@ -351,6 +382,15 @@ function updateExistingProject(projectPath) {
 				build: "gxto build",
 				"dev-socket": "concurrently 'gxto dev' 'nodemon server.js'",
 				"setup-ssl": "gxto setup-ssl",
+				"socket:list": "gxto socket list",
+				"socket:send": "gxto socket send",
+				"assets:list": "gxto assets list",
+				"assets:init": "gxto assets init",
+				"assets:generate": "gxto assets generate",
+				placeholder:
+					"gxto assets generate --size 400x300 --name custom-placeholder",
+				"multiple-assets":
+					"gxto assets generate --name buttons --count 4 --size 120x40",
 			};
 
 			Object.entries(requiredScripts).forEach(([script, command]) => {
@@ -573,6 +613,24 @@ async function initCommand(argv) {
 		if (fs.existsSync(packChromeSource)) {
 			safeCopyFile(packChromeSource, packChromeDest, "Chrome packaging script");
 		}
+
+		// Copy socket events directory for simulation
+		const socketEventsSource = path.join(paths.configDir, "socket-events");
+		const socketEventsDest = path.join(projectPath, "socket-events");
+		if (fs.existsSync(socketEventsSource)) {
+			if (!fs.existsSync(socketEventsDest)) {
+				fs.mkdirSync(socketEventsDest, { recursive: true });
+			}
+
+			const eventFiles = fs
+				.readdirSync(socketEventsSource)
+				.filter((file) => file.endsWith(".json"));
+			eventFiles.forEach((file) => {
+				const srcPath = path.join(socketEventsSource, file);
+				const destPath = path.join(socketEventsDest, file);
+				safeCopyFile(srcPath, destPath, `Socket event: ${file}`);
+			});
+		}
 	}
 
 	// Setup SSL certificates for new projects
@@ -604,6 +662,8 @@ async function initCommand(argv) {
 		console.log("📊 Manage test data with: npm run datastore:add");
 		console.log("🔍 Scan components for strings: npm run datastore:scan");
 		console.log("📋 List all store variables: npm run datastore:list");
+		console.log("📡 Socket simulation available with: npm run socket:list");
+		console.log("🎨 Asset management: npm run assets:list");
 	}
 	if (!hasPackageJson) {
 		console.log(`📁 Navigate to your project: cd ${projectName}`);
@@ -1325,6 +1385,455 @@ async function initDatastoreInExistingProject() {
 	}
 }
 
+/**
+ * Assets management command - manages development assets and placeholder generation
+ */
+async function assetsCommand(argv) {
+	const action = argv.action;
+
+	if (action === "list") {
+		listDevelopmentAssets();
+	} else if (action === "generate") {
+		await generatePlaceholderImage(argv);
+	} else if (action === "init") {
+		await initDevelopmentAssets();
+	} else {
+		console.error(
+			"❌ Invalid assets action. Use 'list', 'generate', or 'init'"
+		);
+		process.exit(1);
+	}
+}
+
+function listDevelopmentAssets() {
+	const projectPath = findProjectRoot();
+	const devAssetsDir = path.join(projectPath, "dev-assets");
+
+	if (!fs.existsSync(devAssetsDir)) {
+		console.log("❌ No dev-assets directory found");
+		console.log("💡 Run 'gxto assets init' to set up development assets");
+		return;
+	}
+
+	console.log("📁 Development Assets:");
+	console.log("");
+
+	const dirs = ["images", "videos"];
+	dirs.forEach((dir) => {
+		const dirPath = path.join(devAssetsDir, dir);
+		if (fs.existsSync(dirPath)) {
+			const files = fs.readdirSync(dirPath);
+			if (files.length > 0) {
+				console.log(`📸 ${dir}/`);
+				files.forEach((file) => {
+					const stats = fs.statSync(path.join(dirPath, file));
+					const size = (stats.size / 1024).toFixed(1);
+					console.log(`   • ${file} (${size} KB)`);
+					console.log(
+						`     URL: http://localhost:3069/dev-assets/${dir}/${file}`
+					);
+				});
+				console.log("");
+			}
+		}
+	});
+
+	console.log("💡 Usage:");
+	console.log("   Add assets to your store:");
+	console.log(
+		'   gxpStore.updateAsset("my_image", "http://localhost:3069/dev-assets/images/my-image.jpg")'
+	);
+}
+
+async function generatePlaceholderImage(argv) {
+	if (!ensureImageMagickInstalled()) {
+		process.exit(1);
+	}
+
+	const projectPath = findProjectRoot();
+	const size = argv.size || "400x300";
+	const name = argv.name || "placeholder";
+	const format = argv.format || "png";
+	const count = Math.max(1, argv.count || 1);
+
+	const devAssetsDir = path.join(projectPath, "dev-assets", "images");
+	if (!fs.existsSync(devAssetsDir)) {
+		fs.mkdirSync(devAssetsDir, { recursive: true });
+	}
+
+	// Use magick command (ImageMagick 7) or convert (ImageMagick 6)
+	const magickCmd = shell.which("magick") ? "magick" : "convert";
+
+	const generatedAssets = [];
+
+	console.log(`🎨 Generating ${count} placeholder${count > 1 ? "s" : ""}...`);
+	console.log(`📐 Size: ${size}`);
+
+	for (let i = 0; i < count; i++) {
+		const color = argv.color || getRandomColor();
+		const style = getRandomStyle();
+		const suffix = count > 1 ? `-${i + 1}` : "";
+		const filename = `${name}${suffix}.${format}`;
+		const text =
+			argv.text ||
+			(count > 1 ? `${name} ${i + 1}\n${size}` : `${name}\n${size}`);
+		const outputPath = path.join(devAssetsDir, filename);
+
+		// Create command with style variations
+		const styleOptions = getStyleOptions(style, color);
+		const command = `${magickCmd} -size ${size} ${styleOptions.background} -gravity center ${styleOptions.text} -annotate +0+0 "${text}" "${outputPath}"`;
+
+		console.log(`🎨 Generating: ${filename} (${color}, ${style.name})`);
+
+		const result = shell.exec(command, { silent: true });
+
+		if (result.code === 0) {
+			console.log(`✅ Generated: ${filename}`);
+			generatedAssets.push({
+				name: count > 1 ? `${name}_${i + 1}` : name,
+				filename,
+				url: `http://localhost:3069/dev-assets/images/${filename}`,
+				color,
+				style: style.name,
+			});
+		} else {
+			console.error(`❌ Failed to generate ${filename}: ${result.stderr}`);
+			process.exit(1);
+		}
+	}
+
+	console.log("");
+	console.log("📁 Generated assets:");
+	generatedAssets.forEach((asset) => {
+		console.log(`   • ${asset.filename} (${asset.color}, ${asset.style})`);
+		console.log(`     URL: ${asset.url}`);
+	});
+
+	console.log("");
+	console.log("💡 Add to your store:");
+	generatedAssets.forEach((asset) => {
+		console.log(`   gxpStore.updateAsset("${asset.name}", "${asset.url}")`);
+	});
+}
+
+function getRandomColor() {
+	const colors = [
+		"#FF6B6B",
+		"#4ECDC4",
+		"#45B7D1",
+		"#96CEB4",
+		"#FFEAA7",
+		"#DDA0DD",
+		"#98D8C8",
+		"#F7DC6F",
+		"#BB8FCE",
+		"#85C1E9",
+	];
+	return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function getRandomStyle() {
+	const styles = [
+		{
+			name: "solid",
+			description: "Solid background with white text",
+		},
+		{
+			name: "bright",
+			description: "Bright background with contrasting text",
+		},
+		{
+			name: "outline",
+			description: "Solid background with outlined text",
+		},
+		{
+			name: "shadow",
+			description: "Solid background with shadowed text",
+		},
+		{
+			name: "minimal",
+			description: "Clean minimal style with dark text",
+		},
+	];
+	return styles[Math.floor(Math.random() * styles.length)];
+}
+
+function getStyleOptions(style, color) {
+	const darkerColor = adjustColor(color, -30);
+	const lighterColor = adjustColor(color, 30);
+
+	switch (style.name) {
+		case "bright":
+			return {
+				background: `"xc:${lighterColor}"`,
+				text: `-pointsize 24 -fill "${darkerColor}"`,
+			};
+		case "outline":
+			return {
+				background: `"xc:${color}"`,
+				text: `-pointsize 24 -fill none -stroke white -strokewidth 2`,
+			};
+		case "shadow":
+			return {
+				background: `"xc:${color}"`,
+				text: `-pointsize 24 -fill white -stroke black -strokewidth 1`,
+			};
+		case "minimal":
+			return {
+				background: `"xc:${lighterColor}"`,
+				text: `-pointsize 20 -fill "${darkerColor}"`,
+			};
+		default: // solid
+			return {
+				background: `"xc:${color}"`,
+				text: `-pointsize 24 -fill white`,
+			};
+	}
+}
+
+function adjustColor(hex, percent) {
+	// Remove # if present
+	hex = hex.replace("#", "");
+
+	// Ensure we have a valid 6-character hex
+	if (hex.length !== 6) {
+		console.error(`Invalid hex color: ${hex}`);
+		return "#000000";
+	}
+
+	// Parse RGB values
+	const r = parseInt(hex.substr(0, 2), 16);
+	const g = parseInt(hex.substr(2, 2), 16);
+	const b = parseInt(hex.substr(4, 2), 16);
+
+	// Check for NaN values
+	if (isNaN(r) || isNaN(g) || isNaN(b)) {
+		console.error(`Failed to parse hex color: ${hex}`);
+		return "#000000";
+	}
+
+	// Adjust brightness
+	const adjustValue = (value, percent) => {
+		const adjusted = value + (percent * 255) / 100;
+		return Math.max(0, Math.min(255, Math.round(adjusted)));
+	};
+
+	const newR = adjustValue(r, percent);
+	const newG = adjustValue(g, percent);
+	const newB = adjustValue(b, percent);
+
+	// Convert back to hex
+	const toHex = (value) => value.toString(16).padStart(2, "0");
+	return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+}
+
+async function initDevelopmentAssets() {
+	const projectPath = findProjectRoot();
+	const devAssetsDir = path.join(projectPath, "dev-assets");
+
+	console.log("🎨 Setting up development assets...");
+
+	// Create directories
+	const dirs = ["images", "videos"];
+	dirs.forEach((dir) => {
+		const dirPath = path.join(devAssetsDir, dir);
+		if (!fs.existsSync(dirPath)) {
+			fs.mkdirSync(dirPath, { recursive: true });
+			console.log(`✓ Created ${dir}/ directory`);
+		}
+	});
+
+	// Copy starter assets from toolkit
+	const paths = resolveGxPaths();
+	const sourceAssetsDir = path.join(paths.configDir, "dev-assets");
+
+	if (fs.existsSync(sourceAssetsDir)) {
+		console.log("📋 Copying starter assets...");
+
+		// Copy image assets
+		const sourceImagesDir = path.join(sourceAssetsDir, "images");
+		const destImagesDir = path.join(devAssetsDir, "images");
+
+		if (fs.existsSync(sourceImagesDir)) {
+			const imageFiles = fs.readdirSync(sourceImagesDir);
+			imageFiles.forEach((file) => {
+				const srcPath = path.join(sourceImagesDir, file);
+				const destPath = path.join(destImagesDir, file);
+				if (!fs.existsSync(destPath)) {
+					safeCopyFile(srcPath, destPath, `Asset: ${file}`);
+				}
+			});
+		}
+	}
+
+	// Add to .gitignore
+	const gitignorePath = path.join(projectPath, ".gitignore");
+	if (fs.existsSync(gitignorePath)) {
+		let gitignoreContent = fs.readFileSync(gitignorePath, "utf-8");
+		if (!gitignoreContent.includes("dev-assets/")) {
+			gitignoreContent +=
+				"\n# Development assets (add your own files here)\ndev-assets/\n";
+			fs.writeFileSync(gitignorePath, gitignoreContent);
+			console.log("✓ Added dev-assets/ to .gitignore");
+		}
+	}
+
+	console.log("✅ Development assets setup complete!");
+	console.log("");
+	console.log("📁 Directory structure:");
+	console.log("   dev-assets/");
+	console.log("   ├── images/     # Image placeholders");
+	console.log("   └── videos/     # Video placeholders");
+	console.log("");
+	console.log("💡 Commands:");
+	console.log(
+		"   gxto assets list                           # List all assets"
+	);
+	console.log(
+		"   gxto assets generate --size 800x600       # Generate placeholder"
+	);
+	console.log(
+		"   gxto assets generate --name logo --size 200x200  # Custom placeholder"
+	);
+	console.log(
+		"   gxto assets generate --name banner --count 5    # Generate 5 variants"
+	);
+}
+
+/**
+ * Socket simulation command - sends JSON events to the Socket.IO server
+ */
+async function socketCommand(argv) {
+	const projectPath = findProjectRoot();
+	const action = argv.action;
+
+	if (action === "list") {
+		listSocketEvents();
+	} else if (action === "send") {
+		await sendSocketEvent(argv.event, argv.identifier);
+	} else {
+		console.error("❌ Invalid socket action. Use 'list' or 'send'");
+		process.exit(1);
+	}
+}
+
+function listSocketEvents() {
+	const projectPath = findProjectRoot();
+	const paths = resolveGxPaths();
+	const eventsDir = path.join(paths.configDir, "socket-events");
+
+	if (!fs.existsSync(eventsDir)) {
+		console.log("❌ No socket events directory found");
+		console.log(`📁 Looking in: ${eventsDir}`);
+		return;
+	}
+
+	const eventFiles = fs
+		.readdirSync(eventsDir)
+		.filter((file) => file.endsWith(".json"));
+
+	if (eventFiles.length === 0) {
+		console.log("❌ No socket event files found");
+		return;
+	}
+
+	console.log("📡 Available socket events:");
+	console.log("");
+
+	eventFiles.forEach((file) => {
+		const eventPath = path.join(eventsDir, file);
+		try {
+			const eventData = JSON.parse(fs.readFileSync(eventPath, "utf-8"));
+			const eventName = path.basename(file, ".json");
+			console.log(`🎯 ${eventName}`);
+			console.log(`   Event: ${eventData.event}`);
+			console.log(`   Channel: ${eventData.channel}`);
+			if (eventData.data.id) {
+				console.log(`   Data ID: ${eventData.data.id}`);
+			}
+			console.log("");
+		} catch (error) {
+			console.error(`❌ Error reading ${file}: ${error.message}`);
+		}
+	});
+
+	console.log("💡 Usage:");
+	console.log("   gxto socket send --event AiSessionMessageCreated");
+	console.log(
+		"   gxto socket send --event SocialStreamPostCreated --identifier social_stream"
+	);
+}
+
+async function sendSocketEvent(eventName, identifier) {
+	if (!eventName) {
+		console.error("❌ Event name is required");
+		console.log("💡 Use: gxto socket send --event <EventName>");
+		process.exit(1);
+	}
+
+	const projectPath = findProjectRoot();
+	const paths = resolveGxPaths();
+	const eventsDir = path.join(paths.configDir, "socket-events");
+	const eventPath = path.join(eventsDir, `${eventName}.json`);
+
+	if (!fs.existsSync(eventPath)) {
+		console.error(`❌ Event file not found: ${eventName}.json`);
+		console.log(`📁 Looking in: ${eventsDir}`);
+		console.log("💡 Use 'gxto socket list' to see available events");
+		process.exit(1);
+	}
+
+	try {
+		let eventData = JSON.parse(fs.readFileSync(eventPath, "utf-8"));
+
+		// If identifier is provided, update the channel
+		if (identifier) {
+			// Try to extract model from the original channel
+			const channelParts = eventData.channel.split(".");
+			if (channelParts.length >= 2) {
+				const model = channelParts[1];
+				eventData.channel = `private.${model}.${identifier}`;
+			}
+		}
+
+		// Send the event via HTTP to the Socket.IO server
+		const socketUrl = "http://localhost:3069";
+
+		console.log(`📡 Sending socket event: ${eventData.event}`);
+		console.log(`📺 Channel: ${eventData.channel}`);
+		console.log(`📦 Data:`, JSON.stringify(eventData.data, null, 2));
+
+		// Use axios to send the event to our Socket.IO server
+		const axios = require("axios");
+
+		try {
+			await axios.post(`${socketUrl}/emit`, {
+				event: eventData.event,
+				channel: eventData.channel,
+				data: eventData.data,
+			});
+
+			console.log("✅ Socket event sent successfully!");
+			console.log(
+				"👂 Check your app console for the received event in the store"
+			);
+		} catch (error) {
+			if (error.code === "ECONNREFUSED") {
+				console.error("❌ Cannot connect to Socket.IO server");
+				console.log("💡 Make sure the server is running:");
+				console.log("   npm run dev-socket");
+				console.log("   or");
+				console.log("   nodemon server.js");
+			} else {
+				console.error(`❌ Error sending event: ${error.message}`);
+			}
+		}
+	} catch (error) {
+		console.error(`❌ Error reading event file: ${error.message}`);
+		process.exit(1);
+	}
+}
+
 // Load global configuration
 const globalConfig = loadGlobalConfig();
 
@@ -1441,6 +1950,66 @@ const argv = yargs
 		"Build browser extensions for distribution",
 		{},
 		extensionBuildCommand
+	)
+	.command(
+		"socket <action>",
+		"Simulate socket events",
+		{
+			action: {
+				describe: "Action to perform",
+				choices: ["list", "send"],
+			},
+			event: {
+				describe: "Event name to send (for send action)",
+				type: "string",
+			},
+			identifier: {
+				describe: "Override identifier/channel (for send action)",
+				type: "string",
+			},
+		},
+		socketCommand
+	)
+	.command(
+		"assets <action>",
+		"Manage development assets and placeholders",
+		{
+			action: {
+				describe: "Action to perform",
+				choices: ["list", "generate", "init"],
+			},
+			size: {
+				describe: "Image size (for generate action)",
+				type: "string",
+				default: "400x300",
+			},
+			name: {
+				describe: "Asset name (for generate action)",
+				type: "string",
+				default: "placeholder",
+			},
+			color: {
+				describe: "Background color (for generate action)",
+				type: "string",
+			},
+			text: {
+				describe: "Text to display (for generate action)",
+				type: "string",
+			},
+			format: {
+				describe: "Image format (for generate action)",
+				type: "string",
+				choices: ["png", "jpg", "jpeg", "gif"],
+				default: "png",
+			},
+			count: {
+				describe:
+					"Number of assets to generate with different colors/styles (for generate action)",
+				type: "number",
+				default: 1,
+			},
+		},
+		assetsCommand
 	)
 	.demandCommand(1, "Please provide a valid command")
 	.help("h")

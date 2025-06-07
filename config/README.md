@@ -176,6 +176,91 @@ Components emit events for navigation and interaction:
 - `npm run build` - Build for production
 - `npm run dev-socket` - Start with socket.io server
 - `npm run setup-ssl` - Generate SSL certificates
+- `npm run socket:list` - List available socket events
+- `npm run socket:send` - Send test socket events
+- `npm run assets:list` - List development assets
+- `npm run assets:init` - Initialize asset directories
+- `npm run assets:generate` - Generate placeholder images
+- `npm run placeholder` - Generate custom placeholder
+
+## Asset Management
+
+The toolkit provides a complete asset management system for development with placeholder generation:
+
+### Available Commands
+```bash
+# List all development assets
+npm run assets:list
+gxto assets list
+
+# Initialize asset directories and copy starter assets
+npm run assets:init
+gxto assets init
+
+# Generate placeholder images (requires ImageMagick)
+npm run assets:generate
+gxto assets generate --size 800x600 --name product-image
+
+# Generate custom placeholder with specific color and text
+gxto assets generate --name logo --size 200x200 --color "#FF5722" --text "My Logo"
+
+# Generate different formats
+gxto assets generate --name banner --size 1200x400 --format jpg
+```
+
+### ImageMagick Installation
+Asset generation requires ImageMagick to be installed:
+
+```bash
+# macOS
+brew install imagemagick
+
+# Ubuntu/Debian
+sudo apt-get install imagemagick
+
+# Windows
+# Download from https://imagemagick.org/script/download.php#windows
+```
+
+### Asset Structure
+```
+dev-assets/
+├── images/          # Generated and custom images
+│   ├── logo-placeholder.png
+│   ├── background-placeholder.jpg
+│   └── custom-images...
+└── videos/          # Video assets (manual upload)
+```
+
+### Using Assets in Your Store
+```javascript
+// Add assets to your GxP store (if using datastore)
+gxpStore.updateAsset("main_logo", "http://localhost:3069/dev-assets/images/logo-placeholder.png");
+
+// Access in components
+const logoUrl = gxpStore.getAsset("main_logo");
+
+// Or use directly in templates
+const assetList = {
+    "main_logo": "http://localhost:3069/dev-assets/images/logo-placeholder.png",
+    "background_image": "http://localhost:3069/dev-assets/images/background-placeholder.jpg"
+};
+```
+
+## Socket Simulation
+
+The toolkit includes socket simulation for testing real-time features:
+
+```bash
+# List all available socket events
+npm run socket:list
+
+# Send a specific socket event
+npm run socket:send
+
+# Send to specific identifier/channel
+gxto socket send --event SocialStreamPostCreated --identifier "stream_123"
+```
 
 ## Learn More
 

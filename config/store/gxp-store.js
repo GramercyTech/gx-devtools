@@ -58,7 +58,12 @@ export const useGxpStore = defineStore("gxp", () => {
 	// Initialize WebSocket connections
 	function initializeSockets() {
 		// Primary socket connection
-		const primarySocket = io("http://localhost:3069");
+		// Use the same protocol as the current page for Socket.IO connection
+		const socketProtocol =
+			typeof window !== "undefined" && window.location.protocol === "https:"
+				? "https"
+				: "http";
+		const primarySocket = io(`${socketProtocol}://localhost:3069`);
 
 		sockets.primary = {
 			broadcast: function (event, data) {
@@ -71,28 +76,40 @@ export const useGxpStore = defineStore("gxp", () => {
 
 		socketConnections.primary = primarySocket;
 
-		// Initialize dependency-based sockets
-		Object.keys(dependencyList.value).forEach((depKey) => {
-			sockets[depKey] = {
-				created: {
-					listen: function (event, callback) {
-						// In development, return empty function
-						// In production, this would connect to actual dependency socket
-						return () => {};
-					},
-				},
-				updated: {
-					listen: function (event, callback) {
-						return () => {};
-					},
-				},
-				deleted: {
-					listen: function (event, callback) {
-						return () => {};
-					},
-				},
-			};
-		});
+		// Initialize dependency-based sockets based on the new structure
+		if (Array.isArray(dependencyList.value)) {
+			dependencyList.value.forEach((dependency) => {
+				if (dependency.events && Object.keys(dependency.events).length > 0) {
+					// Create socket listeners for each event type
+					sockets[dependency.identifier] = {};
+
+					Object.keys(dependency.events).forEach((eventType) => {
+						const eventName = dependency.events[eventType];
+						const channel = `private.${dependency.model}.${dependency.identifier}`;
+
+						sockets[dependency.identifier][eventType] = {
+							listen: function (callback) {
+								// Listen for the specific event on the primary socket
+								return primarySocket.on(eventName, (data) => {
+									console.log(
+										`Socket event received: ${eventName} on ${channel}`,
+										data
+									);
+									callback(data);
+								});
+							},
+						};
+					});
+				} else {
+					// For dependencies without events, create empty listeners
+					sockets[dependency.identifier] = {
+						created: { listen: () => () => {} },
+						updated: { listen: () => () => {} },
+						deleted: { listen: () => () => {} },
+					};
+				}
+			});
+		}
 	}
 
 	// API methods for common operations
@@ -133,7 +150,113 @@ export const useGxpStore = defineStore("gxp", () => {
 	}
 
 	// Dependency API methods
+	function findDependency(identifier) {
+		if (Array.isArray(dependencyList.value)) {
+			return dependencyList.value.find((dep) => dep.identifier === identifier);
+		}
+		return null;
+	}
+
+	async function getList(identifier, params = {}) {
+		const dependency = findDependency(identifier);
+		if (!dependency) {
+			throw new Error(`Dependency not found: ${identifier}`);
+		}
+
+		// Build endpoint based on dependency configuration
+		const endpoint = `/api/${identifier}`;
+
+		try {
+			const response = await apiGet(endpoint, params);
+			console.log(`API call to ${endpoint}:`, response);
+			return response;
+		} catch (error) {
+			console.error(`Failed to fetch list for ${identifier}:`, error);
+			throw error;
+		}
+	}
+
+	async function getItem(identifier, id, params = {}) {
+		const dependency = findDependency(identifier);
+		if (!dependency) {
+			throw new Error(`Dependency not found: ${identifier}`);
+		}
+
+		const endpoint = `/api/${identifier}/${id}`;
+
+		try {
+			const response = await apiGet(endpoint, params);
+			console.log(`API call to ${endpoint}:`, response);
+			return response;
+		} catch (error) {
+			console.error(`Failed to fetch item ${id} for ${identifier}:`, error);
+			throw error;
+		}
+	}
+
+	async function createItem(identifier, data) {
+		const dependency = findDependency(identifier);
+		if (!dependency) {
+			throw new Error(`Dependency not found: ${identifier}`);
+		}
+
+		const endpoint = `/api/${identifier}`;
+
+		try {
+			const response = await apiPost(endpoint, data);
+			console.log(`API call to ${endpoint}:`, response);
+			return response;
+		} catch (error) {
+			console.error(`Failed to create item for ${identifier}:`, error);
+			throw error;
+		}
+	}
+
+	async function updateItem(identifier, id, data) {
+		const dependency = findDependency(identifier);
+		if (!dependency) {
+			throw new Error(`Dependency not found: ${identifier}`);
+		}
+
+		const endpoint = `/api/${identifier}/${id}`;
+
+		try {
+			const response = await apiPut(endpoint, data);
+			console.log(`API call to ${endpoint}:`, response);
+			return response;
+		} catch (error) {
+			console.error(`Failed to update item ${id} for ${identifier}:`, error);
+			throw error;
+		}
+	}
+
+	async function deleteItem(identifier, id) {
+		const dependency = findDependency(identifier);
+		if (!dependency) {
+			throw new Error(`Dependency not found: ${identifier}`);
+		}
+
+		const endpoint = `/api/${identifier}/${id}`;
+
+		try {
+			const response = await apiDelete(endpoint);
+			console.log(`API call to ${endpoint}:`, response);
+			return response;
+		} catch (error) {
+			console.error(`Failed to delete item ${id} for ${identifier}:`, error);
+			throw error;
+		}
+	}
+
+	// Legacy method for backward compatibility
 	async function getDependencyData(dependencyKey, endpoint) {
+		// Try to find by identifier first
+		const dependency = findDependency(dependencyKey);
+		if (dependency) {
+			return await apiGet(`/api/${dependency.identifier}/${endpoint}`);
+		}
+
+		// Fall back to old behavior if it's an old-style dependency
 		const dependencyId = dependencyList.value[dependencyKey];
 		if (!dependencyId) {
 			throw new Error(`Dependency not found: ${dependencyKey}`);
@@ -143,6 +266,13 @@ export const useGxpStore = defineStore("gxp", () => {
 	}
 
 	async function updateDependencyData(dependencyKey, endpoint, data) {
+		// Try to find by identifier first
+		const dependency = findDependency(dependencyKey);
+		if (dependency) {
+			return await apiPost(`/api/${dependency.identifier}/${endpoint}`, data);
+		}
+
+		// Fall back to old behavior if it's an old-style dependency
 		const dependencyId = dependencyList.value[dependencyKey];
 		if (!dependencyId) {
 			throw new Error(`Dependency not found: ${dependencyKey}`);
@@ -218,6 +348,20 @@ export const useGxpStore = defineStore("gxp", () => {
 		assetList.value[key] = value;
 	}
 
+	function addDevAsset(key, filename) {
+		const url = `http://localhost:3069/dev-assets/images/${filename}`;
+		assetList.value[key] = url;
+		console.log(`Added dev asset: ${key} -> ${url}`);
+	}
+
+	function listAssets() {
+		console.log("📁 Current Assets:");
+		Object.entries(assetList.value).forEach(([key, url]) => {
+			console.log(`   ${key}: ${url}`);
+		});
+		return assetList.value;
+	}
+
 	// Initialize sockets when store is created
 	initializeSockets();
 
@@ -244,6 +388,14 @@ export const useGxpStore = defineStore("gxp", () => {
 		getDependencyData,
 		updateDependencyData,
 
+		// New dependency-based API methods
+		getList,
+		getItem,
+		createItem,
+		updateItem,
+		deleteItem,
+		findDependency,
+
 		// Utility methods
 		getString,
 		getSetting,
@@ -259,5 +411,7 @@ export const useGxpStore = defineStore("gxp", () => {
 		updatePluginVar,
 		updateString,
 		updateAsset,
+		addDevAsset,
+		listAssets,
 	};
 });
