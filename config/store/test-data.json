@@ -14,9 +14,15 @@
     "loading_spinner_color": "#dedede",
     "loading_spinner_accent_color": "#000596",
     "error_modal_background_color": "#FFFFFF",
-    "error_modal_text_color": "#000596"
+    "error_modal_text_color": "#000596",
+    "line_1": "Welcome to Your App!",
+    "line_2": "Touch to begin your experience",
+    "line_3": "Get started by touching the button below"
   },
   "stringsList": {
+    "line_1": "Welcome to Your App!",
+    "line_2": "Touch to begin your experience",
+    "line_3": "Get started by touching the button below",
     "start_line_one": "Welcome to Your App!",
     "start_line_two": "Touch to begin your experience",
     "start_touch_start": "Get started by touching the button below",

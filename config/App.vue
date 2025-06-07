@@ -3,11 +3,11 @@
         <!-- Start Page -->
         <GxPageStart
             v-if="currentPage === 'start'"
-            :plugin-vars="pluginVars"
-            :asset-urls="assetList"
-            :strings-list="stringsList"
-            :theme="theme"
-            @start="goToPage('plugin')"
+            :plugin-vars="gxpStore.pluginVars"
+            :asset-urls="gxpStore.assetList"
+            :strings-list="gxpStore.stringsList"
+            :theme="gxpStore.theme"
+            @stage-change="goToPage('plugin')"
             @idle-timeout="resetToStart"
         />
         

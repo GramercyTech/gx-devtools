@@ -20,23 +20,63 @@ if (fs.existsSync(devAssetsDir)) {
 	console.log("📁 Serving development assets from /dev-assets");
 }
 
-// Check for SSL certificates
+/**
+ * Finds existing SSL certificates in the certs directory, including those with suffixes
+ */
+function findExistingCertificates(certsDir) {
+	if (!fs.existsSync(certsDir)) {
+		return null;
+	}
+
+	const files = fs.readdirSync(certsDir);
+
+	// Look for localhost certificates (with or without suffixes)
+	const certFile = files.find(
+		(f) =>
+			f.startsWith("localhost") && f.endsWith(".pem") && !f.includes("-key")
+	);
+	const keyFile = files.find(
+		(f) => f.startsWith("localhost") && f.endsWith("-key.pem")
+	);
+
+	if (certFile && keyFile) {
+		const certPath = path.join(certsDir, certFile);
+		const keyPath = path.join(certsDir, keyFile);
+
+		// Verify files actually exist and have content
+		try {
+			const certStats = fs.statSync(certPath);
+			const keyStats = fs.statSync(keyPath);
+
+			if (certStats.size > 0 && keyStats.size > 0) {
+				return { certPath, keyPath };
+			}
+		} catch (error) {
+			// Files don't exist or can't be read
+		}
+	}
+
+	return null;
+}
+
+// Check for SSL certificates using improved detection
 const certsDir = path.join(process.cwd(), ".certs");
-const certPath = path.join(certsDir, "localhost.pem");
-const keyPath = path.join(certsDir, "localhost-key.pem");
+const existingCerts = findExistingCertificates(certsDir);
 
 let server;
 let protocol = "HTTP";
 
-if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+if (existingCerts) {
 	// Use HTTPS if certificates are available
 	const https = require("https");
 	const options = {
-		cert: fs.readFileSync(certPath),
-		key: fs.readFileSync(keyPath),
+		cert: fs.readFileSync(existingCerts.certPath),
+		key: fs.readFileSync(existingCerts.keyPath),
 	};
 	server = https.createServer(options, app);
 	protocol = "HTTPS";
+	console.log(`📁 Using certificate: ${path.basename(existingCerts.certPath)}`);
+	console.log(`🔑 Using key: ${path.basename(existingCerts.keyPath)}`);
 } else {
 	// Fall back to HTTP if no certificates
 	const http = require("http");

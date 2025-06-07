@@ -762,10 +762,12 @@ async function initCommand(argv) {
 	if (sslSetup) {
 		console.log("🔒 Start HTTPS development: npm run dev");
 		console.log("🌐 Start HTTP development: npm run dev-http");
+		console.log("📡 Start with Socket.IO server: gxto dev --with-socket");
 	} else {
 		console.log("🌐 Start development: npm run dev-http");
 		console.log("🔧 Setup SSL certificates: npm run setup-ssl");
 		console.log("🔒 Then use HTTPS development: npm run dev");
+		console.log("📡 Start with Socket.IO server: gxto dev --with-socket");
 	}
 	console.log("");
 	console.log("📖 Templates available:");
@@ -830,6 +832,20 @@ function devCommand(argv) {
 	const finalPort = argv.port || process.env.NODE_PORT || 3000;
 	console.log(`🌐 Development server will start on port: ${finalPort}`);
 
+	// Check if socket server should be started
+	const withSocket = argv["with-socket"];
+	if (withSocket) {
+		const serverJsPath = path.join(projectPath, "server.js");
+		if (!fs.existsSync(serverJsPath)) {
+			console.error("❌ server.js not found. Cannot start Socket.IO server.");
+			console.log(
+				"💡 Make sure you're in a GxP project directory with server.js"
+			);
+			process.exit(1);
+		}
+		console.log("📡 Also starting Socket.IO server with nodemon...");
+	}
+
 	// Only set environment variables if they're not already set (allows .env to take precedence)
 	const envVars = [];
 
@@ -853,10 +869,22 @@ function devCommand(argv) {
 	envVars.push(`${exportCmd} CERT_PATH=${certPath}`);
 	envVars.push(`${exportCmd} KEY_PATH=${keyPath}`);
 
-	const command = [
-		...envVars,
-		`vite dev --config "${paths.viteConfigPath}"`,
-	].join(" && ");
+	// Build the command based on whether socket server is requested
+	let command;
+	if (withSocket) {
+		// Use concurrently to run both servers
+		const viteCommand = [
+			...envVars,
+			`vite dev --config "${paths.viteConfigPath}"`,
+		].join(" && ");
+
+		command = `concurrently --names "VITE,SOCKET" --prefix-colors "cyan,green" "${viteCommand}" "nodemon server.js"`;
+	} else {
+		// Just run Vite dev server
+		command = [...envVars, `vite dev --config "${paths.viteConfigPath}"`].join(
+			" && "
+		);
+	}
 
 	shell.exec(command);
 }
@@ -1975,6 +2003,12 @@ const argv = yargs
 				describe: "Disable HTTPS and use HTTP instead",
 				type: "boolean",
 				default: false,
+			},
+			"with-socket": {
+				describe: "Also start Socket.IO server with nodemon",
+				type: "boolean",
+				default: false,
+				alias: "s",
 			},
 		},
 		devCommand
