@@ -19,20 +19,6 @@ const dotenv = require("dotenv");
 const isWin = process.platform === "win32";
 const exportCmd = isWin ? "set" : "export";
 
-/**
- * Gets the appropriate gx-componentkit dependency reference
- */
-function getGxUikitDependency() {
-	// Check if gx-componentkit exists locally (for development)
-	const localGxUikit = path.resolve(__dirname, "../../gx-componentkit");
-	if (fs.existsSync(localGxUikit)) {
-		return `file:${localGxUikit}`;
-	}
-
-	// Default to npm package (when published)
-	return "^1.0.0";
-}
-
 // Required dependencies for GxP projects
 const REQUIRED_DEPENDENCIES = {
 	"@vitejs/plugin-vue": "^5.1.4",
@@ -448,8 +434,7 @@ function updateExistingProject(projectPath) {
 
 			// Add gx-componentkit if missing
 			if (!packageJson.dependencies["@gramercytech/gx-componentkit"]) {
-				packageJson.dependencies["@gramercytech/gx-componentkit"] =
-					getGxUikitDependency();
+				packageJson.dependencies["@gramercytech/gx-componentkit"] = "^1.0.0";
 				updated = true;
 				console.log("Adding dependency: @gramercytech/gx-componentkit");
 			}

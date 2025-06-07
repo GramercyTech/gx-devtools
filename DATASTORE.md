@@ -252,7 +252,7 @@ const gxpStore = useGxpStore()
 
 ### Development Mode
 - Uses test data from `src/store/test-data.json`
-- WebSocket connects to localhost:3069
+- WebSocket connects to localhost:3069 (can be set in .env file)
 - API calls use configured base URL with test token
 
 ### Production Mode

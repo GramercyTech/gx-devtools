@@ -74,23 +74,18 @@
       color: #495057;
     }
     
-    .rule-item {
+    .config-container {
       background: white;
       border: 1px solid #dee2e6;
       border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 8px;
-    }
-    
-    .rule-inputs {
-      display: grid;
-      gap: 8px;
+      padding: 16px;
     }
     
     .input-group {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
+      margin-bottom: 16px;
     }
     
     .input-label {
@@ -100,7 +95,7 @@
     }
     
     input[type="text"] {
-      padding: 6px 8px;
+      padding: 8px 10px;
       border: 1px solid #ced4da;
       border-radius: 4px;
       font-size: 13px;
@@ -112,60 +107,68 @@
       box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
     }
     
-    .rule-actions {
+    .checkbox-group {
       display: flex;
-      justify-content: flex-end;
-      margin-top: 8px;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
     }
     
-    .delete-button {
-      background: #dc3545;
-      border: none;
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
+    .checkbox-group input[type="checkbox"] {
+      margin: 0;
+    }
+    
+    .checkbox-group label {
       font-size: 12px;
+      color: #495057;
+      margin: 0;
       cursor: pointer;
     }
     
-    .delete-button:hover {
-      background: #c82333;
-    }
-    
-    .add-button {
-      background: #007bff;
-      border: none;
-      color: white;
-      padding: 8px 16px;
+    .pattern-display {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
       border-radius: 4px;
-      font-size: 13px;
-      cursor: pointer;
-      width: 100%;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #6c757d;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      word-break: break-all;
+      margin-bottom: 8px;
     }
     
-    .add-button:hover {
-      background: #0056b3;
+    .pattern-input {
+      display: none;
+    }
+    
+    .pattern-input.visible {
+      display: block;
     }
     
     .save-button {
       background: #28a745;
       border: none;
       color: white;
-      padding: 10px 20px;
+      padding: 12px 20px;
       border-radius: 4px;
       font-size: 14px;
       cursor: pointer;
       width: 100%;
-      margin-top: 16px;
+      margin-top: 8px;
     }
     
     .save-button:hover {
       background: #218838;
     }
     
+    .save-button:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+    
     .status {
-      margin-top: 8px;
-      padding: 6px 8px;
+      margin-top: 12px;
+      padding: 8px 12px;
       border-radius: 4px;
       font-size: 12px;
       text-align: center;
@@ -177,11 +180,24 @@
       border: 1px solid #c3e6cb;
     }
     
-    .empty-state {
-      text-align: center;
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .help-text {
+      font-size: 11px;
       color: #6c757d;
-      font-size: 13px;
-      padding: 20px;
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+    
+    .current-domain {
+      font-size: 11px;
+      color: #007bff;
+      margin-bottom: 8px;
+      font-weight: 500;
     }
   </style>
 </head>
@@ -202,12 +218,31 @@
   
   <div class="content">
     <div class="section">
-      <div class="section-title">Proxy Rules</div>
-      <div id="rulesContainer"></div>
-      <button id="addRuleButton" class="add-button">+ Add Rule</button>
+      <div class="section-title">Proxy Configuration</div>
+      <div class="config-container">
+        <div id="currentDomain" class="current-domain"></div>
+        
+        <div class="input-group">
+          <label class="input-label">Redirect To URL</label>
+          <input type="text" id="redirectUrl" placeholder="https://localhost:3060/src/Plugin.vue">
+          <div class="help-text">Enter the local URL where matching requests should be redirected</div>
+        </div>
+        
+        <div class="checkbox-group">
+          <input type="checkbox" id="customPattern">
+          <label for="customPattern">Use custom URL pattern</label>
+        </div>
+        
+        <div class="input-group">
+          <label class="input-label">URL Pattern to Match</label>
+          <div id="patternDisplay" class="pattern-display"></div>
+          <input type="text" id="customPatternInput" class="pattern-input" placeholder="">
+          <div class="help-text">RegEx pattern to match URLs that should be redirected</div>
+        </div>
+      </div>
     </div>
     
-    <button id="saveButton" class="save-button">Save Changes</button>
+    <button id="saveButton" class="save-button">Save Configuration</button>
     <div id="status" class="status" style="display: none;"></div>
   </div>
 

@@ -1,20 +1,34 @@
 document.addEventListener("DOMContentLoaded", async function () {
 	const toggleButton = document.getElementById("toggleButton");
 	const toggleText = document.getElementById("toggleText");
-	const addRuleButton = document.getElementById("addRuleButton");
 	const saveButton = document.getElementById("saveButton");
-	const rulesContainer = document.getElementById("rulesContainer");
 	const status = document.getElementById("status");
 	const maskingMode = document.getElementById("maskingMode");
+	const redirectUrl = document.getElementById("redirectUrl");
+	const customPattern = document.getElementById("customPattern");
+	const patternDisplay = document.getElementById("patternDisplay");
+	const customPatternInput = document.getElementById("customPatternInput");
+	const currentDomainDisplay = document.getElementById("currentDomain");
 
 	let currentState = { enabled: false, rules: [] };
+	let currentTabUrl = "";
 
-	// Load current state
+	// Load current state and tab info
 	try {
 		const response = await browser.runtime.sendMessage({ action: "getState" });
 		currentState = response;
+
+		// Get current tab URL
+		const tabs = await browser.tabs.query({
+			active: true,
+			currentWindow: true,
+		});
+		if (tabs[0]) {
+			currentTabUrl = tabs[0].url;
+		}
+
 		updateUI();
-		renderRules();
+		loadConfiguration();
 	} catch (error) {
 		console.error("Failed to load state:", error);
 	}
@@ -27,10 +41,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 			});
 			currentState.enabled = response.enabled;
 			updateUI();
-			showStatus("Proxy " + (response.enabled ? "enabled" : "disabled"));
+			showStatus(
+				"Proxy " + (response.enabled ? "enabled" : "disabled"),
+				"success"
+			);
 		} catch (error) {
 			console.error("Failed to toggle proxy:", error);
-			showStatus("Error toggling proxy");
+			showStatus("Error toggling proxy", "error");
 		}
 	});
 
@@ -42,57 +59,29 @@ document.addEventListener("DOMContentLoaded", async function () {
 				enabled: maskingMode.checked,
 			});
 			showStatus(
-				maskingMode.checked ? "Masking mode enabled" : "Masking mode disabled"
+				maskingMode.checked ? "Masking mode enabled" : "Masking mode disabled",
+				"success"
 			);
 		} catch (error) {
 			console.error("Failed to toggle masking mode:", error);
 		}
 	});
 
-	// Add new rule
-	addRuleButton.addEventListener("click", function () {
-		currentState.rules.push({
-			pattern: "",
-			redirect: "",
-			maskUrl: false,
-		});
-		renderRules();
+	// Toggle custom pattern
+	customPattern.addEventListener("change", function () {
+		updatePatternDisplay();
 	});
 
-	// Save changes
-	saveButton.addEventListener("click", async function () {
-		try {
-			// Validate rules
-			const validRules = currentState.rules.filter(
-				(rule) => rule.pattern.trim() !== "" && rule.redirect.trim() !== ""
-			);
-
-			// Test regex patterns
-			for (const rule of validRules) {
-				try {
-					new RegExp(rule.pattern);
-				} catch (e) {
-					showStatus("Invalid regex pattern: " + rule.pattern);
-					return;
-				}
-			}
-
-			const response = await browser.runtime.sendMessage({
-				action: "updateRules",
-				rules: validRules,
-			});
-
-			if (response.success) {
-				currentState.rules = validRules;
-				renderRules();
-				showStatus("Rules saved successfully!");
-			} else {
-				showStatus("Error saving rules");
-			}
-		} catch (error) {
-			console.error("Failed to save rules:", error);
-			showStatus("Error saving rules");
+	// Update pattern when custom input changes
+	customPatternInput.addEventListener("input", function () {
+		if (customPattern.checked) {
+			updatePatternDisplay();
 		}
+	});
+
+	// Save configuration
+	saveButton.addEventListener("click", async function () {
+		await saveConfiguration();
 	});
 
 	// Update UI based on current state
@@ -106,95 +95,160 @@ document.addEventListener("DOMContentLoaded", async function () {
 		}
 	}
 
-	// Render proxy rules
-	function renderRules() {
-		rulesContainer.innerHTML = "";
-
-		if (currentState.rules.length === 0) {
-			rulesContainer.innerHTML =
-				'<div class="empty-state">No proxy rules configured.<br>Click "Add Rule" to get started.</div>';
-			return;
+	// Load existing configuration
+	function loadConfiguration() {
+		// Display current domain info
+		if (currentTabUrl) {
+			try {
+				const url = new URL(currentTabUrl);
+				currentDomainDisplay.textContent = `Current domain: ${url.hostname}`;
+			} catch (error) {
+				currentDomainDisplay.textContent = "No active domain detected";
+			}
 		}
 
-		currentState.rules.forEach((rule, index) => {
-			const ruleDiv = document.createElement("div");
-			ruleDiv.className = "rule-item";
-			ruleDiv.innerHTML = `
-        <div class="rule-inputs">
-          <div class="input-group">
-            <label class="input-label">Pattern (Regex)</label>
-            <input type="text" class="pattern-input" value="${escapeHtml(
-							rule.pattern
-						)}" 
-                   placeholder="e.g., api\\.example\\.com" data-index="${index}">
-          </div>
-          <div class="input-group">
-            <label class="input-label">Redirect To</label>
-            <input type="text" class="redirect-input" value="${escapeHtml(
-							rule.redirect
-						)}" 
-                   placeholder="e.g., api.alternative.com" data-index="${index}">
-          </div>
-          <div class="input-group">
-            <label style="font-size: 11px; color: #6c757d;">
-              <input type="checkbox" class="mask-checkbox" ${
-								rule.maskUrl ? "checked" : ""
-							} data-index="${index}">
-              Mask URL (transparent proxy)
-            </label>
-          </div>
-        </div>
-        <div class="rule-actions">
-          <button class="delete-button" data-index="${index}">Delete</button>
-        </div>
-      `;
-			rulesContainer.appendChild(ruleDiv);
-		});
+		// Load existing rule if any
+		if (currentState.rules && currentState.rules.length > 0) {
+			const rule = currentState.rules[0]; // Use first rule
+			redirectUrl.value = rule.redirect || "";
 
-		// Attach event listeners
-		attachRuleEventListeners();
+			// Check if it's using default pattern or custom
+			const defaultPattern = generateDefaultPattern();
+			if (rule.pattern === defaultPattern) {
+				customPattern.checked = false;
+			} else {
+				customPattern.checked = true;
+				customPatternInput.value = rule.pattern;
+			}
+		}
+
+		updatePatternDisplay();
 	}
 
-	// Attach event listeners to rule inputs and buttons
-	function attachRuleEventListeners() {
-		// Pattern inputs
-		document.querySelectorAll(".pattern-input").forEach((input) => {
-			input.addEventListener("input", function () {
-				const index = parseInt(this.dataset.index);
-				currentState.rules[index].pattern = this.value;
-			});
-		});
+	// Generate default pattern based on current domain
+	function generateDefaultPattern() {
+		if (!currentTabUrl) return "";
 
-		// Redirect inputs
-		document.querySelectorAll(".redirect-input").forEach((input) => {
-			input.addEventListener("input", function () {
-				const index = parseInt(this.dataset.index);
-				currentState.rules[index].redirect = this.value;
-			});
-		});
+		try {
+			const url = new URL(currentTabUrl);
+			const hostname = url.hostname;
 
-		// Mask checkboxes
-		document.querySelectorAll(".mask-checkbox").forEach((checkbox) => {
-			checkbox.addEventListener("change", function () {
-				const index = parseInt(this.dataset.index);
-				currentState.rules[index].maskUrl = this.checked;
-			});
-		});
+			// For complex domains like "zenith-develop.env.eventfinity.app",
+			// we want to extract the main domain structure
+			const parts = hostname.split(".");
+			let targetDomain = hostname;
 
-		// Delete buttons
-		document.querySelectorAll(".delete-button").forEach((button) => {
-			button.addEventListener("click", function () {
-				const index = parseInt(this.dataset.index);
-				currentState.rules.splice(index, 1);
-				renderRules();
+			// Handle different domain structures:
+			// Remove the first subdomain to get the base domain pattern
+			// e.g., westernightwall.zenith-develop.env.eventfinity.app -> zenith-develop.env.eventfinity.app
+			if (parts.length >= 2) {
+				targetDomain = parts.slice(1).join(".");
+			}
+
+			// Escape dots for regex and create pattern that matches any subdomain
+			const escapedDomain = targetDomain.replace(/\./g, "\\.");
+			return `.*\\.${escapedDomain}\\/uploads\\/versions\\/\\d+\\/file_name\\/.*\\.js`;
+		} catch (error) {
+			console.error("Error generating default pattern:", error);
+			return "";
+		}
+	}
+
+	// Update pattern display
+	function updatePatternDisplay() {
+		if (customPattern.checked) {
+			patternDisplay.style.display = "none";
+			customPatternInput.classList.add("visible");
+			customPatternInput.placeholder =
+				currentTabUrl || "Enter custom regex pattern";
+		} else {
+			patternDisplay.style.display = "block";
+			customPatternInput.classList.remove("visible");
+
+			const defaultPattern = generateDefaultPattern();
+			if (defaultPattern) {
+				patternDisplay.textContent = defaultPattern;
+			} else {
+				patternDisplay.textContent =
+					"No pattern available - please enable proxy on a valid domain";
+			}
+		}
+	}
+
+	// Save configuration
+	async function saveConfiguration() {
+		try {
+			const redirectTo = redirectUrl.value.trim();
+
+			if (!redirectTo) {
+				showStatus("Please enter a redirect URL", "error");
+				return;
+			}
+
+			// Validate redirect URL
+			try {
+				new URL(redirectTo);
+			} catch (e) {
+				showStatus("Please enter a valid URL", "error");
+				return;
+			}
+
+			// Get pattern
+			let pattern;
+			if (customPattern.checked) {
+				pattern = customPatternInput.value.trim();
+				if (!pattern) {
+					showStatus("Please enter a custom pattern", "error");
+					return;
+				}
+			} else {
+				pattern = generateDefaultPattern();
+				if (!pattern) {
+					showStatus(
+						"Unable to generate pattern - please check current domain",
+						"error"
+					);
+					return;
+				}
+			}
+
+			// Validate regex pattern
+			try {
+				new RegExp(pattern);
+			} catch (e) {
+				showStatus("Invalid regex pattern: " + e.message, "error");
+				return;
+			}
+
+			// Create rule
+			const rule = {
+				pattern: pattern,
+				redirect: redirectTo,
+				maskUrl: false, // Default to false, can be controlled by masking mode
+			};
+
+			// Save to background script
+			const response = await browser.runtime.sendMessage({
+				action: "updateRules",
+				rules: [rule], // Single rule array
 			});
-		});
+
+			if (response.success) {
+				currentState.rules = [rule];
+				showStatus("Configuration saved successfully!", "success");
+			} else {
+				showStatus("Error saving configuration", "error");
+			}
+		} catch (error) {
+			console.error("Failed to save configuration:", error);
+			showStatus("Error saving configuration", "error");
+		}
 	}
 
 	// Show status message
-	function showStatus(message) {
+	function showStatus(message, type = "success") {
 		status.textContent = message;
-		status.className = "status success";
+		status.className = `status ${type}`;
 		status.style.display = "block";
 
 		setTimeout(() => {
@@ -202,10 +256,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 		}, 3000);
 	}
 
-	// Escape HTML to prevent XSS
-	function escapeHtml(text) {
-		const div = document.createElement("div");
-		div.textContent = text;
-		return div.innerHTML;
-	}
+	// Initialize pattern display
+	updatePatternDisplay();
 });
