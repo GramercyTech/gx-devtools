@@ -6,6 +6,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const readline = require("readline");
+const dotenv = require("dotenv");
 
 /**
  * GxToolkit CLI
@@ -637,8 +638,11 @@ function devCommand(argv) {
 	const envPath = path.join(projectPath, ".env");
 	const envExamplePath = path.join(projectPath, ".env.example");
 
-	// Suggest copying .env.example if .env doesn't exist
-	if (!fs.existsSync(envPath) && fs.existsSync(envExamplePath)) {
+	// Load .env file into process.env
+	if (fs.existsSync(envPath)) {
+		console.log("📋 Loading environment variables from .env file");
+		dotenv.config({ path: envPath });
+	} else if (fs.existsSync(envExamplePath)) {
 		console.log(
 			"💡 Tip: Copy .env.example to .env to customize your environment settings"
 		);
@@ -668,6 +672,10 @@ function devCommand(argv) {
 		console.log("🌐 Starting HTTP development server...");
 	}
 
+	// Determine final port value (priority: CLI arg > .env > default)
+	const finalPort = argv.port || process.env.NODE_PORT || 3000;
+	console.log(`🌐 Development server will start on port: ${finalPort}`);
+
 	// Only set environment variables if they're not already set (allows .env to take precedence)
 	const envVars = [];
 
@@ -678,7 +686,7 @@ function devCommand(argv) {
 		);
 	}
 	if (!process.env.NODE_PORT) {
-		envVars.push(`${exportCmd} NODE_PORT=${argv.port || 3000}`);
+		envVars.push(`${exportCmd} NODE_PORT=${finalPort}`);
 	}
 	if (!process.env.COMPONENT_PATH) {
 		envVars.push(

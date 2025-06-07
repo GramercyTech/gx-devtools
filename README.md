@@ -46,9 +46,11 @@ gxto init                    # Update existing project (in project directory)
 ### `gxto dev`
 Starts the development server with HTTPS by default.
 
+The tool will automatically load your `.env` file if it exists and show you which port it's using.
+
 ```bash
-gxto dev                     # HTTPS on port 3000
-gxto dev --port 4000         # Custom port
+gxto dev                     # HTTPS on port 3000 (or from .env)
+gxto dev --port 4000         # Custom port (overrides .env)
 gxto dev --no-https          # HTTP mode
 ```
 
@@ -143,9 +145,10 @@ cp .env.example .env
 | `USE_HTTPS` | Enable HTTPS | `true` |
 
 ### Configuration Priority
-1. Command line arguments
-2. Environment variables (`.env`)
+1. Command line arguments (highest priority)
+2. Environment variables from `.env` file
 3. Global config (`~/gxto-default-config.json`)
+4. Built-in defaults (lowest priority)
 
 ## Dependencies
 
