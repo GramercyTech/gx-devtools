@@ -207,21 +207,25 @@ function ensureMkcertInstalled() {
  */
 function generateSSLCertificates(projectPath) {
 	const certsDir = path.join(projectPath, ".certs");
-	const certPath = path.join(certsDir, "localhost.pem");
-	const keyPath = path.join(certsDir, "localhost-key.pem");
-
-	// Check if certificates already exist
-	if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
-		console.log("✓ SSL certificates already exist");
-		return { certPath, keyPath };
-	}
+	const expectedCertPath = path.join(certsDir, "localhost.pem");
+	const expectedKeyPath = path.join(certsDir, "localhost-key.pem");
 
 	// Create .certs directory
 	if (!fs.existsSync(certsDir)) {
 		fs.mkdirSync(certsDir, { recursive: true });
 	}
 
+	// Check for existing certificates (including those with suffixes like +2)
+	const existingCerts = findExistingCertificates(certsDir);
+	if (existingCerts) {
+		console.log("✓ SSL certificates already exist");
+		return existingCerts;
+	}
+
 	console.log("Generating SSL certificates for localhost...");
+
+	// Clean up any leftover certificate files to avoid naming conflicts
+	cleanupOldCertificates(certsDir);
 
 	// Try global mkcert first
 	let mkcertCmd = "mkcert";
@@ -246,8 +250,21 @@ function generateSSLCertificates(projectPath) {
 		});
 
 		if (result.code === 0) {
-			console.log("✓ SSL certificates generated successfully");
-			return { certPath, keyPath };
+			// Find the actual generated certificate files
+			const generatedCerts = findExistingCertificates(certsDir);
+			if (generatedCerts) {
+				console.log("✓ SSL certificates generated successfully");
+				console.log(
+					`📁 Certificate: ${path.basename(generatedCerts.certPath)}`
+				);
+				console.log(`🔑 Key: ${path.basename(generatedCerts.keyPath)}`);
+				return generatedCerts;
+			} else {
+				console.warn(
+					"⚠ Certificates generated but not found in expected location"
+				);
+				return null;
+			}
 		} else {
 			console.warn(
 				"⚠ Failed to generate SSL certificates, falling back to HTTP"
@@ -259,6 +276,78 @@ function generateSSLCertificates(projectPath) {
 		return null;
 	} finally {
 		process.chdir(currentDir);
+	}
+}
+
+/**
+ * Finds existing SSL certificates in the certs directory, including those with suffixes
+ */
+function findExistingCertificates(certsDir) {
+	if (!fs.existsSync(certsDir)) {
+		return null;
+	}
+
+	const files = fs.readdirSync(certsDir);
+
+	// Look for localhost certificates (with or without suffixes)
+	const certFile = files.find(
+		(f) =>
+			f.startsWith("localhost") && f.endsWith(".pem") && !f.includes("-key")
+	);
+	const keyFile = files.find(
+		(f) => f.startsWith("localhost") && f.endsWith("-key.pem")
+	);
+
+	if (certFile && keyFile) {
+		const certPath = path.join(certsDir, certFile);
+		const keyPath = path.join(certsDir, keyFile);
+
+		// Verify files actually exist and have content
+		try {
+			const certStats = fs.statSync(certPath);
+			const keyStats = fs.statSync(keyPath);
+
+			if (certStats.size > 0 && keyStats.size > 0) {
+				return { certPath, keyPath };
+			}
+		} catch (error) {
+			// Files don't exist or can't be read
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Cleans up old SSL certificate files to prevent naming conflicts
+ */
+function cleanupOldCertificates(certsDir) {
+	if (!fs.existsSync(certsDir)) {
+		return;
+	}
+
+	try {
+		const files = fs.readdirSync(certsDir);
+		const certFiles = files.filter(
+			(f) =>
+				f.startsWith("localhost") &&
+				(f.endsWith(".pem") || f.endsWith("-key.pem"))
+		);
+
+		if (certFiles.length > 0) {
+			console.log("🧹 Cleaning up old certificate files...");
+			certFiles.forEach((file) => {
+				const filePath = path.join(certsDir, file);
+				try {
+					fs.unlinkSync(filePath);
+					console.log(`   Removed: ${file}`);
+				} catch (error) {
+					console.warn(`   Could not remove ${file}: ${error.message}`);
+				}
+			});
+		}
+	} catch (error) {
+		console.warn("⚠ Could not clean up old certificates:", error.message);
 	}
 }
 
@@ -716,10 +805,9 @@ function devCommand(argv) {
 
 	if (useHttps) {
 		const certsDir = path.join(projectPath, ".certs");
-		certPath = path.join(certsDir, "localhost.pem");
-		keyPath = path.join(certsDir, "localhost-key.pem");
+		const existingCerts = findExistingCertificates(certsDir);
 
-		if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
+		if (!existingCerts) {
 			console.log(
 				"⚠ SSL certificates not found. Run 'npm run setup-ssl' to enable HTTPS"
 			);
@@ -727,6 +815,12 @@ function devCommand(argv) {
 			useHttps = false;
 		} else {
 			console.log("🔒 Starting HTTPS development server...");
+			console.log(
+				`📁 Using certificate: ${path.basename(existingCerts.certPath)}`
+			);
+			console.log(`🔑 Using key: ${path.basename(existingCerts.keyPath)}`);
+			certPath = existingCerts.certPath;
+			keyPath = existingCerts.keyPath;
 		}
 	} else {
 		console.log("🌐 Starting HTTP development server...");
