@@ -146,8 +146,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 			}
 
 			// Escape dots for regex and create pattern that matches any subdomain
+			// Include optional query parameters after .js for signed URLs
+			// Match both /uploads/versions/ and /uploads/plugin-version/ paths
 			const escapedDomain = targetDomain.replace(/\./g, "\\.");
-			return `.*\\.${escapedDomain}\\/uploads\\/versions\\/\\d+\\/file_name\\/.*\\.js`;
+			return `.*\\.${escapedDomain}\\/uploads\\/(plugin-version|versions)\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?`;
 		} catch (error) {
 			console.error("Error generating default pattern:", error);
 			return "";
@@ -185,12 +187,19 @@ document.addEventListener("DOMContentLoaded", async function () {
 				return;
 			}
 
-			// Validate redirect URL
+			// Validate redirect URL - allow both full URLs and hostname:port/path
+			let validatedRedirectTo = redirectTo;
 			try {
 				new URL(redirectTo);
 			} catch (e) {
-				showStatus("Please enter a valid URL", "error");
-				return;
+				// Try adding https:// prefix
+				try {
+					new URL(`https://${redirectTo}`);
+					validatedRedirectTo = redirectTo; // Keep original for background script to handle
+				} catch (e2) {
+					showStatus("Please enter a valid URL", "error");
+					return;
+				}
 			}
 
 			// Get pattern
@@ -223,7 +232,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			// Create rule
 			const rule = {
 				pattern: pattern,
-				redirect: redirectTo,
+				redirect: validatedRedirectTo,
 				maskUrl: false, // Default to false, can be controlled by masking mode
 			};
 

@@ -108,7 +108,18 @@ function handleRequest(details) {
 		}
 
 		if (matchesHost || matchesFullUrl) {
-			const newUrl = details.url.replace(originalHost, rule.redirect);
+			// For full URL patterns, use the redirect URL directly
+			// For hostname patterns, replace just the hostname
+			let newUrl;
+			if (matchesFullUrl && !matchesHost) {
+				// Full URL pattern match - use redirect URL directly
+				newUrl = rule.redirect.startsWith("http")
+					? rule.redirect
+					: `https://${rule.redirect}`;
+			} else {
+				// Hostname match - replace hostname only
+				newUrl = details.url.replace(originalHost, rule.redirect);
+			}
 			const requestType = getRequestTypeDescription(details.type);
 
 			// Additional loop prevention - check if new URL would match any pattern

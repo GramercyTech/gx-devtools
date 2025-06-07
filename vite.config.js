@@ -79,16 +79,64 @@ export default defineConfig(({ mode }) => {
 					include: ["src/**"],
 				}
 			),
+			// Custom request logging and CORS plugin
+			{
+				name: "request-logger-cors",
+				configureServer(server) {
+					server.middlewares.use((req, res, next) => {
+						const start = Date.now();
+						const originalEnd = res.end;
+
+						// Add CORS headers to all responses
+						res.setHeader("Access-Control-Allow-Origin", "*");
+						res.setHeader(
+							"Access-Control-Allow-Methods",
+							"GET, POST, PUT, DELETE, OPTIONS"
+						);
+						res.setHeader("Access-Control-Allow-Headers", "*");
+						res.setHeader("Access-Control-Allow-Credentials", "false");
+
+						// Handle preflight requests
+						if (req.method === "OPTIONS") {
+							res.statusCode = 200;
+							res.end();
+							return;
+						}
+
+						res.end = function (...args) {
+							const duration = Date.now() - start;
+							const status = res.statusCode;
+							const method = req.method;
+							const url = req.url;
+							const referer = req.headers.referer || "direct";
+							const origin = req.headers.origin || "unknown";
+
+							console.log(
+								`[${new Date().toISOString()}] ${method} ${url} ${status} (${duration}ms) - Origin: ${origin} - Referer: ${referer}`
+							);
+							originalEnd.apply(this, args);
+						};
+
+						next();
+					});
+				},
+			},
 		],
 		logLevel: env.NODE_LOG_LEVEL || "error",
 		clearScreen: false,
 		server: {
-			port: parseInt(env.NODE_PORT) || 3000,
+			port: parseInt(env.NODE_PORT) || 3060,
 			strictPort: true,
 			https: getHttpsConfig(env),
+			cors: {
+				origin: "*",
+				methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+				allowedHeaders: ["*"],
+				credentials: false,
+			},
 			hmr: {
 				clientPort:
-					parseInt(env.CLIENT_PORT) || parseInt(env.NODE_PORT) || 3000,
+					parseInt(env.CLIENT_PORT) || parseInt(env.NODE_PORT) || 3060,
 			},
 			host: true, // Allow access from network
 		},

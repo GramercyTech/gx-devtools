@@ -1901,7 +1901,7 @@ async function sendSocketEvent(eventName, identifier) {
 	const paths = resolveGxPaths();
 	const eventsDir = path.join(paths.configDir, "socket-events");
 	const eventPath = path.join(eventsDir, `${eventName}.json`);
-	const socketIoPort = process.env.SOCKET_IO_PORT || 3069;
+	const socketIoPort = 3061;
 
 	if (!fs.existsSync(eventPath)) {
 		console.error(`❌ Event file not found: ${eventName}.json`);
@@ -1924,7 +1924,7 @@ async function sendSocketEvent(eventName, identifier) {
 		}
 
 		// Send the event via HTTP to the Socket.IO server
-		const socketUrl = `http://localhost:${socketIoPort}`;
+		const socketUrl = `https://localhost:${socketIoPort}`;
 
 		console.log(`📡 Sending socket event: ${eventData.event}`);
 		console.log(`📺 Channel: ${eventData.channel}`);
