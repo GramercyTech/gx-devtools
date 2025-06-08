@@ -295,11 +295,11 @@ li:last-child {
 </style>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-// Instead of:
-// import { useGxpStore } from '@/stores/gxpPortalConfigStore';
+defineOptions({
+  inheritAttrs: false,
+});
 
-// Use:
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useStore } from '@/composables/useStore';
 
 // Initialize the GxP store

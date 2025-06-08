@@ -29,6 +29,7 @@
                 :permission-flags="permissionFlags"
                 :theme="themeSettings"
                 :router="mockRouter"
+                :sockets="sockets"
             />
             
             <!-- Final Page -->
@@ -111,6 +112,7 @@ const hideLoading = () => {
     isLoading.value = false;
 };
 
+const sockets = {};
 // Theme configuration
 const themeSettings = {
     background_color: "#ffffff",

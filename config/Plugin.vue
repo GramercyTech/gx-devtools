@@ -241,6 +241,11 @@
 }
 </style>
 <script setup>
+
+defineOptions({
+  inheritAttrs: false,
+});
+
 import { ref } from 'vue';
 import "@gramercytech/gx-componentkit/style.css";
 import {
