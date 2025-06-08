@@ -49,7 +49,6 @@
   "homepage": "https://github.com/GramercyTech/gx-toolkit#readme",
   "dependencies": {
     "@fal-works/esbuild-plugin-global-externals": "^2.1.2",
-    "@gramercytech/gx-componentkit": "^1.0.7",
     "@vitejs/plugin-vue": "^5.1.4",
     "concurrently": "^9.0.1",
     "cors": "^2.8.5",
