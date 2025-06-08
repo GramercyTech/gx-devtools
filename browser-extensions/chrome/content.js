@@ -1,99 +1,51 @@
-// Override fetch to intercept requests
+// JavaScript Proxy Extension Content Script
+// This extension handles redirects at the network level via webRequest/declarativeNetRequest APIs
+// Content script is mainly used for cache clearing and debugging
 (function () {
-	const originalFetch = window.fetch;
 	let isProxyEnabled = false;
-	let proxyRules = [];
+	let config = {};
 
 	// Get initial state from background script
-	browser.runtime
-		.sendMessage({ action: "getState" })
+	chrome.runtime
+		.sendMessage({ action: "getConfig" })
 		.then((response) => {
 			isProxyEnabled = response.enabled;
-			proxyRules = response.rules;
-			console.log("[Traffic Proxy Content] State received:", {
+			config = response;
+			console.log("[JavaScript Proxy Content] Extension state loaded:", {
 				enabled: isProxyEnabled,
-				ruleCount: proxyRules.length,
+				pattern: config.urlPattern,
+				redirectUrl: config.redirectUrl,
 				url: window.location.href,
 			});
 		})
 		.catch((err) =>
-			console.error("[Traffic Proxy Content] Failed to get proxy state:", err)
+			console.error(
+				"[JavaScript Proxy Content] Failed to get extension config:",
+				err
+			)
 		);
 
-	// Listen for state changes
-	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-		if (message.action === "stateUpdate") {
-			isProxyEnabled = message.enabled;
-			proxyRules = message.rules;
+	// Listen for state changes from background script
+	chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+		if (message.action === "configUpdate") {
+			isProxyEnabled = message.config.enabled;
+			config = message.config;
+			console.log("[JavaScript Proxy Content] Config updated:", config);
 		}
 	});
 
-	// Override fetch function
-	window.fetch = function (input, init) {
-		console.log("fetch", input, init);
-		if (!isProxyEnabled) {
-			return originalFetch.apply(this, arguments);
-		}
-
-		let url = input;
-		if (typeof input === "object" && input.url) {
-			url = input.url;
-		}
-
-		// Apply proxy rules
-		const modifiedUrl = applyProxyRules(url);
-
-		// If URL was modified, use the new URL
-		if (modifiedUrl !== url) {
-			if (typeof input === "string") {
-				input = modifiedUrl;
-			} else if (typeof input === "object") {
-				input = new Request(modifiedUrl, input);
-			}
-		}
-
-		return originalFetch.apply(this, arguments);
+	// Expose proxy state for debugging
+	window.jsProxyExtension = {
+		isEnabled: () => isProxyEnabled,
+		getConfig: () => config,
+		debug: () => {
+			console.log("[JavaScript Proxy Content] Debug Info:", {
+				enabled: isProxyEnabled,
+				config: config,
+				url: window.location.href,
+			});
+		},
 	};
 
-	// Apply proxy rules to URL
-	function applyProxyRules(url) {
-		try {
-			const urlObj = new URL(url);
-			const originalHost = urlObj.hostname;
-
-			for (const rule of proxyRules) {
-				const regex = new RegExp(rule.pattern, "i");
-				if (regex.test(originalHost)) {
-					return url.replace(originalHost, rule.redirect);
-				}
-			}
-		} catch (e) {
-			// Invalid URL, return as-is
-			console.log("Invalid URL for proxy processing:", url);
-		}
-
-		return url;
-	}
-
-	// Override XMLHttpRequest as well
-	const originalXHROpen = XMLHttpRequest.prototype.open;
-	XMLHttpRequest.prototype.open = function (
-		method,
-		url,
-		async,
-		user,
-		password
-	) {
-		console.log("open", method, url, async, user, password);
-		if (isProxyEnabled) {
-			url = applyProxyRules(url);
-		}
-		return originalXHROpen.call(this, method, url, async, user, password);
-	};
-
-	// Note: Dynamic imports (import('module')) are handled by the background script's webRequest API
-	// Static imports (import ... from 'module') are also handled by webRequest API
-	// This content script primarily handles fetch() and XHR calls
-
-	console.log("Traffic Proxy content script loaded");
+	console.log("[JavaScript Proxy Content] Content script loaded");
 })();

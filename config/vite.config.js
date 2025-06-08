@@ -153,6 +153,7 @@ export default defineConfig(({ mode }) => {
 		resolve: {
 			alias: {
 				"@": path.resolve(process.cwd(), "src"),
+				vue: path.resolve("./node_modules/vue"),
 			},
 		},
 	};
