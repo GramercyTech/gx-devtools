@@ -68,15 +68,127 @@ async function clearCacheForPattern(urlPattern) {
 	try {
 		console.log(`[JavaScript Proxy] Clearing cache for pattern: ${urlPattern}`);
 
-		// Clear cache for URLs matching our pattern
+		// Clear browser cache
 		await chrome.browsingData.removeCache({
 			origins: [], // Empty array means all origins
 			since: 0, // Clear all cache entries
 		});
 
+		// Clear service worker caches by injecting script into active tabs
+		await clearServiceWorkerCaches(urlPattern);
+
 		console.log("[JavaScript Proxy] Cache cleared successfully");
 	} catch (error) {
 		console.error("[JavaScript Proxy] Error clearing cache:", error);
+	}
+}
+
+async function clearServiceWorkerCaches(urlPattern) {
+	try {
+		// Get all active tabs
+		const tabs = await chrome.tabs.query({});
+
+		// Script to clear service worker caches for matching URLs
+		const clearCacheScript = `
+			(async function() {
+				try {
+					if ('caches' in window) {
+						const cacheNames = await caches.keys();
+						const pattern = new RegExp("${urlPattern.replace(/\\/g, "\\\\")}", "i");
+						
+						for (const cacheName of cacheNames) {
+							const cache = await caches.open(cacheName);
+							const requests = await cache.keys();
+							
+							for (const request of requests) {
+								if (pattern.test(request.url)) {
+									await cache.delete(request);
+									console.log('[JavaScript Proxy] Deleted from cache:', request.url);
+								}
+							}
+						}
+						
+						// Also try to update service worker registration
+						if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+							navigator.serviceWorker.controller.postMessage({
+								type: 'CLEAR_CACHE_FOR_PATTERN',
+								pattern: "${urlPattern.replace(/\\/g, "\\\\")}"
+							});
+						}
+					}
+				} catch (error) {
+					console.error('[JavaScript Proxy] Error clearing service worker cache:', error);
+				}
+			})();
+		`;
+
+		// Inject the script into each tab
+		for (const tab of tabs) {
+			try {
+				if (
+					tab.url &&
+					!tab.url.startsWith("chrome://") &&
+					!tab.url.startsWith("chrome-extension://")
+				) {
+					await chrome.scripting.executeScript({
+						target: { tabId: tab.id },
+						func: async function (pattern) {
+							try {
+								if ("caches" in window) {
+									const cacheNames = await caches.keys();
+									const regex = new RegExp(pattern, "i");
+
+									for (const cacheName of cacheNames) {
+										const cache = await caches.open(cacheName);
+										const requests = await cache.keys();
+
+										for (const request of requests) {
+											if (regex.test(request.url)) {
+												await cache.delete(request);
+												console.log(
+													"[JavaScript Proxy] Deleted from cache:",
+													request.url
+												);
+											}
+										}
+									}
+
+									// Also try to update service worker registration
+									if (
+										"serviceWorker" in navigator &&
+										navigator.serviceWorker.controller
+									) {
+										navigator.serviceWorker.controller.postMessage({
+											type: "CLEAR_CACHE_FOR_PATTERN",
+											pattern: pattern,
+										});
+									}
+								}
+							} catch (error) {
+								console.error(
+									"[JavaScript Proxy] Error clearing service worker cache:",
+									error
+								);
+							}
+						},
+						args: [urlPattern.replace(/\\/g, "\\\\")],
+					});
+				}
+			} catch (error) {
+				// Tab might not allow script injection, continue with others
+				console.debug(
+					`[JavaScript Proxy] Could not inject cache clear script into tab ${tab.id}:`,
+					error
+				);
+			}
+		}
+
+		console.log("[JavaScript Proxy] Service worker cache clearing attempted");
+	} catch (error) {
+		console.error(
+			"[JavaScript Proxy] Error clearing service worker caches:",
+			error
+		);
 	}
 }
 
@@ -311,9 +423,14 @@ function handleRequestHeaders(details) {
 	if (config.disableCacheForRedirects && shouldDisableCache(details.url)) {
 		// Add cache-busting headers
 		const cacheHeaders = [
-			{ name: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+			{
+				name: "Cache-Control",
+				value: "no-cache, no-store, must-revalidate, max-age=0",
+			},
 			{ name: "Pragma", value: "no-cache" },
 			{ name: "Expires", value: "0" },
+			{ name: "If-None-Match", value: "*" },
+			{ name: "If-Modified-Since", value: "Thu, 01 Jan 1970 00:00:00 GMT" },
 		];
 
 		cacheHeaders.forEach((cacheHeader) => {
@@ -377,13 +494,18 @@ function handleResponseHeaders(details) {
 
 	// Handle cache control for URLs matching our pattern
 	if (config.disableCacheForRedirects && shouldDisableCache(details.url)) {
-		// Add response cache-busting headers
+		// Add aggressive response cache-busting headers
 		const cacheHeaders = [
-			{ name: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+			{
+				name: "Cache-Control",
+				value: "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0",
+			},
 			{ name: "Pragma", value: "no-cache" },
-			{ name: "Expires", value: "0" },
+			{ name: "Expires", value: "Thu, 01 Jan 1970 00:00:00 GMT" },
 			{ name: "Last-Modified", value: new Date().toUTCString() },
-			{ name: "ETag", value: `"${Date.now()}"` },
+			{ name: "ETag", value: `"${Date.now()}-${Math.random()}"` },
+			{ name: "Vary", value: "*" },
+			{ name: "X-Cache-Control", value: "no-cache" },
 		];
 
 		cacheHeaders.forEach((cacheHeader) => {
@@ -450,6 +572,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 			chrome.storage.sync.set({ enabled: config.enabled });
 			updateIcon();
 			updateRequestListener();
+			// Clear cache when enabling the proxy
+			if (config.enabled && config.clearCacheOnEnable) {
+				clearCacheForPattern(config.urlPattern);
+			}
 			sendResponse({ success: true, enabled: config.enabled });
 			break;
 

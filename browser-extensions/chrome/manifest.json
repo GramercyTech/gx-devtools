@@ -10,7 +10,8 @@
     "storage",
     "notifications",
     "webRequest",
-    "browsingData"
+    "browsingData",
+    "scripting"
   ],
   
   "host_permissions": [
