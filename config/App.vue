@@ -59,7 +59,7 @@
 </style>
 
 <script setup>
-import { ref } from "vue";
+import { ref, shallowRef } from "vue";
 
 import "@/theme-layouts/AdditionalStyling.css"
 import SystemLayout from "@/theme-layouts/SystemLayout.vue";
@@ -74,7 +74,7 @@ import {
 } from "@gramercytech/gx-componentkit";
 
 // App state management
-const currentLayout = ref(PublicLayout);
+const currentLayout = shallowRef(PublicLayout);
 const currentPage = ref('start');
 const isLoading = ref(false);
 const loadingMessage = ref('Loading...');
