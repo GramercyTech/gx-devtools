@@ -149,11 +149,27 @@ export default defineConfig(({ mode }) => {
 				fileName: (format) => `plugin.${format}.js`,
 				formats: ["es"],
 			},
+			rollupOptions: {
+				// Make sure Vue and component kit are treated as external dependencies
+				external: ["vue", "@gramercytech/gx-componentkit"],
+				output: {
+					globals: {
+						vue: "Vue",
+						"@gramercytech/gx-componentkit": "GxComponentKit",
+					},
+				},
+			},
 		},
 		resolve: {
 			alias: {
 				"@": path.resolve(process.cwd(), "src"),
 			},
+			// Dedupe Vue to ensure only one instance is used
+			dedupe: ["vue", "@gramercytech/gx-componentkit"],
+		},
+		// SSR configuration to handle externals properly
+		ssr: {
+			external: ["vue", "@gramercytech/gx-componentkit"],
 		},
 	};
 });
