@@ -56,7 +56,7 @@
         </button>
         
         <button 
-          @click="$emit('back')" 
+          @click="props.router?.visit('/start')" 
           class="action-btn secondary"
         >
           {{ gxpStore.getString('back_button', 'Back') }}
@@ -125,7 +125,7 @@
       <!-- Complete button -->
       <div class="complete-section">
         <button 
-          @click="$emit('complete')" 
+          @click="props.router?.visit('/final')" 
           class="action-btn complete"
           :style="{ backgroundColor: gxpStore.getSetting('final_background_color') }"
         >
@@ -304,8 +304,19 @@ import { useStore } from '@/composables/useStore';
 
 // Initialize the GxP store
 const gxpStore = useStore(); // This will automatically use global or local store
-// Define emits
-defineEmits(['back', 'complete']);
+
+// Define props (router will be passed from platform)
+const props = defineProps({
+  router: {
+    type: Object,
+    required: false,
+    default: () => ({
+      visit: (url, options) => console.log('Router not available:', url, options)
+    }),
+  },
+});
+
+// Router is now available as props.router for navigation
 
 // Local state
 const socketMessages = ref([]);

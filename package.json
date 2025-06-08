@@ -12,7 +12,18 @@
     "ext:chrome": "node scripts/launch-chrome.js",
     "ext:chrome-pack": "node scripts/pack-chrome.js",
     "ext:install": "npm run ext:firefox & npm run ext:chrome",
-    "ext:build": "npm run ext:firefox-build && npm run ext:chrome-pack"
+    "ext:build": "npm run ext:firefox-build && npm run ext:chrome-pack",
+    "dev-http": "gxto dev --no-https",
+    "build": "gxto build",
+    "dev-socket": "concurrently 'gxto dev' 'nodemon server.js'",
+    "setup-ssl": "gxto setup-ssl",
+    "socket:list": "gxto socket list",
+    "socket:send": "gxto socket send",
+    "assets:list": "gxto assets list",
+    "assets:init": "gxto assets init",
+    "assets:generate": "gxto assets generate",
+    "placeholder": "gxto assets generate --size 400x300 --name custom-placeholder",
+    "multiple-assets": "gxto assets generate --name buttons --count 4 --size 120x40"
   },
   "repository": {
     "type": "git",
@@ -51,10 +62,15 @@
     "socket.io-client": "^4.8.0",
     "vite": "^5.4.8",
     "vue": "^3.5.8",
-    "yargs": "^17.7.2"
+    "yargs": "^17.7.2",
+    "@gramercytech/gx-componentkit": "^1.0.0"
   },
   "devDependencies": {
     "web-ext": "^8.2.0",
-    "chrome-launcher": "^1.1.2"
+    "chrome-launcher": "^1.1.2",
+    "@gramercytech/gx-toolkit": "^1.0.58",
+    "nodemon": "^3.1.7",
+    "concurrently": "^9.0.1",
+    "mkcert": "^3.2.0"
   }
 }

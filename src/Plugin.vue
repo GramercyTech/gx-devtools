@@ -60,10 +60,10 @@
 			
 			<!-- Navigation -->
 			<div class="navigation">
-				<button @click="router?.visit('/start')" class="nav-button secondary">
+				<button @click="$emit('back')" class="nav-button secondary">
 					← Back to Start
 				</button>
-				<button @click="router?.visit('/final')" class="nav-button primary">
+				<button @click="$emit('complete')" class="nav-button primary">
 					Complete Experience →
 				</button>
 			</div>
@@ -285,16 +285,9 @@ const props = defineProps({
 		required: false,
 		default: () => ({}),
 	},
-	router: {
-		type: Object,
-		required: false,
-		default: () => ({
-			visit: (url, options) => console.log('Router not available:', url, options)
-		}),
-	},
 });
 
-// Router is now available as props.router for navigation
+const emit = defineEmits(['back', 'complete']);
 
 // Component state
 const example = ref('Hello World');

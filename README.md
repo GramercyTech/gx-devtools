@@ -98,10 +98,11 @@ my-project/
 ├── package.json              # Dependencies and scripts
 ├── .env.example              # Environment template
 ├── .gitignore                # Git ignore patterns
-├── main.js                   # Application entry
-├── server.js                 # Express + Socket.IO server
-├── App.vue                   # Root Vue component
-├── index.html                # HTML template
+├── main.js                   # Development entry point
+├── server.js                 # Development server (Express + Socket.IO)
+├── App.vue                   # Development container (mimics platform)
+├── AdvancedExample.vue       # Advanced workflow reference
+├── index.html                # Development HTML template
 ├── app-manifest.json         # Plugin manifest
 ├── .certs/                   # SSL certificates (auto-generated)
 ├── browser-extensions/       # Browser extensions
@@ -111,7 +112,7 @@ my-project/
 │   ├── launch-chrome.js      # Chrome extension launcher
 │   └── pack-chrome.js        # Chrome extension packager
 └── src/
-    └── Plugin.vue            # Main plugin component
+    └── Plugin.vue            # Your app root component (production entry)
 ```
 
 ## HTTPS Development

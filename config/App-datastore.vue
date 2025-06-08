@@ -14,8 +14,7 @@
         <!-- Your Custom Plugin Content -->
         <Plugin
             v-else-if="currentPage === 'plugin'"
-            @back="goToPage('start')"
-            @complete="goToPage('final')"
+            :router="mockRouter"
         />
         
         <!-- Final Page -->
@@ -82,6 +81,35 @@ const showLoading = (message = 'Loading...') => {
 
 const hideLoading = () => {
     isLoading.value = false;
+};
+
+// Mock router to simulate platform navigation during development
+const mockRouter = {
+    visit: (url, options = {}) => {
+        console.log(`🔗 Mock Router: Navigating to ${url}`, options);
+        
+        // Simulate platform navigation behavior
+        if (options.onStart) options.onStart();
+        
+        // Map platform routes to local pages
+        const routeMap = {
+            '/start': 'start',
+            '/plugin': 'plugin', 
+            '/final': 'final',
+            '/camera': 'plugin', // For development, camera stays in plugin
+            '/results': 'plugin', // For development, results stays in plugin
+            '/share': 'plugin',   // For development, share stays in plugin
+            '/instructions': 'plugin' // For development, instructions stays in plugin
+        };
+        
+        const targetPage = routeMap[url] || 'plugin';
+        
+        // Simulate async navigation
+        setTimeout(() => {
+            goToPage(targetPage);
+            if (options.onFinish) options.onFinish();
+        }, 100);
+    }
 };
 
 // Expose functions for use in Plugin component

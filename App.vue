@@ -3,10 +3,10 @@
         <!-- Start Page -->
         <GxPageStart
             v-if="currentPage === 'start'"
-            :plugin-vars="pluginVars"
-            :asset-urls="assetList"
-            :strings-list="stringsList"
-            :theme="theme"
+            :plugin-vars="gxpStore.pluginVars"
+            :asset-urls="gxpStore.assetList"
+            :strings-list="gxpStore.stringsList"
+            :theme="gxpStore.theme"
             @stage-change="goToPage('plugin')"
             @idle-timeout="resetToStart"
         />
@@ -17,10 +17,12 @@
             :plugin-vars="pluginVars"
             :dependency-list="dependencyList"
             :asset-urls="assetList"
+
             :strings-list="stringsList"
             :permission-flags="permissionFlags"
             :theme="theme"
-            :router="mockRouter"
+            @back="goToPage('start')"
+            @complete="goToPage('final')"
         />
         
         <!-- Final Page -->
@@ -125,35 +127,6 @@ const dependencyList = {
 
 //Update permissionFlags with all the permissions that will be set through the custom admin panel in dashboard, GxP will generate this array of flags based on settings set in the dashboard
 const permissionFlags = [];
-
-// Mock router to simulate platform navigation during development
-const mockRouter = {
-    visit: (url, options = {}) => {
-        console.log(`🔗 Mock Router: Navigating to ${url}`, options);
-        
-        // Simulate platform navigation behavior
-        if (options.onStart) options.onStart();
-        
-        // Map platform routes to local pages
-        const routeMap = {
-            '/start': 'start',
-            '/plugin': 'plugin', 
-            '/final': 'final',
-            '/camera': 'plugin', // For development, camera stays in plugin
-            '/results': 'plugin', // For development, results stays in plugin
-            '/share': 'plugin',   // For development, share stays in plugin
-            '/instructions': 'plugin' // For development, instructions stays in plugin
-        };
-        
-        const targetPage = routeMap[url] || 'plugin';
-        
-        // Simulate async navigation
-        setTimeout(() => {
-            goToPage(targetPage);
-            if (options.onFinish) options.onFinish();
-        }, 100);
-    }
-};
 
 // Socket handling is now managed by the GxP datastore
 // Access sockets via: const gxpStore = useGxpStore(); gxpStore.sockets

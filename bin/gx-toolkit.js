@@ -631,9 +631,9 @@ async function initCommand(argv) {
 			desc: "App.vue",
 		},
 		{
-			src: "KioskApp.vue",
-			dest: "KioskApp.vue",
-			desc: "KioskApp.vue (Advanced kiosk template)",
+			src: "AdvancedExample.vue",
+			dest: "AdvancedExample.vue",
+			desc: "AdvancedExample.vue (Advanced workflow reference)",
 		},
 		{ src: "index.html", dest: "index.html", desc: "index.html" },
 		{
@@ -792,11 +792,10 @@ async function initCommand(argv) {
 		console.log("📡 Start with Socket.IO server: gxto dev --with-socket");
 	}
 	console.log("");
-	console.log("📖 Templates available:");
-	console.log(
-		"   • App.vue - Basic 3-page flow with gx-componentkit integration"
-	);
-	console.log("   • KioskApp.vue - Advanced kiosk template (full workflow)");
+	console.log("📖 Files included:");
+	console.log("   • App.vue - Development container (mimics platform)");
+	console.log("   • AdvancedExample.vue - Advanced workflow reference");
+	console.log("   • Plugin.vue - Your app entry point (customize this!)");
 	console.log("📚 Check README.md for detailed usage instructions");
 }
 
