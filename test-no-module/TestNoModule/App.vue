@@ -7,7 +7,7 @@
             :asset-urls="gxpStore.assetList"
             :strings-list="gxpStore.stringsList"
             :theme="gxpStore.theme"
-            @stage-change="goToPage('plugin')"
+            @start="goToPage('plugin')"
             @idle-timeout="resetToStart"
         />
         

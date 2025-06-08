@@ -133,11 +133,7 @@ GxToolkit automatically sets up HTTPS using [mkcert](https://github.com/FiloSott
 
 ## Environment Configuration
 
-Copy `.env.example` to `.env` and customize:
-
-```bash
-cp .env.example .env
-```
+The `.env` file is automatically created from `.env.example` during project initialization. Customize as needed:
 
 ### Key Variables
 
@@ -169,10 +165,10 @@ Added to your `package.json`:
 ```json
 {
   "scripts": {
-    "dev": "gxto dev",
+    "dev": "gxto dev --with-socket",
+    "dev-app": "gxto dev",
     "dev-http": "gxto dev --no-https", 
     "build": "gxto build",
-    "dev-socket": "concurrently 'gxto dev' 'nodemon server.js'",
     "setup-ssl": "gxto setup-ssl",
     "ext:firefox": "gxto ext:firefox",
     "ext:chrome": "gxto ext:chrome",
@@ -187,7 +183,6 @@ Added to your `package.json`:
 ```bash
 gxto init my-plugin
 cd my-plugin
-cp .env.example .env
 npm run dev
 ```
 

@@ -428,12 +428,11 @@ function createPackageJson(projectPath, projectName, useDatastore = false) {
 		version: "1.0.0",
 		description: `GxP Plugin: ${projectName}`,
 		main: "main.js",
-		type: "module",
 		scripts: {
-			dev: "gxto dev",
+			dev: "gxto dev --with-socket",
+			"dev-app": "gxto dev",
 			"dev-http": "gxto dev --no-https",
 			build: "gxto build",
-			"dev-socket": "gxto dev --with-socket",
 			"setup-ssl": "gxto setup-ssl",
 			"socket:list": "gxto socket list",
 			"socket:send": "gxto socket send",
@@ -522,10 +521,10 @@ function updateExistingProject(projectPath) {
 			// Add missing scripts
 			if (!packageJson.scripts) packageJson.scripts = {};
 			const requiredScripts = {
-				dev: "gxto dev",
+				dev: "gxto dev --with-socket",
+				"dev-app": "gxto dev",
 				"dev-http": "gxto dev --no-https",
 				build: "gxto build",
-				"dev-socket": "concurrently 'gxto dev' 'nodemon server.js'",
 				"setup-ssl": "gxto setup-ssl",
 				"socket:list": "gxto socket list",
 				"socket:send": "gxto socket send",
@@ -580,7 +579,9 @@ function setupSSLCommand() {
 		console.log("✅ SSL setup complete!");
 		console.log("🔒 Your development server will now use HTTPS");
 		console.log("📁 Certificates stored in .certs/ directory");
-		console.log("🚀 Run 'npm run dev' to start HTTPS development server");
+		console.log(
+			"🚀 Run 'npm run dev' to start HTTPS development with Socket.IO"
+		);
 	} else {
 		console.log(
 			"❌ SSL setup failed. You can still use HTTP with 'npm run dev-http'"
@@ -854,14 +855,13 @@ async function initCommand(argv) {
 	console.log("⚙️ Environment file (.env) ready - customize as needed");
 
 	if (sslSetup) {
-		console.log("🔒 Start HTTPS development: npm run dev");
+		console.log("🔒 Start HTTPS development with Socket.IO: npm run dev");
+		console.log("🔒 Start HTTPS development only: npm run dev-app");
 		console.log("🌐 Start HTTP development: npm run dev-http");
-		console.log("📡 Start with Socket.IO server: gxto dev --with-socket");
 	} else {
 		console.log("🌐 Start development: npm run dev-http");
 		console.log("🔧 Setup SSL certificates: npm run setup-ssl");
 		console.log("🔒 Then use HTTPS development: npm run dev");
-		console.log("📡 Start with Socket.IO server: gxto dev --with-socket");
 	}
 	console.log("");
 	console.log("📖 Files included:");
@@ -888,7 +888,7 @@ function devCommand(argv) {
 		dotenv.config({ path: envPath });
 	} else if (fs.existsSync(envExamplePath)) {
 		console.log(
-			"💡 Tip: Copy .env.example to .env to customize your environment settings"
+			"💡 Tip: Create .env file from .env.example to customize your environment settings"
 		);
 		console.log("   cp .env.example .env");
 	}
@@ -2154,7 +2154,7 @@ async function sendSocketEvent(eventName, identifier) {
 			if (error.code === "ECONNREFUSED") {
 				console.error("❌ Cannot connect to Socket.IO server");
 				console.log("💡 Make sure the server is running:");
-				console.log("   npm run dev-socket");
+				console.log("   npm run dev");
 				console.log("   or");
 				console.log("   nodemon server.js");
 			} else {

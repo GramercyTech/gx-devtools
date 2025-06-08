@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const chromeLauncher = require("chrome-launcher");
 const path = require("path");
 const fs = require("fs");
 
@@ -7,8 +8,6 @@ const fs = require("fs");
  * Launches Chrome with the browser extension loaded
  */
 async function launchChromeWithExtension() {
-	// Dynamic import for chrome-launcher (ES module)
-	const { launch } = await import("chrome-launcher");
 	// Use environment variable if set (from CLI), otherwise use default path
 	const extensionPath =
 		process.env.CHROME_EXTENSION_PATH ||
@@ -31,15 +30,13 @@ async function launchChromeWithExtension() {
 	console.log("📁 Extension path:", extensionPath);
 
 	try {
-		const chrome = await launch({
+		const chrome = await chromeLauncher.launch({
 			chromeFlags: [
 				`--load-extension=${extensionPath}`,
-				"--disable-extensions-except=" + extensionPath,
-				"--disable-extensions-file-access-check",
+				"--disable-web-security",
+				"--disable-features=VizDisplayCompositor",
 				"--user-data-dir=/tmp/chrome-extension-test",
 				"--new-window",
-				"--no-first-run",
-				"--no-default-browser-check",
 			],
 			startingUrl: "chrome://extensions/",
 		});

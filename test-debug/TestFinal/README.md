@@ -4,17 +4,12 @@ This project was created with `@gramercytech/gx-toolkit` and includes the `@gram
 
 ## Quick Start
 
-1. **Configure your environment:**
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Start development server:**
+1. **Start development server:**
    ```bash
    npm run dev
    ```
 
-3. **Build for production:**
+2. **Build for production:**
    ```bash
    npm run build
    ```
@@ -398,10 +393,10 @@ const shareExperience = () => {
 
 ## Scripts
 
-- `npm run dev` - Start HTTPS development server
+- `npm run dev` - Start HTTPS development server with Socket.IO
+- `npm run dev-app` - Start HTTPS development server only
 - `npm run dev-http` - Start HTTP development server  
 - `npm run build` - Build for production
-- `npm run dev-socket` - Start with socket.io server
 - `npm run setup-ssl` - Generate SSL certificates
 - `npm run socket:list` - List available socket events
 - `npm run socket:send` - Send test socket events
