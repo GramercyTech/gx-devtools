@@ -47,7 +47,7 @@ function updateIcon() {
 		path: {
 			16: `${iconPath}_16.png`,
 			32: `${iconPath}_32.png`,
-			48: `${iconPath}_48.png`,
+			64: `${iconPath}_64.png`,
 			128: `${iconPath}_128.png`,
 		},
 	});
@@ -297,7 +297,7 @@ function showProxyNotification(from, to, requestType = "") {
 
 	chrome.notifications.create(notificationId, {
 		type: "basic",
-		iconUrl: "icons/gx_on_48.png",
+		iconUrl: "icons/gx_on_64.png",
 		title: "JavaScript Proxy Active",
 		message: `${requestType}\n${shortFrom}\n→ ${shortTo}`,
 	});
