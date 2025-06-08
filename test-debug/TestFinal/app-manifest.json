@@ -1,0 +1,12 @@
+{
+	"name": "GxToolkit",
+	"version": "1.0.0",
+	"description": "GxToolkit",
+	"manifest_version": 3,
+	"settings": {},
+	"strings": {
+		"default": {
+		}
+	},
+	"assets": {}
+}
