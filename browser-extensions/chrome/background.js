@@ -544,7 +544,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				clearCacheForPattern(config.urlPattern);
 			}
 			sendResponse({ success: true, enabled: config.enabled });
-			break;
+			return false; // Synchronous response
 
 		case "updateConfig":
 			config = { ...config, ...request.config };
@@ -552,29 +552,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 			updateIcon();
 			updateRequestListener();
 			sendResponse({ success: true });
-			break;
+			return false; // Synchronous response
 
 		case "getConfig":
 			sendResponse(config);
-			break;
+			return false; // Synchronous response
 
 		case "clearCache":
+			console.log(
+				"[JavaScript Proxy] Starting cache clear for pattern:",
+				config.urlPattern
+			);
 			clearCacheForPattern(config.urlPattern)
 				.then(() => {
+					console.log("[JavaScript Proxy] Cache clear completed successfully");
 					sendResponse({ success: true });
 				})
 				.catch((error) => {
 					console.error("[JavaScript Proxy] Cache clear error:", error);
-					sendResponse({ success: false, error: error.message });
+					sendResponse({
+						success: false,
+						error: error.message || error.toString(),
+					});
 				});
 			return true; // Keep message channel open for async response
 
 		default:
 			console.warn("[JavaScript Proxy] Unknown action:", request.action);
 			sendResponse({ success: false, error: "Unknown action" });
+			return false; // Synchronous response
 	}
-
-	return true; // Keep message channel open for async response
 });
 
 // Clear expired proxy requests periodically
