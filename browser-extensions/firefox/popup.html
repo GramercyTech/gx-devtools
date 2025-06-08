@@ -193,17 +193,17 @@
       line-height: 1.3;
     }
     
-    .current-domain {
+    .example-text {
       font-size: 11px;
       color: #007bff;
       margin-bottom: 8px;
-      font-weight: 500;
+      font-style: italic;
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1 class="title">Traffic Proxy</h1>
+    <h1 class="title">JavaScript Proxy</h1>
     <div class="toggle-container">
       <button id="toggleButton" class="toggle-button">
         <div class="status-dot"></div>
@@ -220,12 +220,12 @@
     <div class="section">
       <div class="section-title">Proxy Configuration</div>
       <div class="config-container">
-        <div id="currentDomain" class="current-domain"></div>
+        <div class="example-text">Redirects JavaScript files from production uploads to your local development server</div>
         
         <div class="input-group">
           <label class="input-label">Redirect To URL</label>
           <input type="text" id="redirectUrl" placeholder="https://localhost:3060/src/Plugin.vue">
-          <div class="help-text">Enter the local URL where matching requests should be redirected</div>
+          <div class="help-text">Local URL where matching JavaScript files should be redirected</div>
         </div>
         
         <div class="checkbox-group">
@@ -237,7 +237,7 @@
           <label class="input-label">URL Pattern to Match</label>
           <div id="patternDisplay" class="pattern-display"></div>
           <input type="text" id="customPatternInput" class="pattern-input" placeholder="">
-          <div class="help-text">RegEx pattern to match URLs that should be redirected</div>
+          <div class="help-text">RegEx pattern to match JavaScript file URLs (matches any domain)</div>
         </div>
       </div>
     </div>

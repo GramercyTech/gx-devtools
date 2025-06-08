@@ -4,7 +4,7 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import testData from "./test-data.json";
 
-export const useGxpStore = defineStore("gxp", () => {
+export const useGxpStore = defineStore("gxp-portal-app", () => {
 	// Core configuration - these will be injected by the platform in production
 	const pluginVars = ref({ ...testData.pluginVars });
 	const stringsList = ref({ ...testData.stringsList });
@@ -23,8 +23,6 @@ export const useGxpStore = defineStore("gxp", () => {
 	const apiBaseUrl = computed(
 		() => pluginVars.value.apiBaseUrl || "https://api.efcloud.app"
 	);
-
-	const socketIoPort = computed(() => pluginVars.value.socketIoPort || 3069);
 	const authToken = computed(() => pluginVars.value.apiPageAuthId || "");
 
 	// WebSocket configuration
@@ -65,9 +63,7 @@ export const useGxpStore = defineStore("gxp", () => {
 			typeof window !== "undefined" && window.location.protocol === "https:"
 				? "https"
 				: "http";
-		const primarySocket = io(
-			`${socketProtocol}://localhost:${socketIoPort.value}`
-		);
+		const primarySocket = io(`${socketProtocol}://localhost:3061`);
 
 		sockets.primary = {
 			broadcast: function (event, data) {
@@ -353,12 +349,7 @@ export const useGxpStore = defineStore("gxp", () => {
 	}
 
 	function addDevAsset(key, filename) {
-		const appProtocol =
-			typeof window !== "undefined" && window.location.protocol === "https:"
-				? "https"
-				: "http";
-		const appPort = window.location.port || 3000;
-		const url = `${appProtocol}://localhost:${appPort}/dev-assets/images/${filename}`;
+		const url = `https://localhost:3060/dev-assets/images/${filename}`;
 		assetList.value[key] = url;
 		console.log(`Added dev asset: ${key} -> ${url}`);
 	}

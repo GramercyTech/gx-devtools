@@ -52,10 +52,14 @@ import {
     GxPageFinal,
     GxPageLoading
 } from "@gramercytech/gx-componentkit";
-import { useGxpStore } from '/src/store/gxp-store.js';
+// Instead of:
+// import { useGxpStore } from '@/Store/gxpPortalConfigStore';
+
+// Use:
+import { useStore } from '@/composables/useStore';
 
 // Initialize the GxP store
-const gxpStore = useGxpStore();
+const gxpStore = useStore(); // This will automatically use global or local store
 
 // App state management
 const currentPage = ref('start');

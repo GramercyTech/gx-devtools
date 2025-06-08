@@ -22,7 +22,7 @@ Instead of passing props like this:
 You can now use a centralized store:
 ```vue
 <script setup>
-import { useGxpStore } from '/src/store/gxp-store.js'
+import { useGxpStore } from '/src/store/index.js'
 
 const gxpStore = useGxpStore()
 
@@ -167,7 +167,7 @@ Array of permission strings:
 
 ```vue
 <script setup>
-import { useGxpStore } from '/src/store/gxp-store.js'
+import { useGxpStore } from '/src/store/index.js'
 
 const gxpStore = useGxpStore()
 
@@ -269,14 +269,16 @@ When datastore is enabled, your project will have:
 ```
 src/
 ├── store/
-│   ├── index.js           # Pinia setup
-│   ├── gxp-store.js       # Main store definition
+│   ├── index.js           # Pinia setup & store imports
 │   ├── test-data.json     # Test configuration
 │   └── test-data-*.json   # Additional configurations
 ├── Plugin.vue             # Your component (uses store)
 └── ...
 main.js                    # Includes Pinia setup
 App.vue                    # No prop drilling needed
+
+# Note: gxp-store.js is kept in the package by default
+# Run 'gxto publish gxp-store.js' to create a local copy for customization
 ```
 
 ## Migration Guide
@@ -301,7 +303,7 @@ const welcomeText = props.stringsList.welcome_text
 **After (with store):**
 ```vue
 <script setup>
-import { useGxpStore } from '/src/store/gxp-store.js'
+import { useGxpStore } from '/src/store/index.js'
 
 const gxpStore = useGxpStore()
 
@@ -325,7 +327,7 @@ props.sockets.primary.listen('response', callback)
 **After:**
 ```vue
 <script setup>
-import { useGxpStore } from '/src/store/gxp-store.js'
+import { useGxpStore } from '/src/store/index.js'
 
 const gxpStore = useGxpStore()
 

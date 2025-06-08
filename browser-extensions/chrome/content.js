@@ -5,7 +5,7 @@
 	let proxyRules = [];
 
 	// Get initial state from background script
-	chrome.runtime
+	browser.runtime
 		.sendMessage({ action: "getState" })
 		.then((response) => {
 			isProxyEnabled = response.enabled;
@@ -21,7 +21,7 @@
 		);
 
 	// Listen for state changes
-	chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		if (message.action === "stateUpdate") {
 			isProxyEnabled = message.enabled;
 			proxyRules = message.rules;
@@ -91,8 +91,8 @@
 		return originalXHROpen.call(this, method, url, async, user, password);
 	};
 
-	// Note: Dynamic imports (import('module')) are handled by the background script's declarativeNetRequest API
-	// Static imports (import ... from 'module') are also handled by declarativeNetRequest API
+	// Note: Dynamic imports (import('module')) are handled by the background script's webRequest API
+	// Static imports (import ... from 'module') are also handled by webRequest API
 	// This content script primarily handles fetch() and XHR calls
 
 	console.log("Traffic Proxy content script loaded");

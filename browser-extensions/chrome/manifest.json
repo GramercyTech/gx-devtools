@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Traffic Proxy Extension",
+  "name": "JavaScript Proxy Extension",
   "version": "1.0",
-  "description": "Intercept and redirect web traffic to alternative domains",
+  "description": "Redirect JavaScript files from production uploads to local development server",
   
   "permissions": [
     "activeTab",
     "declarativeNetRequest",
     "storage",
-    "notifications"
+    "notifications",
+    "webRequest"
   ],
   
   "host_permissions": [
@@ -27,7 +28,7 @@
   
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Traffic Proxy",
+    "default_title": "JavaScript Proxy",
     "default_icon": {
       "16": "icons/gx_off_16.png",
       "32": "icons/gx_off_32.png",

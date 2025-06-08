@@ -85,6 +85,7 @@ function resolveGxPaths() {
 			gentoPath: path.join(localNodeModules, "bin", getBinaryName()),
 			viteConfigPath: path.join(localNodeModules, "vite.config.js"),
 			configDir: path.join(localNodeModules, "config"),
+			packageRoot: localNodeModules,
 		};
 	}
 
@@ -94,7 +95,31 @@ function resolveGxPaths() {
 		gentoPath: path.join(globalNodeModules, "bin", getBinaryName()),
 		viteConfigPath: path.join(globalNodeModules, "vite.config.js"),
 		configDir: path.join(globalNodeModules, "config"),
+		packageRoot: globalNodeModules,
 	};
+}
+
+/**
+ * Resolves file path checking local project first, then package
+ */
+function resolveFilePath(fileName, subDir = "") {
+	const projectRoot = findProjectRoot();
+	const paths = resolveGxPaths();
+
+	// Check local project first
+	const localPath = path.join(projectRoot, subDir, fileName);
+	if (fs.existsSync(localPath)) {
+		return { path: localPath, isLocal: true };
+	}
+
+	// Fall back to package version
+	const packagePath = path.join(paths.configDir, subDir, fileName);
+	if (fs.existsSync(packagePath)) {
+		return { path: packagePath, isLocal: false };
+	}
+
+	// Return package path even if doesn't exist (for error handling)
+	return { path: packagePath, isLocal: false };
 }
 
 /**
@@ -599,7 +624,7 @@ async function initCommand(argv) {
 			dest: "main.js",
 			desc: "main.js",
 		},
-		{ src: "server.js", dest: "server.js", desc: "server.js" },
+		// Note: server.js is now kept in package, use 'gxto publish server.js' to create local copy
 		{
 			src: useDatastore ? "App-datastore.vue" : "App.vue",
 			dest: "App.vue",
@@ -634,18 +659,14 @@ async function initCommand(argv) {
 	if (useDatastore) {
 		filesToCopy.push(
 			{
-				src: "store/index.js",
-				dest: "src/store/index.js",
+				src: "Store/index.js",
+				dest: "src/Store/index.js",
 				desc: "Pinia store setup",
 			},
+			// Note: gxp-store.js is now kept in package, use 'gxto publish gxp-store.js' to create local copy
 			{
-				src: "store/gxp-store.js",
-				dest: "src/store/gxp-store.js",
-				desc: "GxP datastore",
-			},
-			{
-				src: "store/test-data.json",
-				dest: "src/store/test-data.json",
+				src: "Store/test-data.json",
+				dest: "src/Store/test-data.json",
 				desc: "Test data configuration",
 			}
 		);
@@ -835,16 +856,23 @@ function devCommand(argv) {
 
 	// Check if socket server should be started
 	const withSocket = argv["with-socket"];
+	let serverJsPath = "";
 	if (withSocket) {
-		const serverJsPath = path.join(projectPath, "server.js");
-		if (!fs.existsSync(serverJsPath)) {
+		const serverJs = resolveFilePath("server.js");
+		if (!fs.existsSync(serverJs.path)) {
 			console.error("❌ server.js not found. Cannot start Socket.IO server.");
 			console.log(
-				"💡 Make sure you're in a GxP project directory with server.js"
+				"💡 Run 'gxto publish server.js' to create a local copy, or ensure you're in a GxP project directory"
 			);
 			process.exit(1);
 		}
-		console.log("📡 Also starting Socket.IO server with nodemon...");
+		serverJsPath = serverJs.path;
+		console.log(
+			`📡 Starting Socket.IO server with nodemon... (${
+				serverJs.isLocal ? "local" : "package"
+			} version)`
+		);
+		console.log(`📁 Using: ${serverJsPath}`);
 	}
 
 	// Only set environment variables if they're not already set (allows .env to take precedence)
@@ -879,7 +907,7 @@ function devCommand(argv) {
 			`npx vite dev --config "${paths.viteConfigPath}"`,
 		].join(" && ");
 
-		command = `npx concurrently --names "VITE,SOCKET" --prefix-colors "cyan,green" "${viteCommand}" "npx nodemon server.js"`;
+		command = `npx concurrently --names "VITE,SOCKET" --prefix-colors "cyan,green" "${viteCommand}" "npx nodemon \\"${serverJsPath}\\""`;
 	} else {
 		// Just run Vite dev server
 		command = [
@@ -919,6 +947,113 @@ function buildCommand(argv) {
 	].join(" && ");
 
 	shell.exec(command);
+}
+
+/**
+ * Publish command - copies package files to local project
+ */
+async function publishCommand(argv) {
+	const projectPath = findProjectRoot();
+	const paths = resolveGxPaths();
+
+	const fileName = argv.file || argv._[1]; // Support both --file and positional argument
+
+	if (!fileName) {
+		console.log("📦 Available files to publish:");
+		console.log("  • server.js          - Socket.IO server file");
+		console.log(
+			"  • gxpPortalConfigStore.js       - GxP datastore (for datastore projects)"
+		);
+		console.log("");
+		console.log("💡 Usage:");
+		console.log("  gxto publish server.js");
+		console.log("  gxto publish gxpPortalConfigStore.js");
+		console.log("  gxto publish --file server.js");
+		return;
+	}
+
+	const publishableFiles = {
+		"server.js": {
+			src: "server.js",
+			dest: "server.js",
+			desc: "Socket.IO server file",
+		},
+		"gxpPortalConfigStore.js": {
+			src: "Store/gxpPortalConfigStore.js",
+			dest: "src/Store/gxpPortalConfigStore.js",
+			desc: "GxP datastore",
+		},
+	};
+
+	const fileConfig = publishableFiles[fileName];
+	if (!fileConfig) {
+		console.error(`❌ Unknown file: ${fileName}`);
+		console.log(
+			"📦 Available files:",
+			Object.keys(publishableFiles).join(", ")
+		);
+		process.exit(1);
+	}
+
+	const srcPath = path.join(paths.configDir, fileConfig.src);
+	const destPath = path.join(projectPath, fileConfig.dest);
+
+	if (!fs.existsSync(srcPath)) {
+		console.error(`❌ Source file not found: ${srcPath}`);
+		process.exit(1);
+	}
+
+	// Check if local file already exists
+	if (fs.existsSync(destPath)) {
+		const overwrite = await promptUser(
+			`📁 ${fileConfig.dest} already exists. Overwrite? (y/N): `
+		);
+		if (overwrite.toLowerCase() !== "y" && overwrite.toLowerCase() !== "yes") {
+			console.log("📦 Publish cancelled");
+			return;
+		}
+	}
+
+	// Ensure destination directory exists
+	const destDir = path.dirname(destPath);
+	if (!fs.existsSync(destDir)) {
+		fs.mkdirSync(destDir, { recursive: true });
+	}
+
+	// Copy the file
+	safeCopyFile(srcPath, destPath, fileConfig.desc);
+	console.log(`✅ Published ${fileName} to project`);
+	console.log(`📁 Local file: ${fileConfig.dest}`);
+
+	// Special handling for gxpPortalConfigStore.js - update the import in Store/index.js
+	if (fileName === "gxpPortalConfigStore.js") {
+		const storeIndexPath = path.join(projectPath, "src/Store/index.js");
+		if (fs.existsSync(storeIndexPath)) {
+			try {
+				let content = fs.readFileSync(storeIndexPath, "utf-8");
+				const oldImport =
+					"import { useGxpStore } from '@gramercytech/gx-toolkit/config/Store/gxpPortalConfigStore.js';";
+				const newImport =
+					"import { useGxpStore } from '@/Store/gxpPortalConfigStore.js';";
+
+				if (content.includes(oldImport)) {
+					content = content.replace(oldImport, newImport);
+					fs.writeFileSync(storeIndexPath, content);
+					console.log(
+						"📝 Updated Store/index.js to use local gxpPortalConfigStore.js"
+					);
+				}
+			} catch (error) {
+				console.warn(
+					"⚠️ Could not update Store/index.js import:",
+					error.message
+				);
+			}
+		}
+	}
+
+	console.log("💡 Future gxto commands will now use your local copy");
+	console.log("   Delete the local file to fall back to package version");
 }
 
 /**
@@ -1131,7 +1266,7 @@ function datastoreCommand(argv) {
 
 function listDatastoreVariables() {
 	const projectPath = findProjectRoot();
-	const testDataPath = path.join(projectPath, "src/store/test-data.json");
+	const testDataPath = path.join(projectPath, "src/Store/test-data.json");
 
 	if (!fs.existsSync(testDataPath)) {
 		console.error('❌ No datastore found. Run "gxto datastore init" first.');
@@ -1207,7 +1342,7 @@ async function addDatastoreVariable(argv) {
 
 function addVariable(type, key, value) {
 	const projectPath = findProjectRoot();
-	const testDataPath = path.join(projectPath, "src/store/test-data.json");
+	const testDataPath = path.join(projectPath, "src/Store/test-data.json");
 
 	if (!fs.existsSync(testDataPath)) {
 		console.error(
@@ -1293,7 +1428,7 @@ async function scanComponentStrings(argv) {
 		);
 		console.log("");
 
-		const testDataPath = path.join(projectPath, "src/store/test-data.json");
+		const testDataPath = path.join(projectPath, "src/Store/test-data.json");
 		let testData = {};
 
 		if (fs.existsSync(testDataPath)) {
@@ -1331,7 +1466,7 @@ async function scanComponentStrings(argv) {
 
 async function switchDatastoreConfig(argv) {
 	const projectPath = findProjectRoot();
-	const storeDir = path.join(projectPath, "src/store");
+	const storeDir = path.join(projectPath, "src/Store");
 
 	if (!fs.existsSync(storeDir)) {
 		console.error(
@@ -1361,7 +1496,7 @@ async function switchDatastoreConfig(argv) {
 		if (files.length === 0) {
 			console.log("ℹ️ No additional configurations found");
 			console.log(
-				"💡 Create a new config: cp src/store/test-data.json src/store/test-data-production.json"
+				"💡 Create a new config: cp src/Store/test-data.json src/Store/test-data-production.json"
 			);
 		} else {
 			console.log("Available configurations:");
@@ -1383,7 +1518,7 @@ async function initDatastoreInExistingProject() {
 		return;
 	}
 
-	const storeDir = path.join(projectPath, "src/store");
+	const storeDir = path.join(projectPath, "src/Store");
 	if (fs.existsSync(storeDir)) {
 		console.error("❌ Datastore already exists in this project.");
 		return;
@@ -1424,18 +1559,18 @@ async function initDatastoreInExistingProject() {
 		const paths = resolveGxPaths();
 		const storeFiles = [
 			{
-				src: "store/index.js",
-				dest: "src/store/index.js",
+				src: "Store/index.js",
+				dest: "src/Store/index.js",
 				desc: "Pinia store setup",
 			},
 			{
-				src: "store/gxp-store.js",
-				dest: "src/store/gxp-store.js",
+				src: "Store/gxpPortalConfigStore.js",
+				dest: "src/Store/gxpPortalConfigStore.js",
 				desc: "GxP datastore",
 			},
 			{
-				src: "store/test-data.json",
-				dest: "src/store/test-data.json",
+				src: "Store/test-data.json",
+				dest: "src/Store/test-data.json",
 				desc: "Test data configuration",
 			},
 		];
@@ -1453,7 +1588,7 @@ async function initDatastoreInExistingProject() {
 
 			// Add Pinia import
 			if (!mainJsContent.includes("pinia")) {
-				const importLine = 'import { pinia } from "./src/store/index.js";';
+				const importLine = 'import { pinia } from "./src/Store/index.js";';
 				const importIndex = mainJsContent.indexOf("import * as Vue");
 				if (importIndex !== -1) {
 					mainJsContent =
@@ -1497,7 +1632,7 @@ async function initDatastoreInExistingProject() {
 			console.log("📋 List all store variables: npm run datastore:list");
 			console.log("");
 			console.log("💡 Update your components to use the store:");
-			console.log('   import { useGxpStore } from "/src/store/gxp-store.js"');
+			console.log('   import { useGxpStore } from "/src/Store/index.js"');
 			console.log("   const gxpStore = useGxpStore()");
 		} else {
 			console.error(
@@ -2033,6 +2168,17 @@ const argv = yargs
 			},
 		},
 		buildCommand
+	)
+	.command(
+		"publish [file]",
+		"Publish package files to local project",
+		{
+			file: {
+				describe: "File to publish (server.js, gxp-store.js)",
+				type: "string",
+			},
+		},
+		publishCommand
 	)
 	.command(
 		"datastore <action>",

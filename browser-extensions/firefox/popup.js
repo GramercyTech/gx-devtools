@@ -1,270 +1,201 @@
 document.addEventListener("DOMContentLoaded", async function () {
 	const toggleButton = document.getElementById("toggleButton");
 	const toggleText = document.getElementById("toggleText");
-	const saveButton = document.getElementById("saveButton");
-	const status = document.getElementById("status");
-	const maskingMode = document.getElementById("maskingMode");
-	const redirectUrl = document.getElementById("redirectUrl");
-	const customPattern = document.getElementById("customPattern");
+	const redirectUrlInput = document.getElementById("redirectUrl");
+	const customPatternCheckbox = document.getElementById("customPattern");
 	const patternDisplay = document.getElementById("patternDisplay");
 	const customPatternInput = document.getElementById("customPatternInput");
-	const currentDomainDisplay = document.getElementById("currentDomain");
+	const saveButton = document.getElementById("saveButton");
+	const statusDiv = document.getElementById("status");
+	const maskingModeCheckbox = document.getElementById("maskingMode");
 
-	let currentState = { enabled: false, rules: [] };
-	let currentTabUrl = "";
+	// Default configuration
+	const defaultConfig = {
+		enabled: false,
+		redirectUrl: "https://localhost:3060/src/Plugin.vue",
+		urlPattern: "uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
+		useCustomPattern: false,
+		maskingMode: false,
+	};
 
-	// Load current state and tab info
+	// Load current configuration
+	let config = {};
 	try {
-		const response = await browser.runtime.sendMessage({ action: "getState" });
-		currentState = response;
-
-		// Get current tab URL
-		const tabs = await browser.tabs.query({
-			active: true,
-			currentWindow: true,
-		});
-		if (tabs[0]) {
-			currentTabUrl = tabs[0].url;
-		}
-
-		updateUI();
-		loadConfiguration();
+		const result = await browser.storage.sync.get(defaultConfig);
+		config = result;
 	} catch (error) {
-		console.error("Failed to load state:", error);
+		console.error("Error loading config:", error);
+		config = defaultConfig;
 	}
 
-	// Toggle proxy
-	toggleButton.addEventListener("click", async function () {
-		try {
-			const response = await browser.runtime.sendMessage({
-				action: "toggleProxy",
-			});
-			currentState.enabled = response.enabled;
-			updateUI();
-			showStatus(
-				"Proxy " + (response.enabled ? "enabled" : "disabled"),
-				"success"
-			);
-		} catch (error) {
-			console.error("Failed to toggle proxy:", error);
-			showStatus("Error toggling proxy", "error");
-		}
-	});
+	// Initialize UI with loaded config
+	updateUI();
+	updatePatternDisplay();
 
-	// Toggle masking mode
-	maskingMode.addEventListener("change", async function () {
-		try {
-			const response = await browser.runtime.sendMessage({
-				action: "setMaskingMode",
-				enabled: maskingMode.checked,
-			});
-			showStatus(
-				maskingMode.checked ? "Masking mode enabled" : "Masking mode disabled",
-				"success"
-			);
-		} catch (error) {
-			console.error("Failed to toggle masking mode:", error);
-		}
-	});
-
-	// Toggle custom pattern
-	customPattern.addEventListener("change", function () {
-		updatePatternDisplay();
-	});
-
-	// Update pattern when custom input changes
-	customPatternInput.addEventListener("input", function () {
-		if (customPattern.checked) {
-			updatePatternDisplay();
-		}
-	});
-
-	// Save configuration
-	saveButton.addEventListener("click", async function () {
-		await saveConfiguration();
-	});
-
-	// Update UI based on current state
 	function updateUI() {
-		if (currentState.enabled) {
+		// Update toggle button
+		if (config.enabled) {
 			toggleButton.classList.add("enabled");
 			toggleText.textContent = "ON";
 		} else {
 			toggleButton.classList.remove("enabled");
 			toggleText.textContent = "OFF";
 		}
-	}
 
-	// Load existing configuration
-	function loadConfiguration() {
-		// Display current domain info
-		if (currentTabUrl) {
-			try {
-				const url = new URL(currentTabUrl);
-				currentDomainDisplay.textContent = `Current domain: ${url.hostname}`;
-			} catch (error) {
-				currentDomainDisplay.textContent = "No active domain detected";
-			}
-		}
+		// Update form fields
+		redirectUrlInput.value = config.redirectUrl || defaultConfig.redirectUrl;
+		customPatternCheckbox.checked = config.useCustomPattern || false;
+		customPatternInput.value = config.urlPattern || defaultConfig.urlPattern;
+		maskingModeCheckbox.checked = config.maskingMode || false;
 
-		// Load existing rule if any
-		if (currentState.rules && currentState.rules.length > 0) {
-			const rule = currentState.rules[0]; // Use first rule
-			redirectUrl.value = rule.redirect || "";
-
-			// Check if it's using default pattern or custom
-			const defaultPattern = generateDefaultPattern();
-			if (rule.pattern === defaultPattern) {
-				customPattern.checked = false;
-			} else {
-				customPattern.checked = true;
-				customPatternInput.value = rule.pattern;
-			}
-		}
-
-		updatePatternDisplay();
-	}
-
-	// Generate default pattern based on current domain
-	function generateDefaultPattern() {
-		if (!currentTabUrl) return "";
-
-		try {
-			const url = new URL(currentTabUrl);
-			const hostname = url.hostname;
-
-			// For complex domains like "zenith-develop.env.eventfinity.app",
-			// we want to extract the main domain structure
-			const parts = hostname.split(".");
-			let targetDomain = hostname;
-
-			// Handle different domain structures:
-			// Remove the first subdomain to get the base domain pattern
-			// e.g., westernightwall.zenith-develop.env.eventfinity.app -> zenith-develop.env.eventfinity.app
-			if (parts.length >= 2) {
-				targetDomain = parts.slice(1).join(".");
-			}
-
-			// Escape dots for regex and create pattern that matches any subdomain
-			// Include optional query parameters after .js for signed URLs
-			// Match both /uploads/versions/ and /uploads/plugin-version/ paths
-			const escapedDomain = targetDomain.replace(/\./g, "\\.");
-			return `.*\\.${escapedDomain}\\/uploads\\/(plugin-version|versions)\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?`;
-		} catch (error) {
-			console.error("Error generating default pattern:", error);
-			return "";
-		}
-	}
-
-	// Update pattern display
-	function updatePatternDisplay() {
-		if (customPattern.checked) {
-			patternDisplay.style.display = "none";
+		// Toggle custom pattern input visibility
+		if (config.useCustomPattern) {
 			customPatternInput.classList.add("visible");
-			customPatternInput.placeholder =
-				currentTabUrl || "Enter custom regex pattern";
+			patternDisplay.style.display = "none";
 		} else {
-			patternDisplay.style.display = "block";
 			customPatternInput.classList.remove("visible");
-
-			const defaultPattern = generateDefaultPattern();
-			if (defaultPattern) {
-				patternDisplay.textContent = defaultPattern;
-			} else {
-				patternDisplay.textContent =
-					"No pattern available - please enable proxy on a valid domain";
-			}
+			patternDisplay.style.display = "block";
 		}
 	}
 
-	// Save configuration
-	async function saveConfiguration() {
-		try {
-			const redirectTo = redirectUrl.value.trim();
-
-			if (!redirectTo) {
-				showStatus("Please enter a redirect URL", "error");
-				return;
-			}
-
-			// Validate redirect URL - allow both full URLs and hostname:port/path
-			let validatedRedirectTo = redirectTo;
-			try {
-				new URL(redirectTo);
-			} catch (e) {
-				// Try adding https:// prefix
-				try {
-					new URL(`https://${redirectTo}`);
-					validatedRedirectTo = redirectTo; // Keep original for background script to handle
-				} catch (e2) {
-					showStatus("Please enter a valid URL", "error");
-					return;
-				}
-			}
-
-			// Get pattern
-			let pattern;
-			if (customPattern.checked) {
-				pattern = customPatternInput.value.trim();
-				if (!pattern) {
-					showStatus("Please enter a custom pattern", "error");
-					return;
-				}
-			} else {
-				pattern = generateDefaultPattern();
-				if (!pattern) {
-					showStatus(
-						"Unable to generate pattern - please check current domain",
-						"error"
-					);
-					return;
-				}
-			}
-
-			// Validate regex pattern
-			try {
-				new RegExp(pattern);
-			} catch (e) {
-				showStatus("Invalid regex pattern: " + e.message, "error");
-				return;
-			}
-
-			// Create rule
-			const rule = {
-				pattern: pattern,
-				redirect: validatedRedirectTo,
-				maskUrl: false, // Default to false, can be controlled by masking mode
-			};
-
-			// Save to background script
-			const response = await browser.runtime.sendMessage({
-				action: "updateRules",
-				rules: [rule], // Single rule array
-			});
-
-			if (response.success) {
-				currentState.rules = [rule];
-				showStatus("Configuration saved successfully!", "success");
-			} else {
-				showStatus("Error saving configuration", "error");
-			}
-		} catch (error) {
-			console.error("Failed to save configuration:", error);
-			showStatus("Error saving configuration", "error");
-		}
+	function updatePatternDisplay() {
+		const pattern = config.useCustomPattern
+			? config.urlPattern
+			: defaultConfig.urlPattern;
+		patternDisplay.textContent = pattern;
 	}
 
-	// Show status message
-	function showStatus(message, type = "success") {
-		status.textContent = message;
-		status.className = `status ${type}`;
-		status.style.display = "block";
+	function showStatus(message, isSuccess = true) {
+		statusDiv.textContent = message;
+		statusDiv.className = `status ${isSuccess ? "success" : "error"}`;
+		statusDiv.style.display = "block";
 
 		setTimeout(() => {
-			status.style.display = "none";
+			statusDiv.style.display = "none";
 		}, 3000);
 	}
 
-	// Initialize pattern display
-	updatePatternDisplay();
+	function validateRedirectUrl(url) {
+		if (!url || url.trim() === "") {
+			return "Redirect URL is required";
+		}
+
+		try {
+			new URL(url);
+			return null; // Valid
+		} catch {
+			// Check if it's a relative-style URL like localhost:3060/path
+			if (url.includes("://")) {
+				return "Invalid URL format";
+			}
+
+			// Try to parse as localhost-style URL
+			try {
+				new URL("https://" + url);
+				return null; // Valid
+			} catch {
+				return "Invalid URL format";
+			}
+		}
+	}
+
+	function validatePattern(pattern) {
+		if (!pattern || pattern.trim() === "") {
+			return "URL pattern is required";
+		}
+
+		try {
+			new RegExp(pattern);
+			return null; // Valid
+		} catch {
+			return "Invalid regular expression pattern";
+		}
+	}
+
+	function normalizeUrl(url) {
+		if (!url.includes("://")) {
+			return "https://" + url;
+		}
+		return url;
+	}
+
+	// Event listeners
+	toggleButton.addEventListener("click", async function () {
+		config.enabled = !config.enabled;
+
+		try {
+			await browser.storage.sync.set({ enabled: config.enabled });
+			updateUI();
+
+			// Send message to background script
+			browser.runtime.sendMessage({
+				action: "toggleProxy",
+				enabled: config.enabled,
+			});
+
+			showStatus(config.enabled ? "Proxy enabled" : "Proxy disabled");
+		} catch (error) {
+			console.error("Error toggling proxy:", error);
+			showStatus("Error toggling proxy", false);
+		}
+	});
+
+	customPatternCheckbox.addEventListener("change", function () {
+		config.useCustomPattern = this.checked;
+		updateUI();
+		updatePatternDisplay();
+	});
+
+	maskingModeCheckbox.addEventListener("change", function () {
+		config.maskingMode = this.checked;
+	});
+
+	saveButton.addEventListener("click", async function () {
+		const redirectUrl = redirectUrlInput.value.trim();
+		const urlPattern = config.useCustomPattern
+			? customPatternInput.value.trim()
+			: defaultConfig.urlPattern;
+
+		// Validate inputs
+		const redirectUrlError = validateRedirectUrl(redirectUrl);
+		if (redirectUrlError) {
+			showStatus(redirectUrlError, false);
+			return;
+		}
+
+		const patternError = validatePattern(urlPattern);
+		if (patternError) {
+			showStatus(patternError, false);
+			return;
+		}
+
+		// Update config
+		config.redirectUrl = normalizeUrl(redirectUrl);
+		config.urlPattern = urlPattern;
+		config.useCustomPattern = customPatternCheckbox.checked;
+		config.maskingMode = maskingModeCheckbox.checked;
+
+		try {
+			await browser.storage.sync.set(config);
+
+			// Send updated config to background script
+			browser.runtime.sendMessage({
+				action: "updateConfig",
+				config: config,
+			});
+
+			updateUI();
+			updatePatternDisplay();
+			showStatus("Configuration saved successfully");
+		} catch (error) {
+			console.error("Error saving config:", error);
+			showStatus("Error saving configuration", false);
+		}
+	});
+
+	// Send initial config to background script
+	browser.runtime.sendMessage({
+		action: "updateConfig",
+		config: config,
+	});
 });

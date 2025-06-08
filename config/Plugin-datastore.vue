@@ -296,13 +296,16 @@ li:last-child {
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import { useGxpStore } from '/src/store/gxp-store.js';
+// Instead of:
+// import { useGxpStore } from '@/Store/gxpPortalConfigStore';
 
-// Define emits
-defineEmits(['back', 'complete']);
+// Use:
+import { useStore } from '@/composables/useStore';
 
 // Initialize the GxP store
-const gxpStore = useGxpStore();
+const gxpStore = useStore(); // This will automatically use global or local store
+// Define emits
+defineEmits(['back', 'complete']);
 
 // Local state
 const socketMessages = ref([]);

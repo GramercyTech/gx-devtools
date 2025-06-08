@@ -74,6 +74,8 @@ export default defineConfig(({ mode }) => {
 			externalGlobals(
 				{
 					vue: "Vue",
+					"@/Store/gxpPortalConfigStore":
+						"(window.useGxpStore || (() => { console.warn('useGxpStore not found on window, using fallback'); return {}; }))",
 				},
 				{
 					include: ["src/**"],
@@ -148,10 +150,9 @@ export default defineConfig(({ mode }) => {
 				formats: ["es"],
 			},
 		},
-		base: env.ENDPOINT ? "/dev-tunnel/" + env.ENDPOINT : "/",
 		resolve: {
 			alias: {
-				"@": path.resolve(__dirname, "src"),
+				"@": path.resolve(process.cwd(), "src"),
 			},
 		},
 	};
