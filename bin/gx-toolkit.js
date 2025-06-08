@@ -388,14 +388,20 @@ function createPackageJson(projectPath, projectName, useDatastore = false) {
 		version: "1.0.0",
 		description: `GxP Plugin: ${projectName}`,
 		main: "main.js",
+		type: "module",
 		scripts: {
-			dev: "concurrently 'vite' 'nodemon server.js'",
-			"dev-http": "HTTPS=false concurrently 'vite' 'nodemon server.js'",
-			build: "vite build",
-			preview: "vite preview",
-			"setup-ssl": "gxto ssl",
-			"gxto-dev": "gxto dev",
-			"gxto-build": "gxto build",
+			dev: "gxto dev",
+			"dev-http": "gxto dev --no-https",
+			build: "gxto build",
+			"dev-socket": "gxto dev --with-socket",
+			"setup-ssl": "gxto setup-ssl",
+			"socket:list": "gxto socket list",
+			"socket:send": "gxto socket send",
+			"assets:list": "gxto assets list",
+			"assets:init": "gxto assets init",
+			"assets:generate": "gxto assets generate",
+			placeholder:
+				"gxto assets generate --size 400x300 --name custom-placeholder",
 			...(useDatastore && {
 				"datastore:list": "gxto datastore list",
 				"datastore:add": "gxto datastore add",
@@ -624,7 +630,12 @@ async function initCommand(argv) {
 			dest: "main.js",
 			desc: "main.js",
 		},
-		// Note: server.js is now kept in package, use 'gxto publish server.js' to create local copy
+		// Note: server.js stays in package, use 'gxto publish server.js' for local copy
+		{
+			src: "vite.config.js",
+			dest: "vite.config.js",
+			desc: "vite.config.js (Build configuration)",
+		},
 		{
 			src: useDatastore ? "App-datastore.vue" : "App.vue",
 			dest: "App.vue",
@@ -668,6 +679,11 @@ async function initCommand(argv) {
 				src: "stores/test-data.json",
 				dest: "src/stores/test-data.json",
 				desc: "Test data configuration",
+			},
+			{
+				src: "composables/useStore.js",
+				dest: "src/composables/useStore.js",
+				desc: "Store composable (datastore integration)",
 			}
 		);
 	}
