@@ -363,6 +363,46 @@ function cleanupOldCertificates(certsDir) {
 }
 
 /**
+ * Updates the .env file with the actual SSL certificate paths
+ */
+function updateEnvWithCertPaths(projectPath, certs) {
+	const envPath = path.join(projectPath, ".env");
+
+	if (!fs.existsSync(envPath)) {
+		console.warn("⚠ .env file not found, skipping certificate path update");
+		return;
+	}
+
+	try {
+		let envContent = fs.readFileSync(envPath, "utf-8");
+
+		// Get just the filenames from the full paths
+		const certFileName = path.basename(certs.certPath);
+		const keyFileName = path.basename(certs.keyPath);
+
+		// Update CERT_PATH and KEY_PATH with actual filenames
+		envContent = envContent.replace(
+			/CERT_PATH=.*$/m,
+			`CERT_PATH=.certs/${certFileName}`
+		);
+		envContent = envContent.replace(
+			/KEY_PATH=.*$/m,
+			`KEY_PATH=.certs/${keyFileName}`
+		);
+
+		fs.writeFileSync(envPath, envContent);
+		console.log("✓ Updated .env with SSL certificate paths");
+		console.log(`   CERT_PATH=.certs/${certFileName}`);
+		console.log(`   KEY_PATH=.certs/${keyFileName}`);
+	} catch (error) {
+		console.warn(
+			"⚠ Could not update .env with certificate paths:",
+			error.message
+		);
+	}
+}
+
+/**
  * Copies a file from source to destination, creating directories if needed
  */
 function safeCopyFile(src, dest, description) {
@@ -534,6 +574,9 @@ function setupSSLCommand() {
 	const certs = generateSSLCertificates(projectPath);
 
 	if (certs) {
+		// Update .env file with actual certificate names
+		updateEnvWithCertPaths(projectPath, certs);
+
 		console.log("✅ SSL setup complete!");
 		console.log("🔒 Your development server will now use HTTPS");
 		console.log("📁 Certificates stored in .certs/ directory");
@@ -710,6 +753,14 @@ async function initCommand(argv) {
 		safeCopyFile(srcPath, destPath, file.desc);
 	});
 
+	// Create .env file from .env.example
+	const envExamplePath = path.join(projectPath, ".env.example");
+	const envPath = path.join(projectPath, ".env");
+	if (fs.existsSync(envExamplePath) && !fs.existsSync(envPath)) {
+		fs.copyFileSync(envExamplePath, envPath);
+		console.log("✓ Created .env file from .env.example");
+	}
+
 	// Copy extension management scripts for new projects
 	if (!hasPackageJson || argv.name) {
 		const scriptsDir = path.join(projectPath, "scripts");
@@ -772,7 +823,12 @@ async function initCommand(argv) {
 		if (sslSetup) {
 			console.log("\n🔒 Setting up HTTPS development environment...");
 			ensureMkcertInstalled();
-			generateSSLCertificates(projectPath);
+			const certs = generateSSLCertificates(projectPath);
+
+			// Update .env file with actual certificate names if SSL setup was successful
+			if (certs) {
+				updateEnvWithCertPaths(projectPath, certs);
+			}
 		} else {
 			console.log(
 				"\n⚠️  Skipping SSL setup. You can set it up later with: npm run setup-ssl"
@@ -795,7 +851,7 @@ async function initCommand(argv) {
 	if (!hasPackageJson) {
 		console.log(`📁 Navigate to your project: cd ${projectName}`);
 	}
-	console.log("⚙️ Configure environment: cp .env.example .env");
+	console.log("⚙️ Environment file (.env) ready - customize as needed");
 
 	if (sslSetup) {
 		console.log("🔒 Start HTTPS development: npm run dev");
