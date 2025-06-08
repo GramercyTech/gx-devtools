@@ -1,6 +1,6 @@
 {
   "name": "@gramercytech/gx-toolkit",
-  "version": "1.0.79",
+  "version": "1.0.80",
   "description": "Dev tools for create platform plugins",
   "type": "commonjs",
   "scripts": {
@@ -63,7 +63,6 @@
     "vite": "^5.4.8",
     "vue": "^3.5.8",
     "yargs": "^17.7.2",
-    "@gramercytech/gx-componentkit": "^1.0.0"
   },
   "devDependencies": {
     "web-ext": "^8.2.0",
