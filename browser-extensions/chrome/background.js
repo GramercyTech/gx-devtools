@@ -80,6 +80,7 @@ async function clearCacheForPattern(urlPattern) {
 		console.log("[JavaScript Proxy] Cache cleared successfully");
 	} catch (error) {
 		console.error("[JavaScript Proxy] Error clearing cache:", error);
+		throw error; // Re-throw to let the caller handle the error
 	}
 }
 
@@ -87,40 +88,6 @@ async function clearServiceWorkerCaches(urlPattern) {
 	try {
 		// Get all active tabs
 		const tabs = await chrome.tabs.query({});
-
-		// Script to clear service worker caches for matching URLs
-		const clearCacheScript = `
-			(async function() {
-				try {
-					if ('caches' in window) {
-						const cacheNames = await caches.keys();
-						const pattern = new RegExp("${urlPattern.replace(/\\/g, "\\\\")}", "i");
-						
-						for (const cacheName of cacheNames) {
-							const cache = await caches.open(cacheName);
-							const requests = await cache.keys();
-							
-							for (const request of requests) {
-								if (pattern.test(request.url)) {
-									await cache.delete(request);
-									console.log('[JavaScript Proxy] Deleted from cache:', request.url);
-								}
-							}
-						}
-						
-						// Also try to update service worker registration
-						if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-							navigator.serviceWorker.controller.postMessage({
-								type: 'CLEAR_CACHE_FOR_PATTERN',
-								pattern: "${urlPattern.replace(/\\/g, "\\\\")}"
-							});
-						}
-					}
-				} catch (error) {
-					console.error('[JavaScript Proxy] Error clearing service worker cache:', error);
-				}
-			})();
-		`;
 
 		// Inject the script into each tab
 		for (const tab of tabs) {
@@ -597,9 +564,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 					sendResponse({ success: true });
 				})
 				.catch((error) => {
+					console.error("[JavaScript Proxy] Cache clear error:", error);
 					sendResponse({ success: false, error: error.message });
 				});
-			break;
+			return true; // Keep message channel open for async response
 
 		default:
 			console.warn("[JavaScript Proxy] Unknown action:", request.action);

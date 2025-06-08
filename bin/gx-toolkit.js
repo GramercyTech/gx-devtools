@@ -686,6 +686,26 @@ async function initCommand(argv) {
 			desc: "App.vue",
 		},
 		{
+			src: "theme-layouts/SystemLayout.vue",
+			dest: "src/theme-layouts/SystemLayout.vue",
+			desc: "SystemLayout.vue",
+		},
+		{
+			src: "theme-layouts/PrivateLayout.vue",
+			dest: "src/theme-layouts/PrivateLayout.vue",
+			desc: "PrivateLayout.vue",
+		},
+		{
+			src: "theme-layouts/PublicLayout.vue",
+			dest: "src/theme-layouts/PublicLayout.vue",
+			desc: "PublicLayout.vue",
+		},
+		{
+			src: "stores/index.js",
+			dest: "src/stores/index.js",
+			desc: "Pinia store setup",
+		},
+		{
 			src: "AdvancedExample.vue",
 			dest: "AdvancedExample.vue",
 			desc: "AdvancedExample.vue (Advanced workflow reference)",

@@ -4,6 +4,12 @@
   "version": "1.0",
   "description": "Intercept and redirect web traffic to alternative domains",
   
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "javascript-proxy@gx-toolkit.dev"
+    }
+  },
+  
   "permissions": [
     "tabs",
     "webRequest",
