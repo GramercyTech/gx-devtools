@@ -297,7 +297,7 @@ li:last-child {
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 // Instead of:
-// import { useGxpStore } from '@/Store/gxpPortalConfigStore';
+// import { useGxpStore } from '@/stores/gxpPortalConfigStore';
 
 // Use:
 import { useStore } from '@/composables/useStore';

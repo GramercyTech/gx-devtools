@@ -74,7 +74,7 @@ export default defineConfig(({ mode }) => {
 			externalGlobals(
 				{
 					vue: "Vue",
-					"@/Store/gxpPortalConfigStore":
+					"@/stores/gxpPortalConfigStore":
 						"(window.useGxpStore || (() => { console.warn('useGxpStore not found on window, using fallback'); return {}; }))",
 				},
 				{

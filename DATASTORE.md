@@ -22,7 +22,7 @@ Instead of passing props like this:
 You can now use a centralized store:
 ```vue
 <script setup>
-import { useGxpStore } from '/src/store/index.js'
+import { useGxpStore } from '/src/stores/index.js'
 
 const gxpStore = useGxpStore()
 
@@ -55,7 +55,7 @@ gxto datastore init
 This will:
 - Install Pinia and axios dependencies
 - Add datastore management scripts to package.json
-- Create the store files in `src/store/`
+- Create the store files in `src/stores/`
 - Update `main.js` to include Pinia
 
 ## CLI Commands
@@ -99,7 +99,7 @@ gxto datastore config
 gxto datastore config production
 
 # Create new configurations by copying test-data.json
-cp src/store/test-data.json src/store/test-data-production.json
+cp src/stores/test-data.json src/stores/test-data-production.json
 ```
 
 ## Store Structure
@@ -167,7 +167,7 @@ Array of permission strings:
 
 ```vue
 <script setup>
-import { useGxpStore } from '/src/store/index.js'
+import { useGxpStore } from '/src/stores/index.js'
 
 const gxpStore = useGxpStore()
 
@@ -251,7 +251,7 @@ const gxpStore = useGxpStore()
 ## Development vs Production
 
 ### Development Mode
-- Uses test data from `src/store/test-data.json`
+- Uses test data from `src/stores/test-data.json`
 - WebSocket connects to localhost:3069 (can be set in .env file)
 - API calls use configured base URL with test token
 
@@ -268,7 +268,7 @@ When datastore is enabled, your project will have:
 
 ```
 src/
-├── store/
+├── stores/
 │   ├── index.js           # Pinia setup & store imports
 │   ├── test-data.json     # Test configuration
 │   └── test-data-*.json   # Additional configurations
@@ -303,7 +303,7 @@ const welcomeText = props.stringsList.welcome_text
 **After (with store):**
 ```vue
 <script setup>
-import { useGxpStore } from '/src/store/index.js'
+import { useGxpStore } from '/src/stores/index.js'
 
 const gxpStore = useGxpStore()
 
@@ -327,7 +327,7 @@ props.sockets.primary.listen('response', callback)
 **After:**
 ```vue
 <script setup>
-import { useGxpStore } from '/src/store/index.js'
+import { useGxpStore } from '/src/stores/index.js'
 
 const gxpStore = useGxpStore()
 
@@ -354,9 +354,9 @@ gxpStore.useSocketListener('primary', 'response', callback)
 
 3. **Organize test configurations** by environment:
    ```bash
-   src/store/test-data.json           # Default
-   src/store/test-data-staging.json   # Staging environment
-   src/store/test-data-demo.json      # Demo configuration
+   src/stores/test-data.json           # Default
+   src/stores/test-data-staging.json   # Staging environment
+   src/stores/test-data-demo.json      # Demo configuration
    ```
 
 4. **Clean up socket listeners** in components:
@@ -378,7 +378,7 @@ gxpStore.useSocketListener('primary', 'response', callback)
 
 1. **Store not found error**
    - Ensure you've run `gxto datastore init` or created project with datastore
-   - Check that `src/store/` directory exists
+   - Check that `src/stores/` directory exists
 
 2. **Pinia not registered error**
    - Verify `main.js` includes `app.use(pinia)`

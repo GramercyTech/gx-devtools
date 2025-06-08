@@ -1,5 +1,5 @@
 // Store wrapper that checks for global store and falls back to local
-import { useGxpStore as localStore } from "@/Store/gxpPortalConfigStore";
+import { useGxpStore as localStore } from "@/stores/gxpPortalConfigStore";
 
 export function useStore() {
 	// Check if global store exists on window
@@ -13,4 +13,4 @@ export function useStore() {
 }
 
 // Export the local store directly for cases where you specifically need it
-export { useGxpStore } from "@/Store/gxpPortalConfigStore";
+export { useGxpStore } from "@/stores/gxpPortalConfigStore";

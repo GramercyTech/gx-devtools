@@ -659,14 +659,14 @@ async function initCommand(argv) {
 	if (useDatastore) {
 		filesToCopy.push(
 			{
-				src: "Store/index.js",
-				dest: "src/Store/index.js",
+				src: "stores/index.js",
+				dest: "src/stores/index.js",
 				desc: "Pinia store setup",
 			},
 			// Note: gxp-store.js is now kept in package, use 'gxto publish gxp-store.js' to create local copy
 			{
-				src: "Store/test-data.json",
-				dest: "src/Store/test-data.json",
+				src: "stores/test-data.json",
+				dest: "src/stores/test-data.json",
 				desc: "Test data configuration",
 			}
 		);
@@ -979,8 +979,8 @@ async function publishCommand(argv) {
 			desc: "Socket.IO server file",
 		},
 		"gxpPortalConfigStore.js": {
-			src: "Store/gxpPortalConfigStore.js",
-			dest: "src/Store/gxpPortalConfigStore.js",
+			src: "stores/gxpPortalConfigStore.js",
+			dest: "src/stores/gxpPortalConfigStore.js",
 			desc: "GxP datastore",
 		},
 	};
@@ -1025,27 +1025,27 @@ async function publishCommand(argv) {
 	console.log(`✅ Published ${fileName} to project`);
 	console.log(`📁 Local file: ${fileConfig.dest}`);
 
-	// Special handling for gxpPortalConfigStore.js - update the import in Store/index.js
+	// Special handling for gxpPortalConfigStore.js - update the import in stores/index.js
 	if (fileName === "gxpPortalConfigStore.js") {
-		const storeIndexPath = path.join(projectPath, "src/Store/index.js");
+		const storeIndexPath = path.join(projectPath, "src/stores/index.js");
 		if (fs.existsSync(storeIndexPath)) {
 			try {
 				let content = fs.readFileSync(storeIndexPath, "utf-8");
 				const oldImport =
-					"import { useGxpStore } from '@gramercytech/gx-toolkit/config/Store/gxpPortalConfigStore.js';";
+					"import { useGxpStore } from '@gramercytech/gx-toolkit/config/stores/gxpPortalConfigStore.js';";
 				const newImport =
-					"import { useGxpStore } from '@/Store/gxpPortalConfigStore.js';";
+					"import { useGxpStore } from '@/stores/gxpPortalConfigStore.js';";
 
 				if (content.includes(oldImport)) {
 					content = content.replace(oldImport, newImport);
 					fs.writeFileSync(storeIndexPath, content);
 					console.log(
-						"📝 Updated Store/index.js to use local gxpPortalConfigStore.js"
+						"📝 Updated stores/index.js to use local gxpPortalConfigStore.js"
 					);
 				}
 			} catch (error) {
 				console.warn(
-					"⚠️ Could not update Store/index.js import:",
+					"⚠️ Could not update stores/index.js import:",
 					error.message
 				);
 			}
@@ -1266,7 +1266,7 @@ function datastoreCommand(argv) {
 
 function listDatastoreVariables() {
 	const projectPath = findProjectRoot();
-	const testDataPath = path.join(projectPath, "src/Store/test-data.json");
+	const testDataPath = path.join(projectPath, "src/stores/test-data.json");
 
 	if (!fs.existsSync(testDataPath)) {
 		console.error('❌ No datastore found. Run "gxto datastore init" first.');
@@ -1342,7 +1342,7 @@ async function addDatastoreVariable(argv) {
 
 function addVariable(type, key, value) {
 	const projectPath = findProjectRoot();
-	const testDataPath = path.join(projectPath, "src/Store/test-data.json");
+	const testDataPath = path.join(projectPath, "src/stores/test-data.json");
 
 	if (!fs.existsSync(testDataPath)) {
 		console.error(
@@ -1428,7 +1428,7 @@ async function scanComponentStrings(argv) {
 		);
 		console.log("");
 
-		const testDataPath = path.join(projectPath, "src/Store/test-data.json");
+		const testDataPath = path.join(projectPath, "src/stores/test-data.json");
 		let testData = {};
 
 		if (fs.existsSync(testDataPath)) {
@@ -1496,7 +1496,7 @@ async function switchDatastoreConfig(argv) {
 		if (files.length === 0) {
 			console.log("ℹ️ No additional configurations found");
 			console.log(
-				"💡 Create a new config: cp src/Store/test-data.json src/Store/test-data-production.json"
+				"💡 Create a new config: cp src/stores/test-data.json src/stores/test-data-production.json"
 			);
 		} else {
 			console.log("Available configurations:");
@@ -1518,7 +1518,7 @@ async function initDatastoreInExistingProject() {
 		return;
 	}
 
-	const storeDir = path.join(projectPath, "src/Store");
+	const storeDir = path.join(projectPath, "src/stores");
 	if (fs.existsSync(storeDir)) {
 		console.error("❌ Datastore already exists in this project.");
 		return;
@@ -1559,18 +1559,18 @@ async function initDatastoreInExistingProject() {
 		const paths = resolveGxPaths();
 		const storeFiles = [
 			{
-				src: "Store/index.js",
-				dest: "src/Store/index.js",
+				src: "stores/index.js",
+				dest: "src/stores/index.js",
 				desc: "Pinia store setup",
 			},
 			{
-				src: "Store/gxpPortalConfigStore.js",
-				dest: "src/Store/gxpPortalConfigStore.js",
+				src: "stores/gxpPortalConfigStore.js",
+				dest: "src/stores/gxpPortalConfigStore.js",
 				desc: "GxP datastore",
 			},
 			{
-				src: "Store/test-data.json",
-				dest: "src/Store/test-data.json",
+				src: "stores/test-data.json",
+				dest: "src/stores/test-data.json",
 				desc: "Test data configuration",
 			},
 		];
@@ -1588,7 +1588,7 @@ async function initDatastoreInExistingProject() {
 
 			// Add Pinia import
 			if (!mainJsContent.includes("pinia")) {
-				const importLine = 'import { pinia } from "./src/Store/index.js";';
+				const importLine = 'import { pinia } from "./src/stores/index.js";';
 				const importIndex = mainJsContent.indexOf("import * as Vue");
 				if (importIndex !== -1) {
 					mainJsContent =
@@ -1632,7 +1632,7 @@ async function initDatastoreInExistingProject() {
 			console.log("📋 List all store variables: npm run datastore:list");
 			console.log("");
 			console.log("💡 Update your components to use the store:");
-			console.log('   import { useGxpStore } from "/src/Store/index.js"');
+			console.log('   import { useGxpStore } from "/src/stores/index.js"');
 			console.log("   const gxpStore = useGxpStore()");
 		} else {
 			console.error(
@@ -2174,7 +2174,7 @@ const argv = yargs
 		"Publish package files to local project",
 		{
 			file: {
-				describe: "File to publish (server.js, gxp-store.js)",
+				describe: "File to publish (server.js, gxpPortalConfigStore.js)",
 				type: "string",
 			},
 		},
