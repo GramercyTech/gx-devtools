@@ -701,6 +701,11 @@ async function initCommand(argv) {
 			desc: "PublicLayout.vue",
 		},
 		{
+			src: "theme-layouts/AdditionalStyling.css",
+			dest: "src/theme-layouts/AdditionalStyling.css",
+			desc: "AdditionalStyling.css",
+		},
+		{
 			src: "stores/index.js",
 			dest: "src/stores/index.js",
 			desc: "Pinia store setup",
@@ -743,11 +748,6 @@ async function initCommand(argv) {
 				src: "stores/test-data.json",
 				dest: "src/stores/test-data.json",
 				desc: "Test data configuration",
-			},
-			{
-				src: "composables/useStore.js",
-				dest: "src/composables/useStore.js",
-				desc: "Store composable (datastore integration)",
 			}
 		);
 	}

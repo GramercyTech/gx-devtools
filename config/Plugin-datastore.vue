@@ -300,10 +300,9 @@ defineOptions({
 });
 
 import { ref, onMounted, onUnmounted } from 'vue';
-import { useStore } from '@/composables/useStore';
 
 // Initialize the GxP store
-const gxpStore = useStore(); // This will automatically use global or local store
+import { useGxpStore } from "@/stores/gxpPortalConfigStore";
 
 // Define props (router will be passed from platform)
 const props = defineProps({

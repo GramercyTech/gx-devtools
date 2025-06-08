@@ -290,6 +290,11 @@ const props = defineProps({
 		required: false,
 		default: () => ({}),
 	},
+	triggerState: {
+		type: Object,
+		required: false,
+		default: () => ({}),
+	},
 	router: {
 		type: Object,
 		required: false,

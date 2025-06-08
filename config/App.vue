@@ -30,6 +30,7 @@
                 :theme="themeSettings"
                 :router="mockRouter"
                 :sockets="sockets"
+                :trigger-state="triggerState"
             />
             
             <!-- Final Page -->
@@ -177,7 +178,8 @@ const portalStringsList = {
 const dependencyList = {
     "project_location": 4
 };
-
+const triggerState = {
+};
 //Update permissionFlags with all the permissions that will be set through the custom admin panel in dashboard, GxP will generate this array of flags based on settings set in the dashboard
 const permissionFlags = [];
 

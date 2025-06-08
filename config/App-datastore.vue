@@ -66,10 +66,8 @@ import SystemLayout from "@/theme-layouts/SystemLayout.vue";
 import PrivateLayout from "@/theme-layouts/PrivateLayout.vue";
 import PublicLayout from "@/theme-layouts/PublicLayout.vue";
 
-import { useStore } from '@/composables/useStore';
-
 // Initialize the GxP store
-const gxpStore = useStore(); // This will automatically use global or local store
+import { useGxpStore } from "@/stores/gxpPortalConfigStore";
 
 // App state management
 const currentLayout = shallowRef(PublicLayout);
@@ -91,6 +89,10 @@ const changeLayout = (layout) => {
     }
 };
 
+const gxpStore = useGxpStore();
+gxpStore.sockets?.primary.listenForStateChange((event) => {
+    console.log('🔗 GXP Store: State change event received', event);
+})
 // Navigation functions
 const goToPage = (page) => {
     currentPage.value = page;

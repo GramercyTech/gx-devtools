@@ -11,6 +11,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	const assetList = ref({ ...testData.assetList });
 	const dependencyList = ref({ ...testData.dependencyList });
 	const permissionFlags = ref(testData.permissionFlags || []);
+	const triggerState = ref({ ...testData.triggerState } || {});
 
 	// User session data (injected by platform in production)
 	const auth = ref(testData.auth || null);
@@ -71,6 +72,9 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			},
 			listen: function (event, callback) {
 				return primarySocket.on(event, callback);
+			},
+			listenForStateChange: function (callback) {
+				return primarySocket.on("state-change", callback);
 			},
 		};
 
@@ -379,6 +383,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		portal,
 		sockets,
 		theme,
+		triggerState,
 
 		// API methods
 		apiGet,
