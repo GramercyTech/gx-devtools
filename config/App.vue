@@ -61,6 +61,7 @@
 <script setup>
 import { ref } from "vue";
 
+import "@/theme-layouts/AdditionalStyling.css"
 import SystemLayout from "@/theme-layouts/SystemLayout.vue";
 import PrivateLayout from "@/theme-layouts/PrivateLayout.vue";
 import PublicLayout from "@/theme-layouts/PublicLayout.vue";
