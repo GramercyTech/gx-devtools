@@ -1,6 +1,6 @@
 {
   "name": "@gramercytech/gx-toolkit",
-  "version": "1.0.97",
+  "version": "1.0.98",
   "description": "Dev tools for create platform plugins",
   "type": "commonjs",
   "scripts": {
