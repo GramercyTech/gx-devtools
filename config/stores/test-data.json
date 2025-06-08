@@ -1,0 +1,173 @@
+{
+  "pluginVars": {
+    "primary_color": "#FFD600",
+    "projectId": 39,
+    "apiPageAuthId": "46|j7vCLmx2KG70Ig8R5mtUcNMFcHExvFPZEOv31kKGe1033f2b",
+    "apiBaseUrl": "https://api.efcloud.app",
+    "idle_timeout": "30",
+    "background_color": "#ffffff",
+    "text_color": "#333333",
+    "start_background_color": "#000596",
+    "start_text_color": "#FFFFFF",
+    "final_background_color": "#4CAF50",
+    "final_text_color": "#ffffff",
+    "loading_spinner_color": "#dedede",
+    "loading_spinner_accent_color": "#000596",
+    "error_modal_background_color": "#FFFFFF",
+    "error_modal_text_color": "#000596",
+    "line_1": "Welcome to Your App!",
+    "line_2": "Touch to begin your experience",
+    "line_3": "Get started by touching the button below"
+  },
+  "stringsList": {
+    "line_1": "Welcome to Your App!",
+    "line_2": "Touch to begin your experience",
+    "line_3": "Get started by touching the button below",
+    "start_line_one": "Welcome to Your App!",
+    "start_line_two": "Touch to begin your experience",
+    "start_touch_start": "Get started by touching the button below",
+    "final_line_one": "Thank You!",
+    "final_line_two": "Your experience has been completed successfully",
+    "final_line_three": "Touch anywhere to start over",
+    "welcome_text": "Hello World",
+    "loading_text": "Loading...",
+    "error_title": "Oops!",
+    "error_message": "Something went wrong. Please try again.",
+    "continue_button": "Continue",
+    "back_button": "Back",
+    "retry_button": "Try Again"
+  },
+  "assetList": {
+    "main_logo": "/dev-assets/images/logo-placeholder.png",
+    "background_image": "/dev-assets/images/background-placeholder.jpg",
+    "product_image": "/dev-assets/images/product-placeholder.jpg",
+    "avatar_placeholder": "/dev-assets/images/avatar-placeholder.png",
+    "icon_placeholder": "/dev-assets/images/icon-placeholder.png",
+    "thumbnail": "/dev-assets/images/thumbnail-placeholder.jpg",
+    "banner_image": "/dev-assets/images/banner-placeholder.jpg"
+  },
+  "dependencyList": [
+    {
+      "model": "AiInterface",
+      "events": {
+        "created": "AiSessionMessageCreated",
+        "updated": "AiSessionMessageUpdated"
+      },
+      "identifier": "ai_interface_background_remover",
+      "permissions": [
+        "manage_ai_interfaces",
+        "view_ai_interfaces",
+        "view_ai_sessions",
+        "view_ai_session_messages"
+      ]
+    },
+    {
+      "model": "AiInterface",
+      "events": {
+        "created": "AiSessionMessageCreated",
+        "updated": "AiSessionMessageUpdated"
+      },
+      "identifier": "ai_interface_background_generator",
+      "permissions": [
+        "manage_ai_interfaces",
+        "view_ai_interfaces",
+        "view_ai_sessions",
+        "view_ai_session_messages"
+      ]
+    },
+    {
+      "model": "AiInterface",
+      "events": {
+        "created": "AiSessionMessageCreated",
+        "updated": "AiSessionMessageUpdated"
+      },
+      "identifier": "ai_interface",
+      "permissions": [
+        "manage_ai_interfaces",
+        "view_ai_interfaces",
+        "view_ai_sessions",
+        "view_ai_session_messages"
+      ]
+    },
+    {
+      "model": "SocialStream",
+      "events": {
+        "created": "SocialStreamPostCreated",
+        "deleted": "SocialStreamPostDeleted",
+        "updated": "SocialStreamPostUpdated",
+        "variantCompleted": "SocialStreamPostVariantCompleted"
+      },
+      "identifier": "social_stream",
+      "permissions": [
+        "view_social_streams",
+        "view_social_stream_posts",
+        "create_social_stream_posts",
+        "manage_social_stream_posts"
+      ]
+    },
+    {
+      "model": "SocialStreamPost",
+      "identifier": "social_stream_posts",
+      "permissions": [
+        "view_social_stream_posts:viewAny"
+      ]
+    },
+    {
+      "key": "slug",
+      "model": "Group",
+      "events": [],
+      "identifier": "groups",
+      "permissions": [
+        "view_groups",
+        "view_attendees"
+      ]
+    },
+    {
+      "model": "Attendee",
+      "identifier": "attendees",
+      "permissions": [
+        "create_attendees:viewAny",
+        "view_attendees:viewAny"
+      ]
+    }
+  ],
+  "permissionFlags": [
+    "can_access_camera",
+    "can_save_data",
+    "can_share_content"
+  ],
+  "auth": {
+    "token": "test-token-12345",
+    "user_id": "test-user-67890",
+    "expires_at": "2024-12-31T23:59:59Z"
+  },
+  "userSession": {
+    "session_id": "session-abc123",
+    "started_at": "2024-01-01T00:00:00Z",
+    "ip_address": "127.0.0.1",
+    "user_agent": "Test Browser"
+  },
+  "pluginData": {
+    "plugin_id": "test-plugin-123",
+    "version": "1.0.0",
+    "environment": "development"
+  },
+  "portalAssets": {
+    "favicon": "/portal/favicon.ico",
+    "logo": "/portal/logo.png",
+    "theme_css": "/portal/theme.css"
+  },
+  "portal": {
+    "name": "Test Portal",
+    "theme_colors": {
+      "primary": "#FFD600",
+      "secondary": "#000596",
+      "accent": "#4CAF50"
+    },
+    "custom_settings": {
+      "allow_guest_access": true,
+      "session_timeout": 1800,
+      "max_file_size": "10MB"
+    }
+  }
+} 
