@@ -139,7 +139,8 @@ The `.env` file is automatically created from `.env.example` during project init
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `NODE_PORT` | Development server port | `3000` |
+| `NODE_PORT` | Development server port | `3060` |
+| `SOCKET_IO_PORT` | SocketIO server port | `3061` |
 | `COMPONENT_PATH` | Main component path | `./src/Plugin.vue` |
 | `NODE_LOG_LEVEL` | Logging level | `info` |
 | `USE_HTTPS` | Enable HTTPS | `true` |
