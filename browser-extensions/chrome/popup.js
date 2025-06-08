@@ -8,6 +8,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const saveButton = document.getElementById("saveButton");
 	const statusDiv = document.getElementById("status");
 	const maskingModeCheckbox = document.getElementById("maskingMode");
+	const clearCacheOnEnableCheckbox =
+		document.getElementById("clearCacheOnEnable");
+	const disableCacheForRedirectsCheckbox = document.getElementById(
+		"disableCacheForRedirects"
+	);
+	const clearCacheButton = document.getElementById("clearCacheButton");
 
 	// Default configuration
 	const defaultConfig = {
@@ -16,6 +22,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 		urlPattern: "uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
 		useCustomPattern: false,
 		maskingMode: false,
+		clearCacheOnEnable: true,
+		disableCacheForRedirects: true,
 	};
 
 	// Load current configuration
@@ -47,6 +55,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 		customPatternCheckbox.checked = config.useCustomPattern || false;
 		customPatternInput.value = config.urlPattern || defaultConfig.urlPattern;
 		maskingModeCheckbox.checked = config.maskingMode || false;
+		clearCacheOnEnableCheckbox.checked = config.clearCacheOnEnable !== false;
+		disableCacheForRedirectsCheckbox.checked =
+			config.disableCacheForRedirects !== false;
 
 		// Toggle custom pattern input visibility
 		if (config.useCustomPattern) {
@@ -150,6 +161,40 @@ document.addEventListener("DOMContentLoaded", async function () {
 		config.maskingMode = this.checked;
 	});
 
+	clearCacheOnEnableCheckbox.addEventListener("change", function () {
+		config.clearCacheOnEnable = this.checked;
+	});
+
+	disableCacheForRedirectsCheckbox.addEventListener("change", function () {
+		config.disableCacheForRedirects = this.checked;
+	});
+
+	clearCacheButton.addEventListener("click", async function () {
+		try {
+			this.textContent = "Clearing...";
+			this.disabled = true;
+
+			const response = await chrome.runtime.sendMessage({
+				action: "clearCache",
+			});
+
+			if (response.success) {
+				showStatus("Cache cleared successfully");
+			} else {
+				showStatus(
+					"Error clearing cache: " + (response.error || "Unknown error"),
+					false
+				);
+			}
+		} catch (error) {
+			console.error("Error clearing cache:", error);
+			showStatus("Error clearing cache", false);
+		} finally {
+			this.textContent = "Clear Cache Now";
+			this.disabled = false;
+		}
+	});
+
 	saveButton.addEventListener("click", async function () {
 		const redirectUrl = redirectUrlInput.value.trim();
 		const urlPattern = config.useCustomPattern
@@ -174,6 +219,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 		config.urlPattern = urlPattern;
 		config.useCustomPattern = customPatternCheckbox.checked;
 		config.maskingMode = maskingModeCheckbox.checked;
+		config.clearCacheOnEnable = clearCacheOnEnableCheckbox.checked;
+		config.disableCacheForRedirects = disableCacheForRedirectsCheckbox.checked;
 
 		try {
 			await chrome.storage.sync.set(config);

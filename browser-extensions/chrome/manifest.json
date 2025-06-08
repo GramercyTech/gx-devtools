@@ -9,7 +9,8 @@
     "declarativeNetRequest",
     "storage",
     "notifications",
-    "webRequest"
+    "webRequest",
+    "browsingData"
   ],
   
   "host_permissions": [

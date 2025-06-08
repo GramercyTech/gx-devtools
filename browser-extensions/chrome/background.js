@@ -5,9 +5,12 @@ let config = {
 	urlPattern: "uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
 	useCustomPattern: false,
 	maskingMode: false,
+	clearCacheOnEnable: true,
+	disableCacheForRedirects: true,
 };
 
 let notificationTimeouts = new Map();
+let cacheBlacklist = new Set();
 
 // Initialize extension
 chrome.runtime.onStartup.addListener(initializeExtension);
@@ -24,6 +27,8 @@ async function initializeExtension() {
 				"uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
 			useCustomPattern: false,
 			maskingMode: false,
+			clearCacheOnEnable: true,
+			disableCacheForRedirects: true,
 		};
 
 		const result = await chrome.storage.sync.get(defaultConfig);
@@ -58,6 +63,49 @@ function updateIcon() {
 	chrome.action.setTitle({ title });
 }
 
+// Cache management functions
+async function clearCacheForPattern(urlPattern) {
+	try {
+		console.log(`[JavaScript Proxy] Clearing cache for pattern: ${urlPattern}`);
+
+		// Clear cache for URLs matching our pattern
+		await chrome.browsingData.removeCache({
+			origins: [], // Empty array means all origins
+			since: 0, // Clear all cache entries
+		});
+
+		console.log("[JavaScript Proxy] Cache cleared successfully");
+	} catch (error) {
+		console.error("[JavaScript Proxy] Error clearing cache:", error);
+	}
+}
+
+async function addToCacheBlacklist(url) {
+	try {
+		const urlObj = new URL(url);
+		const origin = urlObj.origin;
+		cacheBlacklist.add(origin);
+		console.log(`[JavaScript Proxy] Added ${origin} to cache blacklist`);
+	} catch (error) {
+		console.error("[JavaScript Proxy] Error adding to cache blacklist:", error);
+	}
+}
+
+function shouldDisableCache(url) {
+	if (!config.disableCacheForRedirects) return false;
+
+	try {
+		const regex = new RegExp(config.urlPattern, "i");
+		return regex.test(url);
+	} catch (error) {
+		console.error(
+			"[JavaScript Proxy] Error checking cache disable pattern:",
+			error
+		);
+		return false;
+	}
+}
+
 // Handle web requests (Chrome Manifest V3 uses declarativeNetRequest)
 async function updateRequestListener() {
 	// Remove all existing rules
@@ -70,6 +118,11 @@ async function updateRequestListener() {
 	}
 
 	if (config.enabled && !config.maskingMode) {
+		// Clear cache if enabled
+		if (config.clearCacheOnEnable) {
+			await clearCacheForPattern(config.urlPattern);
+		}
+
 		// Add redirect rule using declarativeNetRequest
 		const rule = {
 			id: 1,
@@ -194,8 +247,12 @@ function updateWebRequestListener() {
 		chrome.webRequest.onHeadersReceived.removeListener(handleResponseHeaders);
 	}
 
-	// Only add webRequest listeners for masking mode
-	if (config.enabled && config.maskingMode && chrome.webRequest) {
+	// Add webRequest listeners for masking mode OR cache control
+	if (
+		config.enabled &&
+		chrome.webRequest &&
+		(config.maskingMode || config.disableCacheForRedirects)
+	) {
 		chrome.webRequest.onBeforeRequest.addListener(
 			handleRequest,
 			{ urls: ["<all_urls>"] },
@@ -222,70 +279,137 @@ function updateWebRequestListener() {
 	}
 }
 
-// Handle request headers for masking mode
+// Handle request headers for masking mode and cache control
 function handleRequestHeaders(details) {
-	if (!config.enabled || !config.maskingMode) return {};
+	if (!config.enabled) return {};
 
-	const proxyInfo = pendingProxyRequests.get(details.requestId);
-	if (!proxyInfo) return {};
-
-	// Modify the request to go to the proxy target
+	// Initialize modifications
 	const modifications = { requestHeaders: details.requestHeaders };
+	let hasModifications = false;
 
-	// Add/modify headers to properly route to localhost
-	const hostHeader = modifications.requestHeaders.find(
-		(h) => h.name.toLowerCase() === "host"
-	);
-	if (hostHeader) {
-		try {
-			const proxyUrl = new URL(proxyInfo.redirectUrl);
-			hostHeader.value = proxyUrl.host;
-		} catch (error) {
-			console.error("[JavaScript Proxy] Error parsing proxy URL:", error);
+	// Handle masking mode
+	if (config.maskingMode) {
+		const proxyInfo = pendingProxyRequests.get(details.requestId);
+		if (proxyInfo) {
+			// Add/modify headers to properly route to localhost
+			const hostHeader = modifications.requestHeaders.find(
+				(h) => h.name.toLowerCase() === "host"
+			);
+			if (hostHeader) {
+				try {
+					const proxyUrl = new URL(proxyInfo.redirectUrl);
+					hostHeader.value = proxyUrl.host;
+					hasModifications = true;
+				} catch (error) {
+					console.error("[JavaScript Proxy] Error parsing proxy URL:", error);
+				}
+			}
 		}
 	}
 
-	return modifications;
+	// Handle cache control for URLs matching our pattern
+	if (config.disableCacheForRedirects && shouldDisableCache(details.url)) {
+		// Add cache-busting headers
+		const cacheHeaders = [
+			{ name: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+			{ name: "Pragma", value: "no-cache" },
+			{ name: "Expires", value: "0" },
+		];
+
+		cacheHeaders.forEach((cacheHeader) => {
+			const existingHeader = modifications.requestHeaders.find(
+				(h) => h.name.toLowerCase() === cacheHeader.name.toLowerCase()
+			);
+			if (existingHeader) {
+				existingHeader.value = cacheHeader.value;
+			} else {
+				modifications.requestHeaders.push(cacheHeader);
+			}
+			hasModifications = true;
+		});
+
+		console.log(
+			`[JavaScript Proxy] Added cache-busting headers for: ${details.url}`
+		);
+	}
+
+	return hasModifications ? modifications : {};
 }
 
-// Handle response headers for masking mode
+// Handle response headers for masking mode and cache control
 function handleResponseHeaders(details) {
-	if (!config.enabled || !config.maskingMode) return {};
+	if (!config.enabled) return {};
 
-	const proxyInfo = pendingProxyRequests.get(details.requestId);
-	if (!proxyInfo) return {};
-
-	// Modify response headers to maintain the illusion
+	// Initialize modifications
 	const modifications = { responseHeaders: details.responseHeaders };
+	let hasModifications = false;
 
-	// Add CORS headers if needed
-	const corsHeaders = [
-		{ name: "Access-Control-Allow-Origin", value: "*" },
-		{
-			name: "Access-Control-Allow-Methods",
-			value: "GET, POST, PUT, DELETE, OPTIONS",
-		},
-		{
-			name: "Access-Control-Allow-Headers",
-			value: "Content-Type, Authorization",
-		},
-	];
+	// Handle masking mode
+	if (config.maskingMode) {
+		const proxyInfo = pendingProxyRequests.get(details.requestId);
+		if (proxyInfo) {
+			// Add CORS headers if needed
+			const corsHeaders = [
+				{ name: "Access-Control-Allow-Origin", value: "*" },
+				{
+					name: "Access-Control-Allow-Methods",
+					value: "GET, POST, PUT, DELETE, OPTIONS",
+				},
+				{
+					name: "Access-Control-Allow-Headers",
+					value: "Content-Type, Authorization",
+				},
+			];
 
-	corsHeaders.forEach((corsHeader) => {
-		const existingHeader = modifications.responseHeaders.find(
-			(h) => h.name.toLowerCase() === corsHeader.name.toLowerCase()
-		);
-		if (existingHeader) {
-			existingHeader.value = corsHeader.value;
-		} else {
-			modifications.responseHeaders.push(corsHeader);
+			corsHeaders.forEach((corsHeader) => {
+				const existingHeader = modifications.responseHeaders.find(
+					(h) => h.name.toLowerCase() === corsHeader.name.toLowerCase()
+				);
+				if (existingHeader) {
+					existingHeader.value = corsHeader.value;
+				} else {
+					modifications.responseHeaders.push(corsHeader);
+				}
+				hasModifications = true;
+			});
 		}
-	});
+	}
 
-	console.log(
-		`[JavaScript Proxy] Modified response headers for: ${details.url}`
-	);
-	return modifications;
+	// Handle cache control for URLs matching our pattern
+	if (config.disableCacheForRedirects && shouldDisableCache(details.url)) {
+		// Add response cache-busting headers
+		const cacheHeaders = [
+			{ name: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+			{ name: "Pragma", value: "no-cache" },
+			{ name: "Expires", value: "0" },
+			{ name: "Last-Modified", value: new Date().toUTCString() },
+			{ name: "ETag", value: `"${Date.now()}"` },
+		];
+
+		cacheHeaders.forEach((cacheHeader) => {
+			const existingHeader = modifications.responseHeaders.find(
+				(h) => h.name.toLowerCase() === cacheHeader.name.toLowerCase()
+			);
+			if (existingHeader) {
+				existingHeader.value = cacheHeader.value;
+			} else {
+				modifications.responseHeaders.push(cacheHeader);
+			}
+			hasModifications = true;
+		});
+
+		console.log(
+			`[JavaScript Proxy] Added response cache-busting headers for: ${details.url}`
+		);
+	}
+
+	if (hasModifications) {
+		console.log(
+			`[JavaScript Proxy] Modified response headers for: ${details.url}`
+		);
+	}
+
+	return hasModifications ? modifications : {};
 }
 
 // Show desktop notification for proxy activity (when using masking mode)
@@ -339,6 +463,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 		case "getConfig":
 			sendResponse(config);
+			break;
+
+		case "clearCache":
+			clearCacheForPattern(config.urlPattern)
+				.then(() => {
+					sendResponse({ success: true });
+				})
+				.catch((error) => {
+					sendResponse({ success: false, error: error.message });
+				});
 			break;
 
 		default:

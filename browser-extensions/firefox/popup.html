@@ -216,6 +216,29 @@
     </div>
   </div>
   
+  <div class="content" style="padding-top: 8px;">
+    <div class="section">
+      <div class="section-title">Cache Management</div>
+      <div class="config-container">
+        <div class="checkbox-group">
+          <input type="checkbox" id="clearCacheOnEnable">
+          <label for="clearCacheOnEnable">Clear cache when extension is enabled</label>
+        </div>
+        <div class="help-text" style="margin-top: -8px; margin-bottom: 12px;">Automatically clears browser cache to ensure fresh redirects</div>
+        
+        <div class="checkbox-group">
+          <input type="checkbox" id="disableCacheForRedirects">
+          <label for="disableCacheForRedirects">Disable caching for matched URLs</label>
+        </div>
+        <div class="help-text" style="margin-top: -8px; margin-bottom: 12px;">Adds cache-busting headers to prevent service worker caching</div>
+        
+        <button id="clearCacheButton" style="background: #ffc107; color: #212529; border: none; padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: pointer; width: 100%; margin-top: 8px;">
+          Clear Cache Now
+        </button>
+      </div>
+    </div>
+  </div>
+  
   <div class="content">
     <div class="section">
       <div class="section-title">Proxy Configuration</div>
