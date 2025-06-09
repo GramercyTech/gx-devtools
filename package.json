@@ -12,7 +12,7 @@
     "ext:chrome": "node scripts/launch-chrome.js",
     "ext:chrome-pack": "node scripts/pack-chrome.js",
     "ext:install": "npm run ext:firefox & npm run ext:chrome",
-    "ext:build": "npm run ext:firefox-build && npm run ext:chrome-pack",
+    "ext:build": "npm run ext:firefox-build && npm run ext:chrome-pack"
   },
   "repository": {
     "type": "git",
