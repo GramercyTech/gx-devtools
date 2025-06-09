@@ -90,10 +90,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 					useCustomPattern: config.useCustomPattern || false,
 				},
 				css: {
-					enabled: false,
+					enabled: true,
 					pattern: defaultConfig.rules.css.pattern,
 					redirectUrl: "",
-					returnBlank: false,
+					returnBlank: true,
 					useCustomPattern: false,
 				},
 			};
