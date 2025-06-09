@@ -68,7 +68,7 @@ import SystemLayout from "@/theme-layouts/SystemLayout.vue";
 import PrivateLayout from "@/theme-layouts/PrivateLayout.vue";
 import PublicLayout from "@/theme-layouts/PublicLayout.vue";
 
-import Plugin from "/src/Plugin.vue";
+import Plugin from "@/Plugin.vue";
 import {
     GxPageStart,
     GxPageFinal,

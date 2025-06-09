@@ -54,7 +54,7 @@
 
 <script setup>
 import { ref, shallowRef } from "vue";
-import Plugin from "/src/Plugin.vue";
+import Plugin from "@/Plugin.vue";
 import {
     GxPageStart,
     GxPageFinal,

@@ -1,4 +1,4 @@
-# GxP Project with GX UIKit
+# GxP Project with GX ComponentKit
 
 This project was created with `@gramercytech/gx-toolkit` and includes the `@gramercytech/gx-componentkit` component library for rapid kiosk development.
 
@@ -131,7 +131,7 @@ import { formatPrice } from './utils/helpers.js'
 
 As long as your components and utilities are imported (directly or indirectly) into Plugin.vue, they'll be included in the final compilation.
 
-## GX UIKit Integration
+## GX ComponentKit Integration
 
 This project includes the `@gramercytech/gx-componentkit` component library, which provides:
 
@@ -259,7 +259,7 @@ Access theme configuration via the `theme` prop:
 
 ## Development Tips
 
-### Using GX UIKit Components
+### Using GX ComponentKit Components
 Import and use components in your Plugin.vue:
 
 ```vue
@@ -486,8 +486,8 @@ gxto socket send --event SocialStreamPostCreated --identifier "stream_123"
 
 ## Learn More
 
-- [GX UIKit Documentation](https://github.com/gramercytech/gx-componentkit)
-- [GxP Platform Documentation](https://docs.eventfinity.co)
+- [GX ComponentKit Documentation](https://github.com/gramercytech/gx-componentkit)
+- [GxP Platform Documentation](https://www.gramercytech.com/gxp)
 - [Vue 3 Documentation](https://vuejs.org/)
 
 ## Support

@@ -859,7 +859,7 @@ async function initCommand(argv) {
 
 	console.log("✅ Project setup complete!");
 	console.log(
-		"🎨 GX UIKit component library included for rapid kiosk development!"
+		"🎨 GX ComponentKit component library included for rapid kiosk development!"
 	);
 	if (useDatastore) {
 		console.log("🗃️ GxP Datastore included with Pinia integration!");
@@ -1693,7 +1693,7 @@ async function initDatastoreInExistingProject() {
 
 				// Add Pinia use
 				if (!mainJsContent.includes("app.use(pinia)")) {
-					const useIndex = mainJsContent.indexOf("app.use(GxUikit);");
+					const useIndex = mainJsContent.indexOf("app.use(GxComponentKit);");
 					if (useIndex !== -1) {
 						const endOfLine = mainJsContent.indexOf("\n", useIndex);
 						mainJsContent =

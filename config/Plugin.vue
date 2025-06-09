@@ -8,7 +8,7 @@
 			<h1 class="plugin-title">{{ stringsList?.welcome_text || 'Welcome to Your Plugin!' }}</h1>
 			
 			<div class="demo-section">
-				<h2>GX UIKit Demo Components</h2>
+				<h2>GX ComponentKit Demo Components</h2>
 				
 				<!-- Countdown Demo -->
 				<div class="component-demo">
@@ -339,7 +339,7 @@ const toggleExample = () => {
 	if (example.value === 'Hello World') {
 		example.value = 'Hello Universe';
 	} else if (example.value === 'Hello Universe') {
-		example.value = 'GX UIKit is awesome!';
+		example.value = 'GX ComponentKit is awesome!';
 	} else {
 		example.value = 'Hello World';
 	}
