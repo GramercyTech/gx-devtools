@@ -14,11 +14,11 @@ const DEFAULT_CONFIG = {
 			useCustomPattern: false,
 		},
 		css: {
-			enabled: false,
+			enabled: true,
 			pattern:
 				"uploads\\/plugin-version\\/\\d+\\/style_file_name\\/.*\\.css(\\?.*)?",
 			redirectUrl: "",
-			returnBlank: false,
+			returnBlank: true,
 			useCustomPattern: false,
 		},
 	},
@@ -178,10 +178,10 @@ function migrateConfig(config) {
 				useCustomPattern: config.useCustomPattern || false,
 			},
 			css: {
-				enabled: false,
+				enabled: true,
 				pattern: DEFAULT_CONFIG.rules.css.pattern,
 				redirectUrl: "",
-				returnBlank: false,
+				returnBlank: true,
 				useCustomPattern: false,
 			},
 		};
@@ -197,10 +197,10 @@ function migrateConfig(config) {
 		}
 		if (!config.rules.css) {
 			config.rules.css = {
-				enabled: false,
+				enabled: true,
 				pattern: DEFAULT_CONFIG.rules.css.pattern,
 				redirectUrl: "",
-				returnBlank: false,
+				returnBlank: true,
 				useCustomPattern: false,
 			};
 		}

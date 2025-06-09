@@ -7,39 +7,12 @@
             :portal-language="portalStringsList"
             :portal-navigation="portalNavigationList"
             :portal-assets="portalAssetList"
-        >
-            <!-- Start Page -->
-            <GxPageStart
-                v-if="currentPage === 'start'"
-                :plugin-vars="gxpStore.pluginVars"
-                :asset-urls="gxpStore.assetList"
-                :strings-list="gxpStore.stringsList"
-                :theme="gxpStore.theme"
-                @stage-change="goToPage('plugin')"
-                @idle-timeout="resetToStart"
-            />
-            
+        >   
             <!-- Your Custom Plugin Content -->
             <Plugin
-                v-else-if="currentPage === 'plugin'"
                 :router="mockRouter"
             />
             
-            <!-- Final Page -->
-            <GxPageFinal
-                v-else-if="currentPage === 'final'"
-                :plugin-vars="gxpStore.pluginVars"
-                :strings-list="gxpStore.stringsList"
-                :theme="gxpStore.theme"
-                @restart="resetToStart"
-            />
-            
-            <!-- Loading overlay -->
-            <GxPageLoading
-                v-if="isLoading"
-                :theme="gxpStore.theme"
-                :message="loadingMessage"
-            />
         </component>
     </div>
 </template>

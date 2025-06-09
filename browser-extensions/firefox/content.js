@@ -2,29 +2,31 @@
 (function () {
 	const originalFetch = window.fetch;
 	let isProxyEnabled = false;
-	let proxyRules = [];
+	let proxyConfig = {};
 
 	// Get initial state from background script
 	browser.runtime
-		.sendMessage({ action: "getState" })
+		.sendMessage({ action: "getConfig" })
 		.then((response) => {
-			isProxyEnabled = response.enabled;
-			proxyRules = response.rules;
-			console.log("[Traffic Proxy Content] State received:", {
-				enabled: isProxyEnabled,
-				ruleCount: proxyRules.length,
-				url: window.location.href,
-			});
+			if (response) {
+				isProxyEnabled = response.enabled;
+				proxyConfig = response;
+				console.log("[Traffic Proxy Content] Config received:", {
+					enabled: isProxyEnabled,
+					config: proxyConfig,
+					url: window.location.href,
+				});
+			}
 		})
 		.catch((err) =>
-			console.error("[Traffic Proxy Content] Failed to get proxy state:", err)
+			console.error("[Traffic Proxy Content] Failed to get proxy config:", err)
 		);
 
-	// Listen for state changes
+	// Listen for config changes
 	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-		if (message.action === "stateUpdate") {
+		if (message.action === "configUpdate") {
 			isProxyEnabled = message.enabled;
-			proxyRules = message.rules;
+			proxyConfig = message.config;
 		}
 	});
 
@@ -57,19 +59,38 @@
 
 	// Apply proxy rules to URL
 	function applyProxyRules(url) {
-		try {
-			const urlObj = new URL(url);
-			const originalHost = urlObj.hostname;
+		if (!proxyConfig || !proxyConfig.rules) {
+			return url;
+		}
 
-			for (const rule of proxyRules) {
+		try {
+			// Check each rule type
+			for (const [ruleType, rule] of Object.entries(proxyConfig.rules)) {
+				if (!rule.enabled || !rule.pattern) continue;
+
 				const regex = new RegExp(rule.pattern, "i");
-				if (regex.test(originalHost)) {
-					return url.replace(originalHost, rule.redirect);
+				if (regex.test(url)) {
+					// Handle blank return for CSS
+					if (rule.returnBlank) {
+						console.log(
+							`[Traffic Proxy Content] Returning blank for ${ruleType}: ${url}`
+						);
+						return ruleType === "css"
+							? "data:text/css;charset=utf-8,"
+							: "data:text/javascript;charset=utf-8,";
+					}
+
+					// Handle redirect
+					if (rule.redirectUrl) {
+						console.log(
+							`[Traffic Proxy Content] Redirecting ${ruleType}: ${url} → ${rule.redirectUrl}`
+						);
+						return rule.redirectUrl;
+					}
 				}
 			}
 		} catch (e) {
-			// Invalid URL, return as-is
-			console.log("Invalid URL for proxy processing:", url);
+			console.log("Error processing URL for proxy rules:", url, e);
 		}
 
 		return url;

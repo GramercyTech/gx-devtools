@@ -722,6 +722,11 @@ async function initCommand(argv) {
 			desc: "Plugin.vue",
 		},
 		{
+			src: useDatastore ? "DemoPage-datastore.vue" : "DemoPage.vue",
+			dest: "src/DemoPage.vue",
+			desc: "DemoPage.vue",
+		},
+		{
 			src: "app-manifest.json",
 			dest: "app-manifest.json",
 			desc: "app-manifest.json",
@@ -1049,7 +1054,7 @@ function buildCommand(argv) {
 
 	const command = [
 		...envVars,
-		`npx vite build --config "${viteConfigPath}"`,
+		`npx vite build --config "${paths.viteConfigPath}"`,
 	].join(" && ");
 
 	shell.exec(command);

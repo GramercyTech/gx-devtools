@@ -49,11 +49,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 				useCustomPattern: false,
 			},
 			css: {
-				enabled: false,
+				enabled: true,
 				pattern:
 					"uploads\\/plugin-version\\/\\d+\\/style_file_name\\/.*\\.css(\\?.*)?",
 				redirectUrl: "",
-				returnBlank: false,
+				returnBlank: true,
 				useCustomPattern: false,
 			},
 		},

@@ -1,384 +1,226 @@
 <template>
-	<GxThemeWrapper :theme="theme" class="plugin-container">
-		<div class="plugin-content">
-			<div v-if="assetUrls?.main_logo" class="logo-container">
-				<img :src="assetUrls.main_logo" alt="Logo" class="logo" />
-			</div>
-			
-			<h1 class="plugin-title">{{ stringsList?.welcome_text || 'Welcome to Your Plugin!' }}</h1>
-			
-			<div class="demo-section">
-				<h2>GX ComponentKit Demo Components</h2>
-				
-				<!-- Countdown Demo -->
-				<div class="component-demo">
-					<h3>Countdown Timer</h3>
-					<GxCountdown
-						:duration="30"
-						:auto-start="false"
-						@finished="handleCountdownFinished"
-						@tick="handleCountdownTick"
-						ref="countdownRef"
-					/>
-					<div class="demo-controls">
-						<button @click="startCountdown" class="demo-button">Start</button>
-						<button @click="resetCountdown" class="demo-button">Reset</button>
-					</div>
-				</div>
-				
-				<!-- Video Player Demo -->
-				<div class="component-demo" v-if="demoVideoUrl">
-					<h3>Video Player</h3>
-					<GxVideoPlayer
-						:src="demoVideoUrl"
-						:show-controls="false"
-						@play="handleVideoPlay"
-						@pause="handleVideoPause"
-					/>
-				</div>
-				
-				<!-- Modal Demo -->
-				<div class="component-demo">
-					<h3>Modal Dialog</h3>
-					<button @click="showModal = true" class="demo-button">Show Modal</button>
-					
-					<GxModal
-						v-if="showModal"
-						:plugin-vars="modalConfig"
-						:theme="theme"
-						@close-modal="showModal = false"
-					/>
-				</div>
-				
-				<!-- Interactive Example -->
-				<div class="component-demo">
-					<h3>Interactive Example</h3>
-					<p>Current state: <strong>{{ example }}</strong></p>
-					<button @click="toggleExample" class="demo-button primary">Toggle State</button>
-				</div>
-			</div>
-			
-			<!-- Navigation -->
-			<div class="navigation">
-				<button @click="router?.visit('/start')" class="nav-button secondary">
-					← Back to Start
-				</button>
-				<button @click="router?.visit('/final')" class="nav-button primary">
-					Complete Experience →
-				</button>
-			</div>
-		</div>
-	</GxThemeWrapper>
+    <div id="app">
+        <component 
+            :is="currentLayout"
+            :usr-lang="userLanguage"
+            :portal-settings="themeSettings"
+            :portal-language="portalStringsList"
+            :portal-navigation="portalNavigationList"
+            :portal-assets="portalAssetList"
+        >
+            <!-- Start Page -->
+            <GxPageStart
+                v-if="currentPage === 'start'"
+                :plugin-vars="pluginVars"
+                :asset-urls="appAssetList"
+                :strings-list="appStringsList"
+                :theme="themeSettings"
+                @stage-change="goToPage('plugin')"
+                @idle-timeout="resetToStart"
+            />
+            
+            <!-- Your Custom Plugin Content -->
+            <DemoPage
+                v-else-if="currentPage === 'plugin'"
+                :plugin-vars="pluginVars"
+                :dependency-list="dependencyList"
+                :asset-urls="appAssetList"
+                :strings-list="appStringsList"
+                :permission-flags="permissionFlags"
+                :theme="themeSettings"
+                :router="mockRouter"
+                :sockets="sockets"
+                :trigger-state="triggerState"
+            />
+            
+            <!-- Final Page -->
+            <GxPageFinal
+                v-else-if="currentPage === 'final'"
+                :plugin-vars="pluginVars"
+                :strings-list="appStringsList"
+                :theme="themeSettings"
+                @restart="resetToStart"
+            />
+            
+            <!-- Loading overlay -->
+            <GxPageLoading
+                v-if="isLoading"
+                :theme="themeSettings"
+                :message="loadingMessage"
+            />
+        </component>
+    </div>
 </template>
 
 <style scoped>
-.plugin-container {
-	min-height: 100vh;
-	padding: 2rem;
-	background: var(--gx-background-color, #f8f9fa);
-}
-
-.plugin-content {
-	max-width: 1200px;
-	margin: 0 auto;
-	display: flex;
-	flex-direction: column;
-	gap: 2rem;
-}
-
-.logo-container {
-	text-align: center;
-	margin-bottom: 1rem;
-}
-
-.logo {
-	max-width: 200px;
-	max-height: 100px;
-	object-fit: contain;
-}
-
-.plugin-title {
-	text-align: center;
-	font-size: 2.5rem;
-	font-weight: 800;
-	color: var(--gx-text-color, #333);
-	margin: 0 0 2rem 0;
-}
-
-.demo-section {
-	background: white;
-	border-radius: 12px;
-	padding: 2rem;
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.demo-section h2 {
-	text-align: center;
-	color: var(--gx-primary-color, #007bff);
-	margin-bottom: 2rem;
-}
-
-.component-demo {
-	margin-bottom: 3rem;
-	padding: 1.5rem;
-	border: 1px solid #e9ecef;
-	border-radius: 8px;
-	background: #f8f9fa;
-}
-
-.component-demo h3 {
-	margin-top: 0;
-	color: #495057;
-	border-bottom: 2px solid var(--gx-primary-color, #007bff);
-	padding-bottom: 0.5rem;
-}
-
-.demo-controls {
-	display: flex;
-	gap: 1rem;
-	margin-top: 1rem;
-	justify-content: center;
-}
-
-.demo-button {
-	padding: 0.75rem 1.5rem;
-	border: 2px solid var(--gx-primary-color, #007bff);
-	border-radius: 6px;
-	background: white;
-	color: var(--gx-primary-color, #007bff);
-	font-weight: 600;
-	cursor: pointer;
-	transition: all 0.3s ease;
-}
-
-.demo-button:hover {
-	background: var(--gx-primary-color, #007bff);
-	color: white;
-	transform: translateY(-1px);
-}
-
-.demo-button.primary {
-	background: var(--gx-primary-color, #007bff);
-	color: white;
-}
-
-.demo-button.primary:hover {
-	background: #0056b3;
-}
-
-.navigation {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-top: 2rem;
-	padding-top: 2rem;
-	border-top: 1px solid #dee2e6;
-}
-
-.nav-button {
-	padding: 1rem 2rem;
-	border: 2px solid;
-	border-radius: 8px;
-	font-weight: 600;
-	cursor: pointer;
-	transition: all 0.3s ease;
-	text-decoration: none;
-	display: inline-flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-
-.nav-button.primary {
-	background: var(--gx-primary-color, #007bff);
-	color: white;
-	border-color: var(--gx-primary-color, #007bff);
-}
-
-.nav-button.primary:hover {
-	background: #0056b3;
-	border-color: #0056b3;
-	transform: translateY(-1px);
-}
-
-.nav-button.secondary {
-	background: white;
-	color: #6c757d;
-	border-color: #6c757d;
-}
-
-.nav-button.secondary:hover {
-	background: #6c757d;
-	color: white;
-}
-
-@media (max-width: 768px) {
-	.plugin-container {
-		padding: 1rem;
-	}
-	
-	.plugin-title {
-		font-size: 2rem;
-	}
-	
-	.demo-section {
-		padding: 1rem;
-	}
-	
-	.navigation {
-		flex-direction: column;
-		gap: 1rem;
-	}
-	
-	.nav-button {
-		width: 100%;
-		justify-content: center;
-	}
-	
-	.demo-controls {
-		flex-direction: column;
-		align-items: center;
-	}
+#app {
+    font-family: Avenir, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 </style>
+
 <script setup>
+import { ref, shallowRef } from "vue";
 
-defineOptions({
-  inheritAttrs: false,
-});
+import "@/theme-layouts/AdditionalStyling.css"
+import SystemLayout from "@/theme-layouts/SystemLayout.vue";
+import PrivateLayout from "@/theme-layouts/PrivateLayout.vue";
+import PublicLayout from "@/theme-layouts/PublicLayout.vue";
 
-import { ref } from 'vue';
-import "@gramercytech/gx-componentkit/style.css";
+import DemoPage from "@/DemoPage.vue";
 import {
-	GxThemeWrapper,
-	GxCountdown,
-	GxVideoPlayer,
-	GxModal
-} from '@gramercytech/gx-componentkit';
+    GxPageStart,
+    GxPageFinal,
+    GxPageLoading
+} from "@gramercytech/gx-componentkit";
 
-const props = defineProps({
-	pluginVars: {
-		type: Object,
-		required: true,
-	},
-	sockets: {
-		type: Object,
-		required: true,
-		default: () => { },
-	},
-	assetUrls: {
-		type: Object,
-		required: false,
-		default: () => { },
-	},
-	dependencyList: {
-		type: Object,
-		required: false,
-		default: () => { },
-	},
-	stringsList: {
-		type: Object,
-		required: false,
-		default: () => { },
-	},
-	permissionFlags: {
-		type: Array,
-		required: false,
-		default: () => [],
-	},
-	theme: {
-		type: Object,
-		required: false,
-		default: () => ({}),
-	},
-	triggerState: {
-		type: Object,
-		required: false,
-		default: () => ({}),
-	},
-	router: {
-		type: Object,
-		required: false,
-		default: () => ({
-			visit: (url, options) => console.log('Router not available:', url, options)
-		}),
-	},
-});
+// App state management
+const currentLayout = shallowRef(PublicLayout);
+const currentPage = ref('start');
+const isLoading = ref(false);
+const loadingMessage = ref('Loading...');
 
-// Router is now available as props.router for navigation
-
-// Component state
-const example = ref('Hello World');
-const showModal = ref(false);
-const countdownRef = ref(null);
-
-// Demo video URL (you can replace with your own)
-const demoVideoUrl = ref('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
-
-// Modal configuration
-const modalConfig = ref({
-	title: 'Demo Modal',
-	messages: [
-		'This is a demonstration of the GxModal component!',
-		'You can customize the content, buttons, and styling.'
-	],
-	left_button_text: 'Cancel',
-	right_button_text: 'Confirm',
-	left_button_action: () => {
-		showModal.value = false;
-		console.log('Modal cancelled');
-	},
-	right_button_action: () => {
-		showModal.value = false;
-		console.log('Modal confirmed');
-		example.value = 'Modal was confirmed!';
-	}
-});
-
-// Component methods
-const toggleExample = () => {
-	if (example.value === 'Hello World') {
-		example.value = 'Hello Universe';
-	} else if (example.value === 'Hello Universe') {
-		example.value = 'GX ComponentKit is awesome!';
-	} else {
-		example.value = 'Hello World';
-	}
+const changeLayout = (layout) => {
+    switch (layout) {
+        case 'system':
+            currentLayout.value = SystemLayout;
+            break;
+        case 'private':
+            currentLayout.value = PrivateLayout;
+            break;
+        default:
+            currentLayout.value = PublicLayout;
+            break;
+    }
 };
 
-const startCountdown = () => {
-	if (countdownRef.value) {
-		countdownRef.value.start();
-	}
+// Navigation functions
+const goToPage = (page) => {
+    currentPage.value = page;
 };
 
-const resetCountdown = () => {
-	if (countdownRef.value) {
-		countdownRef.value.reset();
-	}
+const resetToStart = () => {
+    currentPage.value = 'start';
 };
 
-const handleCountdownFinished = () => {
-	console.log('Countdown finished!');
-	example.value = 'Countdown completed!';
+const showLoading = (message = 'Loading...') => {
+    loadingMessage.value = message;
+    isLoading.value = true;
 };
 
-const handleCountdownTick = (remaining) => {
-	console.log(`Countdown: ${remaining} seconds remaining`);
+const hideLoading = () => {
+    isLoading.value = false;
 };
 
-const handleVideoPlay = () => {
-	console.log('Video started playing');
+const sockets = {};
+// Theme configuration
+const themeSettings = {
+    background_color: "#ffffff",
+    text_color: "#333333",
+    primary_color: "#FFD600",
+    start_background_color: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    start_text_color: "#ffffff",
+    final_background_color: "#4CAF50",
+    final_text_color: "#ffffff",
 };
 
-const handleVideoPause = () => {
-	console.log('Video paused');
+const portalNavigationList = [
+    {title: "Start", route: "/start"},
+    {title: "Plugin", route: "/plugin"},
+    {title: "Final", route: "/final"},
+    // {title: "Login", route: "/login", system_type: "login"},
+    {title: "Logout", route: "/logout", system_type: "logout"},
+]
+
+//Update pluginVars with all the variables that will be set through the custom admin panel in dashboard
+const pluginVars = {
+    "primary_color": "#FFD600", //This key automatically provided by GxP
+    "projectId": 39, //This key automatically provided by GxP
+    "apiPageAuthId": "46|j7vCLmx2KG70Ig8R5mtUcNMFcHExvFPZEOv31kKGe1033f2b", //This key automatically provided by GxP
+    "apiBaseUrl": "https://api.efcloud.app", //This key automatically provided by GxP
+    "idle_timeout": "30", // Idle timeout in seconds
 };
 
-// Log plugin configuration for debugging
-console.log('Plugin initialized with:', {
-	pluginVars: props.pluginVars,
-	stringsList: props.stringsList,
-	assetUrls: props.assetUrls,
-	theme: props.theme
+//Update assetList with all the assets that will be selected through the custom admin panel in dashboard, GxP will return signed urls for each key
+const appAssetList = {
+    "main_logo": "https://dashboard.eventfinity.test/storage/assets/69/2HyPwh1692319982.png",
+    "background_image": "https://dashboard.eventfinity.test/storage/assets/69/2HyPwh1692319982.png",
+};
+const portalAssetList = {
+    "main_logo": "https://dashboard.eventfinity.test/storage/assets/69/2HyPwh1692319982.png",
+    "background_image": "https://dashboard.eventfinity.test/storage/assets/69/2HyPwh1692319982.png",
+};
+
+//Update stringsList with all the strings that will be set through the custom admin panel in dashboard, language selection will be handled by GxP
+const appStringsList = {
+    "line_1": "Welcome to Your App!",
+    "line_2": "Touch to begin your experience",
+    "line_3": "Get started by touching the button below",
+    "start_line_one": "Welcome to Your App!",
+    "start_line_two": "Touch to begin your experience",
+    "start_touch_start": "Get started by touching the button below",
+    "final_line_one": "Thank You!",
+    "final_line_two": "Your experience has been completed successfully",
+    "final_line_three": "Touch anywhere to start over",
+    "welcome_text": "Hello World",
+};
+const portalStringsList = {
+    "start_line_one": "Welcome to Your App!",
+    "start_line_two": "Touch to begin your experience",
+    "start_touch_start": "Get started by touching the button below",
+    "final_line_one": "Thank You!",
+    "final_line_two": "Your experience has been completed successfully",
+    "final_line_three": "Touch anywhere to start over",
+    "welcome_text": "Hello World",
+};
+//Update dependencyList with all the dependencies that will be set through the custom admin panel in dashboard, GxP will return the id of the selected dependency
+const dependencyList = {
+    "project_location": 4
+};
+const triggerState = {
+};
+//Update permissionFlags with all the permissions that will be set through the custom admin panel in dashboard, GxP will generate this array of flags based on settings set in the dashboard
+const permissionFlags = [];
+
+// Mock router to simulate platform navigation during development
+const mockRouter = {
+    visit: (url, options = {}) => {
+        console.log(`🔗 Mock Router: Navigating to ${url}`, options);
+        
+        // Simulate platform navigation behavior
+        if (options.onStart) options.onStart();
+        
+        // Map platform routes to local pages
+        const routeMap = {
+            '/start': 'start',
+            '/plugin': 'plugin', 
+            '/final': 'final',
+            '/camera': 'plugin', // For development, camera stays in plugin
+            '/results': 'plugin', // For development, results stays in plugin
+            '/share': 'plugin',   // For development, share stays in plugin
+            '/instructions': 'plugin' // For development, instructions stays in plugin
+        };
+        
+        const targetPage = routeMap[url] || 'plugin';
+        
+        // Simulate async navigation
+        setTimeout(() => {
+            goToPage(targetPage);
+            if (options.onFinish) options.onFinish();
+        }, 100);
+    }
+};
+
+// Socket handling is now managed by the GxP datastore
+// Access sockets via: const gxpStore = useGxpStore(); gxpStore.sockets
+
+// Expose functions for use in Plugin component
+defineExpose({
+    goToPage,
+    resetToStart,
+    showLoading,
+    hideLoading
 });
 </script>
+
