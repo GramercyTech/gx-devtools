@@ -1,9 +1,27 @@
 // Extension state
 let config = {
 	enabled: false,
+	// Legacy fields for backward compatibility
 	redirectUrl: "https://localhost:3060/src/Plugin.vue",
 	urlPattern: "uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
 	useCustomPattern: false,
+	// New rules-based configuration
+	rules: {
+		js: {
+			enabled: true,
+			pattern: "uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
+			redirectUrl: "https://localhost:3060/src/Plugin.vue",
+			useCustomPattern: false,
+		},
+		css: {
+			enabled: false,
+			pattern:
+				"uploads\\/plugin-version\\/\\d+\\/style_file_name\\/.*\\.css(\\?.*)?",
+			redirectUrl: "",
+			returnBlank: false,
+			useCustomPattern: false,
+		},
+	},
 	maskingMode: false,
 	clearCacheOnEnable: true,
 	disableCacheForRedirects: true,
@@ -22,10 +40,29 @@ async function initializeExtension() {
 		// Load saved configuration
 		const defaultConfig = {
 			enabled: false,
+			// Legacy fields for backward compatibility
 			redirectUrl: "https://localhost:3060/src/Plugin.vue",
 			urlPattern:
 				"uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
 			useCustomPattern: false,
+			// New rules-based configuration
+			rules: {
+				js: {
+					enabled: true,
+					pattern:
+						"uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
+					redirectUrl: "https://localhost:3060/src/Plugin.vue",
+					useCustomPattern: false,
+				},
+				css: {
+					enabled: false,
+					pattern:
+						"uploads\\/plugin-version\\/\\d+\\/style_file_name\\/.*\\.css(\\?.*)?",
+					redirectUrl: "",
+					returnBlank: false,
+					useCustomPattern: false,
+				},
+			},
 			maskingMode: false,
 			clearCacheOnEnable: true,
 			disableCacheForRedirects: true,
@@ -33,6 +70,9 @@ async function initializeExtension() {
 
 		const result = await browser.storage.sync.get(defaultConfig);
 		config = result;
+
+		// Migrate legacy configuration to new rules format
+		config = migrateConfig(config);
 
 		console.log("[JavaScript Proxy] Loaded configuration:", config);
 
@@ -43,6 +83,57 @@ async function initializeExtension() {
 	} catch (error) {
 		console.error("[JavaScript Proxy] Failed to initialize:", error);
 	}
+}
+
+// Migrate legacy configuration to new rules format
+function migrateConfig(config) {
+	// If rules don't exist, create them from legacy config
+	if (!config.rules) {
+		config.rules = {
+			js: {
+				enabled: true,
+				pattern:
+					config.urlPattern ||
+					"uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
+				redirectUrl:
+					config.redirectUrl || "https://localhost:3060/src/Plugin.vue",
+				useCustomPattern: config.useCustomPattern || false,
+			},
+			css: {
+				enabled: false,
+				pattern:
+					"uploads\\/plugin-version\\/\\d+\\/style_file_name\\/.*\\.css(\\?.*)?",
+				redirectUrl: "",
+				returnBlank: false,
+				useCustomPattern: false,
+			},
+		};
+	} else {
+		// Ensure all required fields exist
+		if (!config.rules.js) {
+			config.rules.js = {
+				enabled: true,
+				pattern:
+					config.urlPattern ||
+					"uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
+				redirectUrl:
+					config.redirectUrl || "https://localhost:3060/src/Plugin.vue",
+				useCustomPattern: config.useCustomPattern || false,
+			};
+		}
+		if (!config.rules.css) {
+			config.rules.css = {
+				enabled: false,
+				pattern:
+					"uploads\\/plugin-version\\/\\d+\\/style_file_name\\/.*\\.css(\\?.*)?",
+				redirectUrl: "",
+				returnBlank: false,
+				useCustomPattern: false,
+			};
+		}
+	}
+
+	return config;
 }
 
 // Update toolbar icon based on state
@@ -64,9 +155,28 @@ function updateIcon() {
 }
 
 // Cache management functions
-async function clearCacheForPattern(urlPattern) {
+async function clearCacheForPattern(urlPattern = null) {
 	try {
-		console.log(`[JavaScript Proxy] Clearing cache for pattern: ${urlPattern}`);
+		// Collect all patterns that need cache clearing
+		const patterns = [];
+
+		if (urlPattern) {
+			patterns.push(urlPattern);
+		} else {
+			// Clear cache for all enabled rules
+			for (const [ruleType, rule] of Object.entries(config.rules || {})) {
+				if (rule.enabled && rule.pattern) {
+					patterns.push(rule.pattern);
+				}
+			}
+
+			// Include legacy pattern if exists
+			if (config.urlPattern) {
+				patterns.push(config.urlPattern);
+			}
+		}
+
+		console.log(`[JavaScript Proxy] Clearing cache for patterns:`, patterns);
 
 		// Clear browser cache
 		await browser.browsingData.removeCache({
@@ -74,8 +184,10 @@ async function clearCacheForPattern(urlPattern) {
 			since: 0, // Clear all cache entries
 		});
 
-		// Clear service worker caches by injecting script into active tabs
-		await clearServiceWorkerCaches(urlPattern);
+		// Clear service worker caches for each pattern
+		for (const pattern of patterns) {
+			await clearServiceWorkerCaches(pattern);
+		}
 
 		console.log("[JavaScript Proxy] Cache cleared successfully");
 	} catch (error) {
@@ -167,8 +279,25 @@ function shouldDisableCache(url) {
 	if (!config.disableCacheForRedirects) return false;
 
 	try {
-		const regex = new RegExp(config.urlPattern, "i");
-		return regex.test(url);
+		// Check against all enabled rules
+		for (const [ruleType, rule] of Object.entries(config.rules || {})) {
+			if (rule.enabled) {
+				const pattern =
+					rule.useCustomPattern && rule.pattern ? rule.pattern : rule.pattern;
+				const regex = new RegExp(pattern, "i");
+				if (regex.test(url)) {
+					return true;
+				}
+			}
+		}
+
+		// Fallback to legacy pattern for backward compatibility
+		if (config.urlPattern) {
+			const regex = new RegExp(config.urlPattern, "i");
+			return regex.test(url);
+		}
+
+		return false;
 	} catch (error) {
 		console.error(
 			"[JavaScript Proxy] Error checking cache disable pattern:",
@@ -198,58 +327,117 @@ function handleRequest(details) {
 		return {};
 	}
 
-	// Only process JavaScript files (script type)
-	if (details.type !== "script") {
-		return {};
-	}
-
 	try {
-		const regex = new RegExp(config.urlPattern, "i");
+		// Check each rule type
+		for (const [ruleType, rule] of Object.entries(config.rules || {})) {
+			if (!rule.enabled || !rule.pattern) continue;
 
-		// Test the full URL against the pattern
-		if (regex.test(details.url)) {
-			let newUrl = config.redirectUrl;
+			// Check if this rule type matches the resource type
+			if (ruleType === "js" && details.type !== "script") continue;
+			if (ruleType === "css" && details.type !== "stylesheet") continue;
 
-			// Ensure URL has protocol
-			if (!newUrl.includes("://")) {
-				newUrl = "https://" + newUrl;
-			}
+			const regex = new RegExp(rule.pattern, "i");
 
-			const requestType = getRequestTypeDescription(details.type);
-
-			// Check if this would create a redirect loop
-			if (details.url === newUrl || details.url.includes("localhost")) {
-				console.log(
-					`[JavaScript Proxy] Skipping redirect loop: ${details.url}`
-				);
-				return {};
-			}
-
-			// Check if this rule should use URL masking
-			if (config.maskingMode) {
-				// Store original URL for header modification
-				storeOriginalUrl(details.requestId, details.url, newUrl);
-
-				console.log(
-					`[JavaScript Proxy] Masking ${details.type}: ${details.url} (routing to ${newUrl})`
-				);
-
-				// Don't redirect - we'll modify headers instead
-				return {};
-			} else {
-				// Clear cache if enabled (for traditional redirect)
-				if (config.clearCacheOnEnable) {
-					clearCacheForPattern(config.urlPattern);
+			// Test the full URL against the pattern
+			if (regex.test(details.url)) {
+				// Handle blank return for CSS
+				if (rule.returnBlank) {
+					console.log(
+						`[JavaScript Proxy] Returning blank for ${ruleType}: ${details.url}`
+					);
+					// Return a data URL with empty content
+					const blankUrl =
+						ruleType === "css"
+							? "data:text/css;charset=utf-8,"
+							: "data:text/javascript;charset=utf-8,";
+					return { redirectUrl: blankUrl };
 				}
 
-				// Traditional redirect approach
-				showProxyNotification(details.url, newUrl, requestType);
+				if (rule.redirectUrl) {
+					let newUrl = rule.redirectUrl;
 
-				console.log(
-					`[JavaScript Proxy] Redirecting ${details.type}: ${details.url} → ${newUrl}`
-				);
+					// Ensure URL has protocol
+					if (!newUrl.includes("://")) {
+						newUrl = "https://" + newUrl;
+					}
 
-				return { redirectUrl: newUrl };
+					const requestType = getRequestTypeDescription(details.type);
+
+					// Check if this would create a redirect loop
+					if (details.url === newUrl || details.url.includes("localhost")) {
+						console.log(
+							`[JavaScript Proxy] Skipping redirect loop: ${details.url}`
+						);
+						return {};
+					}
+
+					// Check if this rule should use URL masking
+					if (config.maskingMode) {
+						// Store original URL for header modification
+						storeOriginalUrl(details.requestId, details.url, newUrl);
+
+						console.log(
+							`[JavaScript Proxy] Masking ${ruleType}: ${details.url} (routing to ${newUrl})`
+						);
+
+						// Don't redirect - we'll modify headers instead
+						return {};
+					} else {
+						// Clear cache if enabled (for traditional redirect)
+						if (config.clearCacheOnEnable) {
+							clearCacheForPattern(rule.pattern);
+						}
+
+						// Traditional redirect approach
+						showProxyNotification(details.url, newUrl, requestType);
+
+						console.log(
+							`[JavaScript Proxy] Redirecting ${ruleType}: ${details.url} → ${newUrl}`
+						);
+
+						return { redirectUrl: newUrl };
+					}
+				}
+			}
+		}
+
+		// Fallback to legacy pattern for backward compatibility
+		if (config.urlPattern && details.type === "script") {
+			const regex = new RegExp(config.urlPattern, "i");
+
+			if (regex.test(details.url)) {
+				let newUrl = config.redirectUrl;
+
+				if (!newUrl.includes("://")) {
+					newUrl = "https://" + newUrl;
+				}
+
+				const requestType = getRequestTypeDescription(details.type);
+
+				if (details.url === newUrl || details.url.includes("localhost")) {
+					console.log(
+						`[JavaScript Proxy] Skipping redirect loop: ${details.url}`
+					);
+					return {};
+				}
+
+				if (config.maskingMode) {
+					storeOriginalUrl(details.requestId, details.url, newUrl);
+					console.log(
+						`[JavaScript Proxy] Legacy masking: ${details.url} (routing to ${newUrl})`
+					);
+					return {};
+				} else {
+					if (config.clearCacheOnEnable) {
+						clearCacheForPattern(config.urlPattern);
+					}
+
+					showProxyNotification(details.url, newUrl, requestType);
+					console.log(
+						`[JavaScript Proxy] Legacy redirecting: ${details.url} → ${newUrl}`
+					);
+					return { redirectUrl: newUrl };
+				}
 			}
 		}
 	} catch (error) {
@@ -512,7 +700,7 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
 			updateRequestListener();
 			// Clear cache when enabling the proxy
 			if (config.enabled && config.clearCacheOnEnable) {
-				clearCacheForPattern(config.urlPattern);
+				clearCacheForPattern(); // Clear cache for all enabled patterns
 			}
 			sendResponse({ success: true, enabled: config.enabled });
 			break;
@@ -530,7 +718,7 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
 			break;
 
 		case "clearCache":
-			clearCacheForPattern(config.urlPattern)
+			clearCacheForPattern() // Clear cache for all enabled patterns
 				.then(() => {
 					sendResponse({ success: true });
 				})

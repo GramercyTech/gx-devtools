@@ -966,6 +966,14 @@ function devCommand(argv) {
 		console.log(`📁 Using: ${serverJsPath}`);
 	}
 
+	// check if vite.config.js exists locally
+	let viteConfigPath = paths.viteConfigPath;
+	const localViteConfigPath = path.join(projectPath, "vite.config.js");
+	if (fs.existsSync(localViteConfigPath)) {
+		viteConfigPath = localViteConfigPath;
+		console.log(`📁 Using local vite.config.js: ${viteConfigPath}`);
+	}
+
 	// Only set environment variables if they're not already set (allows .env to take precedence)
 	const envVars = [];
 
@@ -995,16 +1003,15 @@ function devCommand(argv) {
 		// Use concurrently to run both servers
 		const viteCommand = [
 			...envVars,
-			`npx vite dev --config "${paths.viteConfigPath}"`,
+			`npx vite dev --config "${viteConfigPath}"`,
 		].join(" && ");
 
 		command = `npx concurrently --names "VITE,SOCKET" --prefix-colors "cyan,green" "${viteCommand}" "npx nodemon \\"${serverJsPath}\\""`;
 	} else {
 		// Just run Vite dev server
-		command = [
-			...envVars,
-			`npx vite dev --config "${paths.viteConfigPath}"`,
-		].join(" && ");
+		command = [...envVars, `npx vite dev --config "${viteConfigPath}"`].join(
+			" && "
+		);
 	}
 
 	shell.exec(command);
@@ -1020,6 +1027,14 @@ function buildCommand(argv) {
 
 	const envVars = [];
 
+	// check if vite.config.js exists locally
+	let viteConfigPath = paths.viteConfigPath;
+	const localViteConfigPath = path.join(projectPath, "vite.config.js");
+	if (fs.existsSync(localViteConfigPath)) {
+		viteConfigPath = localViteConfigPath;
+		console.log(`📁 Using local vite.config.js: ${viteConfigPath}`);
+	}
+
 	// Set variables only if not already defined in environment
 	if (!process.env.NODE_LOG_LEVEL) {
 		envVars.push(
@@ -1034,7 +1049,7 @@ function buildCommand(argv) {
 
 	const command = [
 		...envVars,
-		`npx vite build --config "${paths.viteConfigPath}"`,
+		`npx vite build --config "${viteConfigPath}"`,
 	].join(" && ");
 
 	shell.exec(command);

@@ -259,6 +259,10 @@ Access theme configuration via the `theme` prop:
 
 ## Development Tips
 
+### Loading Component in Production
+
+When loading the component in dev vs production, dev requires the index.html file within the project to preload the externalized Vue library, loading vue within the project in dev will cause a multiple vue defintion error if run within production via the browser extension
+
 ### Using GX ComponentKit Components
 Import and use components in your Plugin.vue:
 
@@ -292,53 +296,11 @@ Theme variables are automatically available:
 }
 ```
 
-### Navigation
-Use the router prop to navigate between platform pages (based on [Inertia.js manual visits](https://inertiajs.com/manual-visits)):
-
-```vue
-<script setup>
-// Access router from props
-const { router } = props;
-
-// Navigate to different platform pages
-const goToStart = () => router.visit('/start');
-const goToFinal = () => router.visit('/final');
-const goToCamera = () => router.visit('/camera');
-const goToShare = (data) => router.visit('/share', { 
-    method: 'post', 
-    data: data 
-});
-
-// Navigate with options
-const navigateWithLoader = () => {
-    router.visit('/results', {
-        preserveScroll: true,
-        preserveState: true,
-        onStart: () => console.log('Navigation started'),
-        onFinish: () => console.log('Navigation completed')
-    });
-};
-</script>
-
-<template>
-    <button @click="goToStart">← Back to Start</button>
-    <button @click="goToFinal">Complete Experience →</button>
-    <button @click="goToCamera">Take Photo</button>
-    <button @click="goToShare({ image: photoData })">Share Results</button>
-</template>
-```
-
 ## Platform Router
 
 The platform provides a router prop that follows the [Inertia.js manual visits](https://inertiajs.com/manual-visits) pattern for seamless navigation:
 
-### Available Routes
-- `/start` - Welcome/start screen
-- `/instructions` - Instruction display
-- `/camera` - Camera capture interface  
-- `/results` - Results display
-- `/share` - Social sharing interface
-- `/final` - Thank you/completion page
+
 
 ### Router Methods
 ```javascript
@@ -360,35 +322,6 @@ router.visit('/results', {
     onFinish: () => {},      // Called after navigation
     onError: (errors) => {}  // Handle navigation errors
 });
-```
-
-### Example Usage in Plugin
-```vue
-<script setup>
-const { router, pluginVars } = props;
-
-const handlePhotoTaken = async (photoData) => {
-    // Process photo...
-    const processedData = await processPhoto(photoData);
-    
-    // Navigate to results with data
-    router.visit('/results', {
-        method: 'post',
-        data: { photo: processedData }
-    });
-};
-
-const shareExperience = () => {
-    router.visit('/share', {
-        method: 'post',
-        data: {
-            image: currentPhoto.value,
-            title: 'Check out my experience!',
-            hashtags: ['#awesome', '#kiosk']
-        }
-    });
-};
-</script>
 ```
 
 ## Scripts

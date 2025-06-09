@@ -233,6 +233,9 @@ npm run ext:build
 - Restart dev server after changes
 - Check variable name casing
 
+**Loading Component in Production**
+- When loading the component in dev vs production, dev requires the index.html file within the project to preload the externalized Vue library, loading vue within the project in dev will cause a multiple vue defintion error if run within production via the browser extension
+
 ## Support
 
 Create an issue in the project repository for bugs and feature requests.

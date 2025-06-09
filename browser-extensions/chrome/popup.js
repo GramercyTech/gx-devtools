@@ -1,10 +1,7 @@
 document.addEventListener("DOMContentLoaded", async function () {
+	// Get all DOM elements
 	const toggleButton = document.getElementById("toggleButton");
 	const toggleText = document.getElementById("toggleText");
-	const redirectUrlInput = document.getElementById("redirectUrl");
-	const customPatternCheckbox = document.getElementById("customPattern");
-	const patternDisplay = document.getElementById("patternDisplay");
-	const customPatternInput = document.getElementById("customPatternInput");
 	const saveButton = document.getElementById("saveButton");
 	const statusDiv = document.getElementById("status");
 	const maskingModeCheckbox = document.getElementById("maskingMode");
@@ -15,12 +12,51 @@ document.addEventListener("DOMContentLoaded", async function () {
 	);
 	const clearCacheButton = document.getElementById("clearCacheButton");
 
+	// JS Rule elements
+	const jsRuleEnabled = document.getElementById("jsRuleEnabled");
+	const jsRuleContent = document.getElementById("jsRuleContent");
+	const jsRedirectUrl = document.getElementById("jsRedirectUrl");
+	const jsCustomPattern = document.getElementById("jsCustomPattern");
+	const jsPatternDisplay = document.getElementById("jsPatternDisplay");
+	const jsCustomPatternInput = document.getElementById("jsCustomPatternInput");
+
+	// CSS Rule elements
+	const cssRuleEnabled = document.getElementById("cssRuleEnabled");
+	const cssRuleContent = document.getElementById("cssRuleContent");
+	const cssRedirectUrl = document.getElementById("cssRedirectUrl");
+	const cssReturnBlank = document.getElementById("cssReturnBlank");
+	const cssRedirectSection = document.getElementById("cssRedirectSection");
+	const cssCustomPattern = document.getElementById("cssCustomPattern");
+	const cssPatternDisplay = document.getElementById("cssPatternDisplay");
+	const cssCustomPatternInput = document.getElementById(
+		"cssCustomPatternInput"
+	);
+
 	// Default configuration
 	const defaultConfig = {
 		enabled: false,
+		// Legacy fields for backward compatibility
 		redirectUrl: "https://localhost:3060/src/Plugin.vue",
 		urlPattern: "uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
 		useCustomPattern: false,
+		// New rules-based configuration
+		rules: {
+			js: {
+				enabled: true,
+				pattern:
+					"uploads\\/plugin-version\\/\\d+\\/file_name\\/.*\\.js(\\?.*)?",
+				redirectUrl: "https://localhost:3060/src/Plugin.vue",
+				useCustomPattern: false,
+			},
+			css: {
+				enabled: false,
+				pattern:
+					"uploads\\/plugin-version\\/\\d+\\/style_file_name\\/.*\\.css(\\?.*)?",
+				redirectUrl: "",
+				returnBlank: false,
+				useCustomPattern: false,
+			},
+		},
 		maskingMode: false,
 		clearCacheOnEnable: true,
 		disableCacheForRedirects: true,
@@ -31,6 +67,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 	try {
 		const result = await chrome.storage.sync.get(defaultConfig);
 		config = result;
+
+		// Migrate legacy config if needed
+		config = migrateConfig(config);
 	} catch (error) {
 		console.error("Error loading config:", error);
 		config = defaultConfig;
@@ -38,7 +77,29 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	// Initialize UI with loaded config
 	updateUI();
-	updatePatternDisplay();
+	updatePatternDisplays();
+
+	function migrateConfig(config) {
+		// If rules don't exist, create them from legacy config
+		if (!config.rules) {
+			config.rules = {
+				js: {
+					enabled: true,
+					pattern: config.urlPattern || defaultConfig.rules.js.pattern,
+					redirectUrl: config.redirectUrl || defaultConfig.rules.js.redirectUrl,
+					useCustomPattern: config.useCustomPattern || false,
+				},
+				css: {
+					enabled: false,
+					pattern: defaultConfig.rules.css.pattern,
+					redirectUrl: "",
+					returnBlank: false,
+					useCustomPattern: false,
+				},
+			};
+		}
+		return config;
+	}
 
 	function updateUI() {
 		// Update toggle button
@@ -50,30 +111,85 @@ document.addEventListener("DOMContentLoaded", async function () {
 			toggleText.textContent = "OFF";
 		}
 
-		// Update form fields
-		redirectUrlInput.value = config.redirectUrl || defaultConfig.redirectUrl;
-		customPatternCheckbox.checked = config.useCustomPattern || false;
-		customPatternInput.value = config.urlPattern || defaultConfig.urlPattern;
+		// Update global settings
 		maskingModeCheckbox.checked = config.maskingMode || false;
 		clearCacheOnEnableCheckbox.checked = config.clearCacheOnEnable !== false;
 		disableCacheForRedirectsCheckbox.checked =
 			config.disableCacheForRedirects !== false;
 
-		// Toggle custom pattern input visibility
-		if (config.useCustomPattern) {
-			customPatternInput.classList.add("visible");
-			patternDisplay.style.display = "none";
-		} else {
-			customPatternInput.classList.remove("visible");
-			patternDisplay.style.display = "block";
+		// Update JS rule
+		if (config.rules && config.rules.js) {
+			jsRuleEnabled.checked = config.rules.js.enabled;
+			jsRedirectUrl.value = config.rules.js.redirectUrl || "";
+			jsCustomPattern.checked = config.rules.js.useCustomPattern || false;
+			jsCustomPatternInput.value = config.rules.js.pattern || "";
+
+			// Toggle JS rule content visibility
+			if (config.rules.js.enabled) {
+				jsRuleContent.classList.remove("rule-disabled");
+			} else {
+				jsRuleContent.classList.add("rule-disabled");
+			}
+
+			// Toggle custom pattern input visibility
+			if (config.rules.js.useCustomPattern) {
+				jsCustomPatternInput.classList.add("visible");
+				jsPatternDisplay.style.display = "none";
+			} else {
+				jsCustomPatternInput.classList.remove("visible");
+				jsPatternDisplay.style.display = "block";
+			}
+		}
+
+		// Update CSS rule
+		if (config.rules && config.rules.css) {
+			cssRuleEnabled.checked = config.rules.css.enabled;
+			cssRedirectUrl.value = config.rules.css.redirectUrl || "";
+			cssReturnBlank.checked = config.rules.css.returnBlank || false;
+			cssCustomPattern.checked = config.rules.css.useCustomPattern || false;
+			cssCustomPatternInput.value = config.rules.css.pattern || "";
+
+			// Toggle CSS rule content visibility
+			if (config.rules.css.enabled) {
+				cssRuleContent.classList.remove("rule-disabled");
+			} else {
+				cssRuleContent.classList.add("rule-disabled");
+			}
+
+			// Toggle redirect section based on blank return setting
+			if (config.rules.css.returnBlank) {
+				cssRedirectSection.style.display = "none";
+			} else {
+				cssRedirectSection.style.display = "block";
+			}
+
+			// Toggle custom pattern input visibility
+			if (config.rules.css.useCustomPattern) {
+				cssCustomPatternInput.classList.add("visible");
+				cssPatternDisplay.style.display = "none";
+			} else {
+				cssCustomPatternInput.classList.remove("visible");
+				cssPatternDisplay.style.display = "block";
+			}
 		}
 	}
 
-	function updatePatternDisplay() {
-		const pattern = config.useCustomPattern
-			? config.urlPattern
-			: defaultConfig.urlPattern;
-		patternDisplay.textContent = pattern;
+	function updatePatternDisplays() {
+		// Update JS pattern display
+		if (config.rules && config.rules.js) {
+			const jsPattern = config.rules.js.useCustomPattern
+				? config.rules.js.pattern
+				: defaultConfig.rules.js.pattern;
+			jsPatternDisplay.textContent = jsPattern;
+		}
+
+		// Update CSS pattern display
+		if (config.rules && config.rules.css) {
+			const cssPattern = config.rules.css.useCustomPattern
+				? config.rules.css.pattern
+				: defaultConfig.rules.css.pattern;
+			cssPatternDisplay.textContent = cssPattern;
+		}
 	}
 
 	function showStatus(message, isSuccess = true) {
@@ -88,7 +204,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	function validateRedirectUrl(url) {
 		if (!url || url.trim() === "") {
-			return "Redirect URL is required";
+			return null; // Empty URL is valid for optional fields
 		}
 
 		try {
@@ -124,6 +240,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	}
 
 	function normalizeUrl(url) {
+		if (!url || url.trim() === "") return "";
 		if (!url.includes("://")) {
 			return "https://" + url;
 		}
@@ -151,12 +268,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		}
 	});
 
-	customPatternCheckbox.addEventListener("change", function () {
-		config.useCustomPattern = this.checked;
-		updateUI();
-		updatePatternDisplay();
-	});
-
+	// Global settings event listeners
 	maskingModeCheckbox.addEventListener("change", function () {
 		config.maskingMode = this.checked;
 	});
@@ -167,6 +279,45 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	disableCacheForRedirectsCheckbox.addEventListener("change", function () {
 		config.disableCacheForRedirects = this.checked;
+	});
+
+	// JS rule event listeners
+	jsRuleEnabled.addEventListener("change", function () {
+		if (!config.rules) config.rules = {};
+		if (!config.rules.js) config.rules.js = { ...defaultConfig.rules.js };
+		config.rules.js.enabled = this.checked;
+		updateUI();
+	});
+
+	jsCustomPattern.addEventListener("change", function () {
+		if (!config.rules) config.rules = {};
+		if (!config.rules.js) config.rules.js = { ...defaultConfig.rules.js };
+		config.rules.js.useCustomPattern = this.checked;
+		updateUI();
+		updatePatternDisplays();
+	});
+
+	// CSS rule event listeners
+	cssRuleEnabled.addEventListener("change", function () {
+		if (!config.rules) config.rules = {};
+		if (!config.rules.css) config.rules.css = { ...defaultConfig.rules.css };
+		config.rules.css.enabled = this.checked;
+		updateUI();
+	});
+
+	cssReturnBlank.addEventListener("change", function () {
+		if (!config.rules) config.rules = {};
+		if (!config.rules.css) config.rules.css = { ...defaultConfig.rules.css };
+		config.rules.css.returnBlank = this.checked;
+		updateUI();
+	});
+
+	cssCustomPattern.addEventListener("change", function () {
+		if (!config.rules) config.rules = {};
+		if (!config.rules.css) config.rules.css = { ...defaultConfig.rules.css };
+		config.rules.css.useCustomPattern = this.checked;
+		updateUI();
+		updatePatternDisplays();
 	});
 
 	clearCacheButton.addEventListener("click", async function () {
@@ -196,31 +347,77 @@ document.addEventListener("DOMContentLoaded", async function () {
 	});
 
 	saveButton.addEventListener("click", async function () {
-		const redirectUrl = redirectUrlInput.value.trim();
-		const urlPattern = config.useCustomPattern
-			? customPatternInput.value.trim()
-			: defaultConfig.urlPattern;
+		// Ensure rules structure exists
+		if (!config.rules) config.rules = {};
+		if (!config.rules.js) config.rules.js = { ...defaultConfig.rules.js };
+		if (!config.rules.css) config.rules.css = { ...defaultConfig.rules.css };
 
-		// Validate inputs
-		const redirectUrlError = validateRedirectUrl(redirectUrl);
-		if (redirectUrlError) {
-			showStatus(redirectUrlError, false);
-			return;
+		// Validate JS rule if enabled
+		if (config.rules.js.enabled) {
+			const jsRedirectUrlValue = jsRedirectUrl.value.trim();
+			const jsPatternValue = config.rules.js.useCustomPattern
+				? jsCustomPatternInput.value.trim()
+				: defaultConfig.rules.js.pattern;
+
+			if (!jsRedirectUrlValue) {
+				showStatus(
+					"JavaScript redirect URL is required when JS rule is enabled",
+					false
+				);
+				return;
+			}
+
+			const jsUrlError = validateRedirectUrl(jsRedirectUrlValue);
+			if (jsUrlError) {
+				showStatus("JavaScript rule: " + jsUrlError, false);
+				return;
+			}
+
+			const jsPatternError = validatePattern(jsPatternValue);
+			if (jsPatternError) {
+				showStatus("JavaScript rule: " + jsPatternError, false);
+				return;
+			}
+
+			// Update JS rule config
+			config.rules.js.redirectUrl = normalizeUrl(jsRedirectUrlValue);
+			config.rules.js.pattern = jsPatternValue;
 		}
 
-		const patternError = validatePattern(urlPattern);
-		if (patternError) {
-			showStatus(patternError, false);
-			return;
-		}
+		// Validate CSS rule if enabled
+		if (config.rules.css.enabled) {
+			const cssRedirectUrlValue = cssRedirectUrl.value.trim();
+			const cssPatternValue = config.rules.css.useCustomPattern
+				? cssCustomPatternInput.value.trim()
+				: defaultConfig.rules.css.pattern;
 
-		// Update config
-		config.redirectUrl = normalizeUrl(redirectUrl);
-		config.urlPattern = urlPattern;
-		config.useCustomPattern = customPatternCheckbox.checked;
-		config.maskingMode = maskingModeCheckbox.checked;
-		config.clearCacheOnEnable = clearCacheOnEnableCheckbox.checked;
-		config.disableCacheForRedirects = disableCacheForRedirectsCheckbox.checked;
+			// Only validate redirect URL if not returning blank
+			if (!config.rules.css.returnBlank && !cssRedirectUrlValue) {
+				showStatus(
+					"CSS redirect URL is required when CSS rule is enabled and not returning blank",
+					false
+				);
+				return;
+			}
+
+			if (!config.rules.css.returnBlank) {
+				const cssUrlError = validateRedirectUrl(cssRedirectUrlValue);
+				if (cssUrlError) {
+					showStatus("CSS rule: " + cssUrlError, false);
+					return;
+				}
+			}
+
+			const cssPatternError = validatePattern(cssPatternValue);
+			if (cssPatternError) {
+				showStatus("CSS rule: " + cssPatternError, false);
+				return;
+			}
+
+			// Update CSS rule config
+			config.rules.css.redirectUrl = normalizeUrl(cssRedirectUrlValue);
+			config.rules.css.pattern = cssPatternValue;
+		}
 
 		try {
 			await chrome.storage.sync.set(config);
@@ -232,7 +429,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			});
 
 			updateUI();
-			updatePatternDisplay();
+			updatePatternDisplays();
 			showStatus("Configuration saved successfully");
 		} catch (error) {
 			console.error("Error saving config:", error);
