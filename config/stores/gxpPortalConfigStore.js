@@ -153,138 +153,6 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		}
 	}
 
-	// Dependency API methods
-	function findDependency(identifier) {
-		if (Array.isArray(dependencyList.value)) {
-			return dependencyList.value.find((dep) => dep.identifier === identifier);
-		}
-		return null;
-	}
-
-	async function getList(identifier, params = {}) {
-		const dependency = findDependency(identifier);
-		if (!dependency) {
-			throw new Error(`Dependency not found: ${identifier}`);
-		}
-
-		// Build endpoint based on dependency configuration
-		const endpoint = `/api/${identifier}`;
-
-		try {
-			const response = await apiGet(endpoint, params);
-			console.log(`API call to ${endpoint}:`, response);
-			return response;
-		} catch (error) {
-			console.error(`Failed to fetch list for ${identifier}:`, error);
-			throw error;
-		}
-	}
-
-	async function getItem(identifier, id, params = {}) {
-		const dependency = findDependency(identifier);
-		if (!dependency) {
-			throw new Error(`Dependency not found: ${identifier}`);
-		}
-
-		const endpoint = `/api/${identifier}/${id}`;
-
-		try {
-			const response = await apiGet(endpoint, params);
-			console.log(`API call to ${endpoint}:`, response);
-			return response;
-		} catch (error) {
-			console.error(`Failed to fetch item ${id} for ${identifier}:`, error);
-			throw error;
-		}
-	}
-
-	async function createItem(identifier, data) {
-		const dependency = findDependency(identifier);
-		if (!dependency) {
-			throw new Error(`Dependency not found: ${identifier}`);
-		}
-
-		const endpoint = `/api/${identifier}`;
-
-		try {
-			const response = await apiPost(endpoint, data);
-			console.log(`API call to ${endpoint}:`, response);
-			return response;
-		} catch (error) {
-			console.error(`Failed to create item for ${identifier}:`, error);
-			throw error;
-		}
-	}
-
-	async function updateItem(identifier, id, data) {
-		const dependency = findDependency(identifier);
-		if (!dependency) {
-			throw new Error(`Dependency not found: ${identifier}`);
-		}
-
-		const endpoint = `/api/${identifier}/${id}`;
-
-		try {
-			const response = await apiPut(endpoint, data);
-			console.log(`API call to ${endpoint}:`, response);
-			return response;
-		} catch (error) {
-			console.error(`Failed to update item ${id} for ${identifier}:`, error);
-			throw error;
-		}
-	}
-
-	async function deleteItem(identifier, id) {
-		const dependency = findDependency(identifier);
-		if (!dependency) {
-			throw new Error(`Dependency not found: ${identifier}`);
-		}
-
-		const endpoint = `/api/${identifier}/${id}`;
-
-		try {
-			const response = await apiDelete(endpoint);
-			console.log(`API call to ${endpoint}:`, response);
-			return response;
-		} catch (error) {
-			console.error(`Failed to delete item ${id} for ${identifier}:`, error);
-			throw error;
-		}
-	}
-
-	// Legacy method for backward compatibility
-	async function getDependencyData(dependencyKey, endpoint) {
-		// Try to find by identifier first
-		const dependency = findDependency(dependencyKey);
-		if (dependency) {
-			return await apiGet(`/api/${dependency.identifier}/${endpoint}`);
-		}
-
-		// Fall back to old behavior if it's an old-style dependency
-		const dependencyId = dependencyList.value[dependencyKey];
-		if (!dependencyId) {
-			throw new Error(`Dependency not found: ${dependencyKey}`);
-		}
-
-		return await apiGet(`/dependencies/${dependencyId}/${endpoint}`);
-	}
-
-	async function updateDependencyData(dependencyKey, endpoint, data) {
-		// Try to find by identifier first
-		const dependency = findDependency(dependencyKey);
-		if (dependency) {
-			return await apiPost(`/api/${dependency.identifier}/${endpoint}`, data);
-		}
-
-		// Fall back to old behavior if it's an old-style dependency
-		const dependencyId = dependencyList.value[dependencyKey];
-		if (!dependencyId) {
-			throw new Error(`Dependency not found: ${dependencyKey}`);
-		}
-
-		return await apiPost(`/dependencies/${dependencyId}/${endpoint}`, data);
-	}
-
 	// Utility methods
 	function getString(key, fallback = "") {
 		return stringsList.value[key] || fallback;
@@ -296,6 +164,10 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 	function getAsset(key, fallback = "") {
 		return assetList.value[key] || fallback;
+	}
+
+	function getState(key, fallback = null) {
+		return triggerState.value[key] || fallback;
 	}
 
 	function hasPermission(flag) {
@@ -339,25 +211,6 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		final_text_color: getSetting("final_text_color", "#ffffff"),
 	}));
 
-	// Configuration update methods (for development)
-	function updatePluginVar(key, value) {
-		pluginVars.value[key] = value;
-	}
-
-	function updateString(key, value) {
-		stringsList.value[key] = value;
-	}
-
-	function updateAsset(key, value) {
-		assetList.value[key] = value;
-	}
-
-	function addDevAsset(key, filename) {
-		const url = `https://localhost:3060/dev-assets/images/${filename}`;
-		assetList.value[key] = url;
-		console.log(`Added dev asset: ${key} -> ${url}`);
-	}
-
 	function listAssets() {
 		console.log("📁 Current Assets:");
 		Object.entries(assetList.value).forEach(([key, url]) => {
@@ -390,21 +243,12 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		apiPost,
 		apiPut,
 		apiDelete,
-		getDependencyData,
-		updateDependencyData,
-
-		// New dependency-based API methods
-		getList,
-		getItem,
-		createItem,
-		updateItem,
-		deleteItem,
-		findDependency,
 
 		// Utility methods
 		getString,
 		getSetting,
 		getAsset,
+		getState,
 		hasPermission,
 
 		// Socket methods
