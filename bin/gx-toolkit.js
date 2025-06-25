@@ -1026,6 +1026,7 @@ function devCommand(argv) {
  * Build command - builds the plugin for production
  */
 function buildCommand(argv) {
+	const projectPath = findProjectRoot();
 	const paths = resolveGxPaths();
 
 	console.log("Building plugin...");
