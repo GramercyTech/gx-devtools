@@ -186,6 +186,7 @@ gxto init my-plugin
 cd my-plugin
 git init
 git submodule add git@bitbucket.org:gramercytech/z-plugin-components.git src/z-components
+git submodule update
 npm run dev
 ```
 
