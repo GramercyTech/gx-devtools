@@ -184,6 +184,8 @@ Added to your `package.json`:
 ```bash
 gxto init my-plugin
 cd my-plugin
+git init
+git submodule add git@bitbucket.org:gramercytech/z-plugin-components.git src/z-components
 npm run dev
 ```
 
