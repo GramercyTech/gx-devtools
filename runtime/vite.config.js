@@ -1,0 +1,302 @@
+import { defineConfig, loadEnv } from "vite";
+import vue from "@vitejs/plugin-vue";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import externalGlobals from "rollup-plugin-external-globals";
+import { gxpInspectorPlugin } from "./vite-inspector-plugin.js";
+import { gxpSourceTrackerPlugin } from "./vite-source-tracker-plugin.js";
+
+/**
+ * Get the library name from package.json
+ */
+function getLibName() {
+	try {
+		const packageJsonPath = path.resolve(process.cwd(), "package.json");
+		if (fs.existsSync(packageJsonPath)) {
+			const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+			// Convert package name to a valid JS identifier
+			// e.g., "@company/my-plugin" -> "MyPlugin"
+			const name = packageJson.name || "Plugin";
+			return name
+				.replace(/[@\/\-]/g, " ")
+				.replace(/\b\w/g, (l) => l.toUpperCase())
+				.replace(/\s/g, "");
+		}
+	} catch (error) {
+		console.warn("Could not read package.json, using default lib name");
+	}
+	return "Plugin";
+}
+
+/**
+ * Setup HTTPS configuration if certificates are available
+ */
+function getHttpsConfig(env) {
+	const useHttps = env.USE_HTTPS === "true";
+	const certPath = env.CERT_PATH;
+	const keyPath = env.KEY_PATH;
+
+	if (!useHttps || !certPath || !keyPath) {
+		return false;
+	}
+
+	// Resolve paths relative to project root
+	const resolvedCertPath = path.resolve(process.cwd(), certPath);
+	const resolvedKeyPath = path.resolve(process.cwd(), keyPath);
+
+	// Check if certificate files exist
+	if (!fs.existsSync(resolvedCertPath) || !fs.existsSync(resolvedKeyPath)) {
+		console.warn("⚠ SSL certificate files not found, falling back to HTTP");
+		return false;
+	}
+
+	try {
+		return {
+			key: fs.readFileSync(resolvedKeyPath),
+			cert: fs.readFileSync(resolvedCertPath),
+		};
+	} catch (error) {
+		console.warn("⚠ Failed to read SSL certificates, falling back to HTTP");
+		return false;
+	}
+}
+
+/**
+ * Find the gx-toolkit package directory (works for both local and global installs)
+ */
+function findToolkitPath() {
+	const packageName = "@gramercytech/gx-toolkit";
+
+	// Try local node_modules first
+	const localPath = path.resolve(process.cwd(), "node_modules", packageName);
+	if (fs.existsSync(localPath)) {
+		return localPath;
+	}
+
+	// Try to find via require.resolve
+	try {
+		const pkgPath = require.resolve(`${packageName}/package.json`);
+		return path.dirname(pkgPath);
+	} catch (e) {
+		// Fallback: assume we're in the toolkit itself during development
+		return process.cwd();
+	}
+}
+
+/**
+ * Check if a file exists locally in the project
+ */
+function hasLocalFile(fileName) {
+	const localPath = path.resolve(process.cwd(), fileName);
+	return fs.existsSync(localPath);
+}
+
+export default defineConfig(({ mode }) => {
+	// Load environment variables from project directory
+	const env = loadEnv(mode, process.cwd(), "");
+
+	// Get lib name from package.json
+	const libName = getLibName();
+
+	// Find the toolkit path for runtime imports
+	const toolkitPath = findToolkitPath();
+	const runtimeDir = path.resolve(toolkitPath, "runtime");
+
+	// Check for local dev files
+	const hasLocalIndexHtml = hasLocalFile("index.html");
+	const hasLocalMainJs = hasLocalFile("main.js");
+
+	// Log which files are being used
+	console.log(`📄 index.html: ${hasLocalIndexHtml ? "local" : "runtime"}`);
+	console.log(`📄 main.js: ${hasLocalMainJs ? "local" : "runtime"}`);
+
+	// Create plugin to serve runtime files (index.html and main.js) if no local ones exist
+	const runtimeFilesPlugin = {
+		name: "runtime-files",
+		configureServer(server) {
+			server.middlewares.use((req, res, next) => {
+				// Serve runtime index.html for root requests (if no local index.html)
+				if (
+					!hasLocalIndexHtml &&
+					(req.url === "/" || req.url === "/index.html")
+				) {
+					const runtimeIndexPath = path.join(runtimeDir, "index.html");
+					if (fs.existsSync(runtimeIndexPath)) {
+						// Read and transform the runtime index.html
+						server
+							.transformIndexHtml(
+								req.url,
+								fs.readFileSync(runtimeIndexPath, "utf-8")
+							)
+							.then((html) => {
+								res.setHeader("Content-Type", "text/html");
+								res.end(html);
+							})
+							.catch((err) => {
+								console.error("Error transforming index.html:", err);
+								next(err);
+							});
+						return;
+					}
+				}
+
+				// Serve runtime main.js for @gx-runtime/main.js requests (if no local main.js)
+				if (
+					!hasLocalMainJs &&
+					(req.url === "/@gx-runtime/main.js" ||
+						req.url?.startsWith("/@gx-runtime/main.js?"))
+				) {
+					const runtimeMainPath = path.join(runtimeDir, "main.js");
+					if (fs.existsSync(runtimeMainPath)) {
+						// Use the real path to handle symlinks correctly
+						const realMainPath = fs.realpathSync(runtimeMainPath);
+						server
+							.transformRequest(realMainPath)
+							.then((result) => {
+								if (result) {
+									res.setHeader("Content-Type", "application/javascript");
+									res.end(result.code);
+								} else {
+									next();
+								}
+							})
+							.catch((err) => {
+								console.error("Error transforming main.js:", err);
+								next(err);
+							});
+						return;
+					}
+				}
+
+				next();
+			});
+		},
+	};
+
+	return {
+		// Root is always the project directory
+		root: process.cwd(),
+		plugins: [
+			runtimeFilesPlugin,
+			// Source tracker must run BEFORE vue() to transform templates before compilation
+			gxpSourceTrackerPlugin(),
+			vue(),
+			// GxP Inspector plugin for browser extension integration
+			gxpInspectorPlugin(),
+			externalGlobals(
+				{
+					vue: "Vue",
+					"@/stores/gxpPortalConfigStore": "{ useGxpStore: window.useGxpStore }",
+				},
+				{
+					include: ["src/**"],
+				}
+			),
+			// Custom request logging and CORS plugin
+			{
+				name: "request-logger-cors",
+				configureServer(server) {
+					server.middlewares.use((req, res, next) => {
+						const start = Date.now();
+						const originalEnd = res.end;
+
+						// Add CORS headers to all responses
+						res.setHeader("Access-Control-Allow-Origin", "*");
+						res.setHeader(
+							"Access-Control-Allow-Methods",
+							"GET, POST, PUT, DELETE, OPTIONS"
+						);
+						res.setHeader("Access-Control-Allow-Headers", "*");
+						res.setHeader("Access-Control-Allow-Credentials", "false");
+
+						// Handle preflight requests
+						if (req.method === "OPTIONS") {
+							res.statusCode = 200;
+							res.end();
+							return;
+						}
+
+						res.end = function (...args) {
+							const duration = Date.now() - start;
+							const status = res.statusCode;
+							const method = req.method;
+							const url = req.url;
+							const referer = req.headers.referer || "direct";
+							const origin = req.headers.origin || "unknown";
+
+							console.log(
+								`[${new Date().toISOString()}] ${method} ${url} ${status} (${duration}ms) - Origin: ${origin} - Referer: ${referer}`
+							);
+							originalEnd.apply(this, args);
+						};
+
+						next();
+					});
+				},
+			},
+		],
+		logLevel: env.NODE_LOG_LEVEL || "error",
+		clearScreen: false,
+		server: {
+			port: parseInt(env.NODE_PORT) || 3060,
+			strictPort: true,
+			https: getHttpsConfig(env),
+			cors: {
+				origin: "*",
+				methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+				allowedHeaders: ["*"],
+				credentials: false,
+			},
+			hmr: {
+				clientPort:
+					parseInt(env.CLIENT_PORT) || parseInt(env.NODE_PORT) || 3060,
+			},
+			host: true, // Allow access from network
+			// Allow serving files from the toolkit runtime directory
+			// Also resolve symlinks to allow files from the real path
+			fs: {
+				allow: [process.cwd(), toolkitPath, fs.realpathSync(toolkitPath)],
+			},
+		},
+		build: {
+			// Build output goes to project directory
+			outDir: path.resolve(process.cwd(), "dist"),
+			lib: {
+				entry: [
+					path.resolve(process.cwd(), env.COMPONENT_PATH || "./src/Plugin.vue"),
+				],
+				name: libName,
+				fileName: (format) => `plugin.${format}.js`,
+				formats: ["es"],
+			},
+			rollupOptions: {
+				// Make sure Vue and component kit are treated as external dependencies
+				external: ["vue"],
+				output: {
+					globals: {
+						vue: "Vue",
+					},
+				},
+			},
+		},
+		resolve: {
+			alias: {
+				// Client project's source directory
+				"@": path.resolve(process.cwd(), "src"),
+				// Theme layouts in client project
+				"@layouts": path.resolve(process.cwd(), "theme-layouts"),
+				// GxP Toolkit runtime (PortalContainer, etc.) - from node_modules
+				"@gx-runtime": runtimeDir,
+				// Ensure single Vue instance
+				vue: path.resolve(process.cwd(), "node_modules/vue"),
+			},
+			// Dedupe Vue to ensure only one instance is used
+			dedupe: ["vue"],
+		},
+		// SSR configuration to handle externals properly
+		ssr: {
+			external: ["vue"],
+		},
+	};
+});
