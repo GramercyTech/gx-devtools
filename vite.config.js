@@ -3,6 +3,7 @@ import vue from "@vitejs/plugin-vue";
 import path from "path";
 import fs from "fs";
 import externalGlobals from "rollup-plugin-external-globals";
+import { gxpInspectorPlugin } from "./runtime/vite-inspector-plugin.js";
 
 // https://www.npmjs.com/package/rollup-plugin-external-globals
 
@@ -71,14 +72,17 @@ export default defineConfig(({ mode }) => {
 	return {
 		plugins: [
 			vue(),
+			gxpInspectorPlugin(),
 			externalGlobals(
 				{
+					"@gramercytech/gx-toolkit/config/stores/gxpPortalConfigStore":
+						"(window.useGxpStoreBuilder || (() => { console.warn('useGxpStoreBuilder not found on window, using fallback'); return {}; }))",
 					vue: "Vue",
 					"@/stores/gxpPortalConfigStore":
-						"(window.useGxpStore || (() => { console.warn('useGxpStore not found on window, using fallback'); return {}; }))",
+						"(window.useGxpStoreBuilder || (() => { console.warn('useGxpStoreBuilder not found on window, using fallback'); return {}; }))",
 				},
 				{
-					include: ["src/**"],
+					include: ["template/**"],
 				}
 			),
 			// Custom request logging and CORS plugin
@@ -126,6 +130,7 @@ export default defineConfig(({ mode }) => {
 		],
 		logLevel: env.NODE_LOG_LEVEL || "error",
 		clearScreen: false,
+		dev: {},
 		server: {
 			port: parseInt(env.NODE_PORT) || 3060,
 			strictPort: true,
@@ -152,7 +157,7 @@ export default defineConfig(({ mode }) => {
 		},
 		resolve: {
 			alias: {
-				"@": path.resolve(process.cwd(), "src"),
+				"@": path.resolve(process.cwd(), "template/src"),
 			},
 		},
 	};

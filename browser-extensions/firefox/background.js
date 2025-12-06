@@ -688,9 +688,64 @@ function updateRequestListener() {
 	}
 }
 
+// ============================================================
+// DevTools Panel Communication
+// ============================================================
+
+const devtoolsConnections = new Map();
+
+browser.runtime.onConnect.addListener((port) => {
+	if (port.name === 'gxp-devtools-panel') {
+		const extensionListener = (message, port) => {
+			if (message.name === 'init') {
+				devtoolsConnections.set(message.tabId, port);
+				console.log('[GxP DevTools] Panel connected for tab:', message.tabId);
+			}
+
+			// Forward messages to content script
+			if (message.tabId && message.action) {
+				browser.tabs.sendMessage(message.tabId, message).then((response) => {
+					port.postMessage(response);
+				}).catch(console.error);
+			}
+		};
+
+		port.onMessage.addListener(extensionListener);
+
+		port.onDisconnect.addListener(() => {
+			// Remove the connection when panel is closed
+			for (const [tabId, connectedPort] of devtoolsConnections.entries()) {
+				if (connectedPort === port) {
+					devtoolsConnections.delete(tabId);
+					console.log('[GxP DevTools] Panel disconnected for tab:', tabId);
+					break;
+				}
+			}
+		});
+	}
+});
+
+// Forward messages from content script to DevTools panel
+function forwardToDevTools(tabId, message) {
+	const port = devtoolsConnections.get(tabId);
+	if (port) {
+		try {
+			port.postMessage(message);
+		} catch (error) {
+			console.error('[GxP DevTools] Error forwarding to panel:', error);
+		}
+	}
+}
+
 // Handle messages from popup
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	console.log("[JavaScript Proxy] Received message:", request);
+
+	// Handle messages from content script about element selection
+	if (request.type === 'elementSelected' && sender.tab) {
+		forwardToDevTools(sender.tab.id, request);
+		return;
+	}
 
 	switch (request.action) {
 		case "toggleProxy":

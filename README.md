@@ -1,241 +1,244 @@
-# GxToolkit
+# GxP Dev Toolkit
 
-A CLI toolkit for creating and managing GxP platform projects with modern development features.
-
-## Quick Start
-
-```bash
-# Install globally
-npm install -g @gramercytech/gx-toolkit
-
-# Create new project
-gxto init my-project
-
-# Start development
-cd my-project
-npm run dev
-```
+A development toolkit for creating plugins for the GxP kiosk platform. This package provides CLI tools, project scaffolding, and a development environment that emulates the GxP platform.
 
 ## Installation
 
-**Global (Recommended)**
 ```bash
 npm install -g @gramercytech/gx-toolkit
 ```
 
-**Local Development Dependency**
+Or use it as a dev dependency in your project:
+
 ```bash
 npm install --save-dev @gramercytech/gx-toolkit
 ```
 
-## Commands
+## Quick Start
 
-### `gxto init [name]`
-Creates a new project or updates an existing one with all required dependencies and configurations.
-
-During initialization, you'll be prompted to:
-- Include GxP Datastore (optional Pinia-based state management)
-- Set up SSL certificates for HTTPS development
+Create a new GxP plugin project:
 
 ```bash
-gxto init                    # Interactive mode
-gxto init my-project         # Create "my-project" directory
-gxto init                    # Update existing project (in project directory)
-```
-
-### `gxto dev`
-Starts the development server with HTTPS by default.
-
-The tool will automatically load your `.env` file if it exists and show you which port it's using.
-
-```bash
-gxto dev                     # HTTPS on port 3000 (or from .env)
-gxto dev --port 4000         # Custom port (overrides .env)
-gxto dev --no-https          # HTTP mode
-```
-
-### `gxto build`
-Builds the plugin for production.
-
-```bash
-gxto build
-```
-
-### `gxto setup-ssl`
-Generates SSL certificates for HTTPS development.
-
-```bash
-gxto setup-ssl
-```
-
-### Browser Extension Commands
-
-### `gxto ext:firefox`
-Launches Firefox with your browser extension loaded for testing.
-
-```bash
-gxto ext:firefox
-```
-
-### `gxto ext:chrome`
-Launches Chrome with your browser extension loaded for testing.
-
-```bash
-gxto ext:chrome
-```
-
-### `gxto ext:build`
-Builds both Firefox and Chrome extensions for distribution.
-
-```bash
-gxto ext:build
-```
-
-## Project Structure
-
-```
-my-project/
-├── package.json              # Dependencies and scripts
-├── .env.example              # Environment template
-├── .gitignore                # Git ignore patterns
-├── main.js                   # Development entry point
-├── server.js                 # Development server (Express + Socket.IO)
-├── App.vue                   # Development container (mimics platform)
-├── AdvancedExample.vue       # Advanced workflow reference
-├── index.html                # Development HTML template
-├── app-manifest.json         # Plugin manifest
-├── .certs/                   # SSL certificates (auto-generated)
-├── browser-extensions/       # Browser extensions
-│   ├── chrome/               # Chrome extension
-│   └── firefox/              # Firefox extension
-├── scripts/                  # Extension management scripts
-│   ├── launch-chrome.js      # Chrome extension launcher
-│   └── pack-chrome.js        # Chrome extension packager
-└── src/
-    └── Plugin.vue            # Your app root component (production entry)
-```
-
-## HTTPS Development
-
-GxToolkit automatically sets up HTTPS using [mkcert](https://github.com/FiloSottile/mkcert) for:
-- Modern web API compatibility (Camera, Geolocation, etc.)
-- Production-like environment
-- Secure context testing
-- Secure WebSocket connections (Socket.IO)
-
-**Interactive Setup**: You'll be prompted to set up SSL certificates when creating new projects.
-
-**Manual Setup**: Run `npm run setup-ssl` to regenerate certificates.
-
-**HTTP Fallback**: Use `npm run dev-http` if HTTPS issues occur.
-
-**Socket.IO SSL**: When SSL certificates are present, both the main server and Socket.IO server automatically use HTTPS for secure connections.
-
-## Environment Configuration
-
-The `.env` file is automatically created from `.env.example` during project initialization. Customize as needed:
-
-### Key Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NODE_PORT` | Development server port | `3060` |
-| `SOCKET_IO_PORT` | SocketIO server port | `3061` |
-| `COMPONENT_PATH` | Main component path | `./src/Plugin.vue` |
-| `NODE_LOG_LEVEL` | Logging level | `info` |
-| `USE_HTTPS` | Enable HTTPS | `true` |
-
-### Configuration Priority
-1. Command line arguments (highest priority)
-2. Environment variables from `.env` file
-3. Global config (`~/gxto-default-config.json`)
-4. Built-in defaults (lowest priority)
-
-## Dependencies
-
-**Runtime**
-- Vue 3, Vite, Express, Socket.IO, CORS
-
-**Development**  
-- mkcert, nodemon, concurrently, dotenv
-
-## Scripts
-
-Added to your `package.json`:
-
-```json
-{
-  "scripts": {
-    "dev": "gxto dev --with-socket",
-    "dev-app": "gxto dev",
-    "dev-http": "gxto dev --no-https", 
-    "build": "gxto build",
-    "setup-ssl": "gxto setup-ssl",
-    "ext:firefox": "gxto ext:firefox",
-    "ext:chrome": "gxto ext:chrome",
-    "ext:build": "gxto ext:build"
-  }
-}
-```
-
-## Examples
-
-**New Project**
-```bash
-gxto init my-plugin
+gxtk init my-plugin
 cd my-plugin
 npm run dev
 ```
 
-**Update Existing Project**
-```bash
-# In project directory
-gxto init
-npm run dev
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `gxtk init [name]` | Create a new project or update an existing one |
+| `gxtk dev` | Start development server with HTTPS and Socket.IO |
+| `gxtk dev --no-https` | Start development server with HTTP only |
+| `gxtk build` | Build plugin for production |
+| `gxtk setup-ssl` | Generate SSL certificates for HTTPS development |
+| `gxtk publish <file>` | Copy runtime files to your project for customization |
+| `gxtk datastore <action>` | Manage GxP datastore (list, add, scan-strings, config) |
+| `gxtk socket <action>` | Simulate socket events (list, send) |
+| `gxtk assets <action>` | Manage development assets (list, init, generate) |
+| `gxtk ext:firefox` | Launch Firefox with browser extension |
+| `gxtk ext:chrome` | Launch Chrome with browser extension |
+| `gxtk ext:build` | Build browser extensions for distribution |
+
+## Features
+
+- **Platform Emulator**: PortalContainer.vue mimics the GxP platform environment
+- **Hot Module Replacement**: Instant updates during development
+- **Socket.IO Integration**: Test real-time features with simulated events
+- **SSL Support**: HTTPS development with auto-generated certificates
+- **Browser Extensions**: Test plugins on live GxP pages
+- **Dev Tools Modal**: In-browser tools for inspecting state, switching layouts, and more
+- **Asset Generation**: Create placeholder images for development
+
+---
+
+# Toolkit Development Guide
+
+This section is for developers contributing to the toolkit itself.
+
+## Repository Structure
+
+```
+gx-toolkit/
+├── bin/                    # CLI tool
+│   ├── gx-toolkit.js       # Entry point (delegates to lib/cli.js)
+│   └── lib/                # Modular CLI components
+│       ├── cli.js          # Yargs command definitions
+│       ├── constants.js    # Dependencies, scripts, ports
+│       ├── commands/       # Individual command modules
+│       │   ├── init.js     # gxtk init
+│       │   ├── dev.js      # gxtk dev
+│       │   ├── build.js    # gxtk build
+│       │   ├── publish.js  # gxtk publish
+│       │   ├── ssl.js      # gxtk setup-ssl
+│       │   ├── datastore.js
+│       │   ├── socket.js
+│       │   ├── assets.js
+│       │   └── extensions.js
+│       └── utils/          # Shared utilities
+│           ├── paths.js    # Path resolution
+│           ├── ssl.js      # SSL certificate management
+│           ├── files.js    # File operations
+│           └── prompts.js  # User prompts
+├── runtime/                # Files used from node_modules (NOT copied to projects)
+│   ├── PortalContainer.vue # Platform emulator (immutable for users)
+│   ├── server.js           # Socket.IO development server
+│   ├── dev-tools/          # In-browser development tools
+│   │   ├── DevToolsModal.vue
+│   │   ├── StoreInspector.vue
+│   │   ├── LayoutSwitcher.vue
+│   │   ├── SocketSimulator.vue
+│   │   └── MockDataEditor.vue
+│   └── stores/
+│       └── gxpPortalConfigStore.js  # Core Pinia store
+├── template/               # Files copied to new projects during init
+│   ├── src/
+│   │   ├── Plugin.vue      # User's app entry point
+│   │   ├── DemoPage.vue    # Example component
+│   │   └── stores/         # Store setup
+│   ├── theme-layouts/      # Layout templates
+│   ├── dev-assets/         # Placeholder images
+│   ├── main.js             # Dev entry point
+│   ├── vite.config.js      # Project build config
+│   └── ...
+├── socket-events/          # Socket event templates for simulation
+├── browser-extensions/     # Chrome and Firefox extensions
+│   ├── chrome/
+│   └── firefox/
+└── scripts/                # Build and launch scripts
 ```
 
-**Custom Configuration**
-```bash
-# Command line
-gxto dev --port 4000 --component-path ./components/Main.vue
+## Key Concepts
 
-# Environment file (.env)
-NODE_PORT=4000
-COMPONENT_PATH=./components/Main.vue
-NODE_LOG_LEVEL=debug
+### Runtime vs Template
+
+- **`/runtime/`**: Files that stay in node_modules and are imported at runtime via the `@gx-runtime` Vite alias. Users cannot modify these files directly.
+
+- **`/template/`**: Files copied to user projects during `gxtk init`. Users can edit these files.
+
+### Vite Aliases
+
+Projects use these aliases (defined in `template/vite.config.js`):
+
+- `@` → Project's `src/` directory
+- `@layouts` → Project's `theme-layouts/` directory
+- `@gx-runtime` → Toolkit's `runtime/` directory (from node_modules)
+
+### PortalContainer.vue
+
+The platform emulator that wraps user plugins during development. It:
+- Provides mock router, theme, and navigation
+- Injects props that the real platform provides
+- Includes the dev tools modal (Ctrl+Shift+D)
+- Lives in `/runtime/` so users can't accidentally modify it
+
+## Setting Up for Development
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/GramercyTech/gx-toolkit.git
+   cd gx-toolkit
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Link for local testing**:
+   ```bash
+   npm link
+   ```
+
+4. **Create a test project**:
+   ```bash
+   mkdir /tmp/test-project
+   cd /tmp/test-project
+   gxtk init test-app
+   cd test-app
+
+   # Link to local toolkit instead of npm version
+   rm -rf node_modules/@gramercytech/gx-toolkit
+   mkdir -p node_modules/@gramercytech
+   ln -s /path/to/gx-toolkit node_modules/@gramercytech/gx-toolkit
+
+   npm run dev-http
+   ```
+
+## Making Changes
+
+### Adding a New CLI Command
+
+1. Create a new file in `bin/lib/commands/`:
+   ```javascript
+   // bin/lib/commands/mycommand.js
+   function myCommand(argv) {
+       console.log("My command running!");
+   }
+   module.exports = { myCommand };
+   ```
+
+2. Export from `bin/lib/commands/index.js`
+
+3. Register in `bin/lib/cli.js`:
+   ```javascript
+   .command('mycommand', 'Description', {}, myCommand)
+   ```
+
+### Modifying the Dev Tools Modal
+
+Dev tools components are in `/runtime/dev-tools/`. Changes here affect all projects using the toolkit.
+
+### Adding Template Files
+
+Add files to `/template/` and update `bin/lib/commands/init.js` to copy them during project creation.
+
+## Testing
+
+### Manual Testing
+
+```bash
+# Test CLI help
+node bin/gx-toolkit.js --help
+
+# Test init command
+cd /tmp && rm -rf test-project
+node /path/to/gx-toolkit/bin/gx-toolkit.js init test-project
+
+# Test dev server (after linking)
+cd test-project
+npm run dev-http
+
+# Test build
+npm run build
 ```
 
-**Browser Extension Development**
-```bash
-# Test Firefox extension
-npm run ext:firefox
+### Verifying Changes
 
-# Test Chrome extension  
-npm run ext:chrome
+1. Create a fresh test project
+2. Link the local toolkit
+3. Run `npm run dev-http` and verify the app loads
+4. Run `npm run build` and check `dist/` output
+5. Test dev tools with Ctrl+Shift+D
 
-# Build extensions for distribution
-npm run ext:build
-```
+## Publishing
 
-## Troubleshooting
+1. Update version in `package.json`
+2. Ensure all new directories are included (runtime/, template/, socket-events/)
+3. Run `npm publish`
 
-**Command not found**
-- Verify global installation: `npm install -g @gramercytech/gx-toolkit`
-- Check npm global path in your shell
+## Dependencies
 
-**SSL Certificate Issues**
-- Regenerate: `npm run setup-ssl`
-- Use HTTP: `npm run dev-http`
-- Install mkcert: `npm install -g mkcert`
+The toolkit uses:
+- **Vite** - Build tool and dev server
+- **Vue 3** - UI framework
+- **Pinia** - State management
+- **Socket.IO** - Real-time communication
+- **yargs** - CLI argument parsing
+- **shelljs** - Shell commands
+- **mkcert** - SSL certificate generation
 
-**Environment Variables**
-- Ensure `.env` file exists in project root
-- Restart dev server after changes
-- Check variable name casing
+## License
 
-**Loading Component in Production**
-- When loading the component in dev vs production, dev requires the index.html file within the project to preload the externalized Vue library, loading vue within the project in dev will cause a multiple vue defintion error if run within production via the browser extension
-
-## Support
-
-Create an issue in the project repository for bugs and feature requests.
+ISC

@@ -5,21 +5,23 @@
   "type": "commonjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently 'vite dev' 'nodemon server.js'",
+    "dev": "concurrently 'vite dev' 'nodemon config/server.js'",
     "dev-app": "vite dev",
     "ext:firefox": "web-ext run --source-dir browser-extensions/firefox",
     "ext:firefox-build": "web-ext build --source-dir browser-extensions/firefox --artifacts-dir dist/firefox",
     "ext:chrome": "node scripts/launch-chrome.js",
     "ext:chrome-pack": "node scripts/pack-chrome.js",
     "ext:install": "npm run ext:firefox & npm run ext:chrome",
-    "ext:build": "npm run ext:firefox-build && npm run ext:chrome-pack"
+    "ext:build": "npm run ext:firefox-build && npm run ext:chrome-pack",
+    "build:tui": "tsc -p tsconfig.tui.json && echo '{\"type\":\"module\"}' > dist/tui/package.json",
+    "dev:tui": "tsx watch bin/lib/tui/index.tsx"
   },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/GramercyTech/gx-toolkit.git"
   },
   "bin": {
-    "gxto": "bin/gx-toolkit.js"
+    "gxtk": "bin/gx-toolkit.js"
   },
   "keywords": [
     "tunnel",
@@ -37,13 +39,19 @@
     "@fal-works/esbuild-plugin-global-externals": "^2.1.2",
     "@gramercytech/gx-componentkit": "^1.0.8",
     "@vitejs/plugin-vue": "^5.1.4",
+    "archiver": "^7.0.1",
     "chrome-launcher": "^1.1.2",
     "concurrently": "^9.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "ink": "^5.0.1",
+    "ink-text-input": "^6.0.0",
     "mkcert": "^3.2.0",
     "nodemon": "^3.1.7",
+    "open": "^10.0.0",
+    "pinia": "^3.0.4",
+    "react": "^18.2.0",
     "rollup-plugin-external-globals": "^0.12.0",
     "shelljs": "^0.8.5",
     "socket.io": "^4.8.0",
@@ -54,8 +62,11 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@types/react": "^18.2.0",
     "concurrently": "^9.0.1",
     "mkcert": "^3.2.0",
-    "nodemon": "^3.1.7"
+    "nodemon": "^3.1.7",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
   }
 }
