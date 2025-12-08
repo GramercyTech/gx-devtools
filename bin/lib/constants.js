@@ -55,6 +55,28 @@ const DEFAULT_PORTS = {
 	socketIo: 3069,
 };
 
+const ENVIRONMENT_URLS = {
+	production: {
+		api: "https://api.gramercy.cloud",
+		documentation: "https://api.gramercy.cloud/gxp-open-api-specs.json",
+	},
+	staging: {
+		api: "https://api.efz-staging.env.eventfinity.app",
+		documentation:
+			"https://api.efz-staging.env.eventfinity.app/gxp-open-api-specs.json",
+	},
+	testing: {
+		api: "https://api.zenith-develop-testing.env.eventfinity.app",
+		documentation:
+			"https://api.zenith-develop-testing.env.eventfinity.app/gxp-open-api-specs.json",
+	},
+	development: {
+		api: "https://api.zenith-develop.env.eventfinity.app",
+		documentation:
+			"https://api.zenith-develop.env.eventfinity.app/gxp-open-api-specs.json",
+	},
+};
+
 // Package name for path resolution
 const PACKAGE_NAME = "@gramercytech/gx-toolkit";
 
