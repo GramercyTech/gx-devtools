@@ -7,6 +7,7 @@ import http from 'http';
 
 export interface SocketOptions {
   cwd?: string;
+  withMock?: boolean;
 }
 
 export interface SocketEvent {
@@ -48,16 +49,24 @@ function getSocketEventsDir(cwd: string): string | null {
 
 export function startSocket(options: SocketOptions = {}): void {
   const cwd = options.cwd || process.cwd();
+  const withMock = options.withMock || false;
+
+  const env: Record<string, string> = {
+    FORCE_COLOR: '1',
+  };
+
+  // Enable mock API if requested
+  if (withMock) {
+    env.MOCK_API_ENABLED = 'true';
+  }
 
   const config: ServiceConfig = {
     id: 'socket',
-    name: 'Socket.IO',
+    name: withMock ? 'Socket.IO + Mock API' : 'Socket.IO',
     command: 'node',
     args: [getServerPath()],
     cwd,
-    env: {
-      FORCE_COLOR: '1',
-    },
+    env,
   };
 
   serviceManager.start(config);

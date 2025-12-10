@@ -36,6 +36,7 @@
   },
   "homepage": "https://github.com/GramercyTech/gx-toolkit#readme",
   "dependencies": {
+    "@faker-js/faker": "^9.9.0",
     "@fal-works/esbuild-plugin-global-externals": "^2.1.2",
     "@gramercytech/gx-componentkit": "^1.0.8",
     "@vitejs/plugin-vue": "^5.1.4",
@@ -47,6 +48,7 @@
     "express": "^4.21.0",
     "ink": "^5.0.1",
     "ink-text-input": "^6.0.0",
+    "json-schema-faker": "^0.5.9",
     "mkcert": "^3.2.0",
     "nodemon": "^3.1.7",
     "open": "^10.0.0",

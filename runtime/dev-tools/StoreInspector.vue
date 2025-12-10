@@ -161,8 +161,21 @@
                         class="property-item"
                     >
                         <span class="property-key">{{ key }}</span>
-                        <span class="property-value" :class="getValueType(value)">
-                            {{ formatValue(value) }}
+                        <input
+                            v-if="editingKey === `dependencyList.${key}`"
+                            v-model="editValue"
+                            class="property-input"
+                            @blur="saveEdit('dependencyList', key)"
+                            @keydown.enter="saveEdit('dependencyList', key)"
+                            @keydown.escape="cancelEdit"
+                        />
+                        <span
+                            v-else
+                            class="property-value string"
+                            @dblclick="startEdit('dependencyList', key, value)"
+                            :title="'Double-click to edit'"
+                        >
+                            "{{ value }}"
                         </span>
                     </div>
                 </div>

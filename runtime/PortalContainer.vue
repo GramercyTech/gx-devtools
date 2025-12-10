@@ -98,7 +98,7 @@ import DevToolsModal from "./dev-tools/DevToolsModal.vue";
 // Initialize the GxP store from client project's stores/index.js
 // which re-exports useGxpStore from either the toolkit or a local copy
 import { useGxpStore } from "@/stores/index.js";
-window.useGxpStore = useGxpStore;
+window.useGxpStore = { useGxpStore };
 // App state management
 const showDevTools = ref(false);
 const currentLayout = shallowRef(PublicLayout);

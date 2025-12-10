@@ -1,22 +1,32 @@
 import { createApp } from "vue";
-
 import * as Vue from "vue";
-import { useGxpStore, pinia } from "@/stores/index.js";
-import { createGxpStringsPlugin } from "@gx-runtime/gxpStringsPlugin.js";
+import * as Pinia from "pinia";
+import { createPinia, setActivePinia } from "pinia";
 
-// Expose Vue and store to window for browser console access and platform compatibility
-window.useGxpStore = useGxpStore;
+// Create and configure Pinia before any store imports
+const pinia = createPinia();
+setActivePinia(pinia);
+
+// Expose Vue and Pinia to window for dynamically loaded plugins
 window.Vue = Vue;
+window.Pinia = Pinia;
 window.pinia = pinia;
 
-// Import PortalContainer from the toolkit's runtime
-import App from "@gx-runtime/PortalContainer.vue";
+// Dynamic imports ensure pinia is set up before stores load
+async function init() {
+	const { default: App } = await import("@gx-runtime/PortalContainer.vue");
+	const { useGxpStore } = await import("@/stores/index.js");
+	const { createGxpStringsPlugin } = await import("@gx-runtime/gxpStringsPlugin.js");
 
-const app = createApp(App);
-app.use(pinia);
+	window.useGxpStore = useGxpStore;
 
-// Initialize the GxP store and register the strings plugin
-const gxpStore = useGxpStore();
-app.use(createGxpStringsPlugin(gxpStore));
+	const app = createApp(App);
+	app.use(pinia);
 
-app.mount("#app");
+	const gxpStore = useGxpStore();
+	app.use(createGxpStringsPlugin(gxpStore));
+
+	app.mount("#app");
+}
+
+init();

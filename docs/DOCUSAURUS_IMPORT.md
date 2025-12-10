@@ -29,7 +29,7 @@ module.exports = {
 
         // GitHub raw content URL for the docs folder
         sourceBaseUrl:
-          'https://raw.githubusercontent.com/gramercytech/gx-toolkit/main/docs/',
+          'https://raw.githubusercontent.com/gramercytech/gx-toolkit/develop/docs/',
 
         // Where to output the fetched docs
         outDir: 'docs/gx-toolkit',
@@ -75,6 +75,12 @@ module.exports = {
           'dev-tools.md',
           'building-for-platform.md',
         ],
+        // Ensure content is returned as string (plugin expects {content: string} object)
+        modifyContent: (filename, content) => {
+          return {
+            content: typeof content === "string" ? content : String(content),
+          }
+        },
       },
     ],
     // Category config (JSON)
@@ -86,8 +92,15 @@ module.exports = {
           'https://raw.githubusercontent.com/gramercytech/gx-toolkit/main/docs/',
         outDir: 'docs/gx-toolkit',
         documents: ['_category_.json'],
-        // Don't add frontmatter to JSON
-        modifyContent: undefined,
+        // JSON files need to be stringified before writing (plugin expects {content: string} object)
+        modifyContent: (filename, content) => {
+          return {
+            content:
+              typeof content === "string"
+                ? content
+                : JSON.stringify(content, null, 2),
+          }
+        },
       },
     ],
   ],

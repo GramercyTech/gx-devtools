@@ -192,8 +192,14 @@ export default function App({ autoStart, args }: AppProps) {
         } else if (cmdArgs[0] === 'list') {
           handleSocketList();
         } else {
-          startSocketServer();
+          const socketWithMock = cmdArgs.includes('--with-mock') || args?.withMock === true;
+          startSocketServer(socketWithMock);
         }
+        break;
+
+      case 'mock':
+        // Shorthand for /socket --with-mock
+        startSocketServer(true);
         break;
 
       case 'ext':
@@ -235,6 +241,7 @@ export default function App({ autoStart, args }: AppProps) {
     const noHttps = cmdArgs.includes('--no-https') || args?.noHttps === true;
     const noSocket = cmdArgs.includes('--no-socket') || args?.noSocket === true;
     const withSocket = cmdArgs.includes('--with-socket') || args?.withSocket === true;
+    const withMock = cmdArgs.includes('--with-mock') || args?.withMock === true;
     const withFirefox = cmdArgs.includes('--firefox') || args?.firefox === true;
     const withChrome = cmdArgs.includes('--chrome') || args?.chrome === true;
 
@@ -244,7 +251,8 @@ export default function App({ autoStart, args }: AppProps) {
 
     // Check SOCKET_IO_ENABLED env var (default to socket if enabled, unless --no-socket)
     const socketEnabled = process.env.SOCKET_IO_ENABLED === 'true';
-    const shouldStartSocket = !noSocket && (withSocket || socketEnabled);
+    // Mock API requires socket server
+    const shouldStartSocket = !noSocket && (withSocket || socketEnabled || withMock);
 
     // Check if already running
     if (serviceManager.isRunning('vite')) {
@@ -257,9 +265,9 @@ export default function App({ autoStart, args }: AppProps) {
 
     startVite({ noHttps });
 
-    // Also start socket server based on flags/env
+    // Also start socket server based on flags/env (with mock if requested)
     if (shouldStartSocket && !serviceManager.isRunning('socket')) {
-      startSocket();
+      startSocket({ withMock });
     }
 
     // Launch browser extensions if requested (pass URL options)
@@ -282,7 +290,7 @@ export default function App({ autoStart, args }: AppProps) {
     setActiveTab(viteIdx >= 0 ? viteIdx : Math.max(0, updatedServices.length - 1));
   };
 
-  const startSocketServer = () => {
+  const startSocketServer = (withMock: boolean = false) => {
     if (serviceManager.isRunning('socket')) {
       addSystemLog('Socket.IO server is already running.');
       const socketIdx = services.findIndex(s => s.id === 'socket');
@@ -290,7 +298,7 @@ export default function App({ autoStart, args }: AppProps) {
       return;
     }
 
-    startSocket();
+    startSocket({ withMock });
 
     // Sync and switch to the new socket tab
     const updatedServices = serviceManager.getAllServices();
@@ -506,13 +514,16 @@ export default function App({ autoStart, args }: AppProps) {
 Available commands:
   /dev                  Start Vite (+ Socket if SOCKET_IO_ENABLED=true)
   /dev --with-socket    Start Vite + Socket.IO together
+  /dev --with-mock      Start Vite + Socket.IO + Mock API server
   /dev --no-socket      Start Vite only (skip Socket.IO)
   /dev --no-https       Start Vite without SSL
   /dev --firefox        Start Vite + Firefox extension
   /dev --chrome         Start Vite + Chrome extension
   /socket               Start Socket.IO server
+  /socket --with-mock   Start Socket.IO with Mock API enabled
   /socket send <event>  Send socket event
   /socket list          List available events
+  /mock                 Start Socket.IO + Mock API (shorthand)
   /ext chrome           Launch Chrome extension
   /ext firefox          Launch Firefox extension
   /stop [service]       Stop a running service

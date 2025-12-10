@@ -3,6 +3,96 @@ import { ref, computed, reactive } from "vue";
 import axios from "axios";
 import { io } from "socket.io-client";
 
+// Environment URL configuration (matches constants.js ENVIRONMENT_URLS)
+const ENVIRONMENT_URLS = {
+	production: {
+		apiBaseUrl: "https://api.gramercy.cloud",
+	},
+	staging: {
+		apiBaseUrl: "https://api.efz-staging.env.eventfinity.app",
+	},
+	testing: {
+		apiBaseUrl: "https://api.zenith-develop-testing.env.eventfinity.app",
+	},
+	develop: {
+		apiBaseUrl: "https://api.zenith-develop.env.eventfinity.app",
+	},
+	local: {
+		apiBaseUrl: "https://dashboard.eventfinity.test",
+	},
+};
+
+/**
+ * Generate a random bearer token for mock API
+ */
+function generateMockToken() {
+	const chars =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	let token = "";
+	for (let i = 0; i < 32; i++) {
+		token += chars.charAt(Math.floor(Math.random() * chars.length));
+	}
+	return token;
+}
+
+/**
+ * Get API configuration based on API_ENV environment variable
+ * During development, non-mock environments use Vite's proxy at /api-proxy
+ * which handles CORS and forwards requests to the actual API server.
+ * The proxy also injects the Authorization header, so authToken is not needed client-side.
+ * @returns {{ apiBaseUrl: string, authToken: string, projectId: string }}
+ */
+function getApiConfig() {
+	const apiEnv = import.meta.env.VITE_API_ENV || "mock";
+	const apiKey = import.meta.env.VITE_API_KEY || "";
+	const projectId = import.meta.env.VITE_API_PROJECT_ID || "";
+	const useHttps = import.meta.env.VITE_USE_HTTPS !== "false";
+	const nodePort = import.meta.env.VITE_NODE_PORT || "3060";
+
+	// Check if we're in development mode (Vite dev server)
+	const isDev = import.meta.env.DEV;
+
+	if (apiEnv === "mock") {
+		// Mock API: use local dev server with random token
+		const protocol = useHttps ? "https" : "http";
+		return {
+			apiBaseUrl: `${protocol}://localhost:${nodePort}/mock-api`,
+			authToken: generateMockToken(),
+			projectId: "team/project",
+		};
+	}
+
+	// For non-mock environments in development, use the local Vite proxy
+	// The proxy handles CORS and injects the Authorization header
+	if (isDev) {
+		const protocol = useHttps ? "https" : "http";
+		return {
+			apiBaseUrl: `${protocol}://localhost:${nodePort}/api-proxy`,
+			authToken: "", // Proxy injects the token server-side
+			projectId: projectId,
+		};
+	}
+
+	// Production build: use the actual API URL directly
+	const envConfig = ENVIRONMENT_URLS[apiEnv];
+	if (!envConfig) {
+		console.warn(
+			`[GxP Store] Unknown API_ENV "${apiEnv}", falling back to production`
+		);
+		return {
+			apiBaseUrl: ENVIRONMENT_URLS.production.apiBaseUrl,
+			authToken: apiKey,
+			projectId: projectId,
+		};
+	}
+
+	return {
+		apiBaseUrl: envConfig.apiBaseUrl,
+		authToken: apiKey,
+		projectId: projectId,
+	};
+}
+
 // Default values used when app-manifest.json doesn't exist or is missing keys
 const defaultData = {
 	pluginVars: {
@@ -12,7 +102,7 @@ const defaultData = {
 	},
 	stringsList: {},
 	assetList: {},
-	dependencyList: [],
+	dependencyList: {},
 	permissionFlags: [],
 	triggerState: {},
 	auth: null,
@@ -27,7 +117,8 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	const pluginVars = ref({ ...defaultData.pluginVars });
 	const stringsList = ref({ ...defaultData.stringsList });
 	const assetList = ref({ ...defaultData.assetList });
-	const dependencyList = ref([...defaultData.dependencyList]);
+	const dependencyList = ref({ ...defaultData.dependencyList });
+	const dependencies = ref([]); // Store full dependency objects for socket initialization
 	const permissionFlags = ref([...defaultData.permissionFlags]);
 	const triggerState = ref({ ...defaultData.triggerState });
 
@@ -42,11 +133,19 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	const manifestLoaded = ref(false);
 	const manifestError = ref(null);
 
-	// API configuration
-	const apiBaseUrl = computed(
-		() => pluginVars.value.apiBaseUrl || "https://api.efcloud.app"
+	// API configuration - initialized from environment
+	const apiConfig = getApiConfig();
+	const apiBaseUrl = ref(apiConfig.apiBaseUrl);
+	const authToken = ref(apiConfig.authToken);
+	pluginVars.value.projectId = apiConfig.projectId;
+	pluginVars.value.apiPageAuthId = apiConfig.authToken;
+	pluginVars.value.apiBaseUrl = apiConfig.apiBaseUrl;
+
+	// Log API configuration for debugging
+	console.log(
+		`[GxP Store] API Environment: ${import.meta.env.VITE_API_ENV || "mock"}`
 	);
-	const authToken = computed(() => pluginVars.value.apiPageAuthId || "");
+	console.log(`[GxP Store] API Base URL: ${apiConfig.apiBaseUrl}`);
 
 	// WebSocket configuration - initialized as reactive objects immediately
 	const sockets = reactive({});
@@ -90,9 +189,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			const response = await fetch("/app-manifest.json");
 			if (!response.ok) {
 				if (response.status === 404) {
-					console.log(
-						"[GxP Store] No app-manifest.json found, using defaults"
-					);
+					console.log("[GxP Store] No app-manifest.json found, using defaults");
 					manifestLoaded.value = true;
 					return;
 				}
@@ -108,7 +205,10 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			// Re-initialize dependency sockets after manifest loads
 			initializeDependencySockets();
 		} catch (error) {
-			console.warn("[GxP Store] Could not load app-manifest.json:", error.message);
+			console.warn(
+				"[GxP Store] Could not load app-manifest.json:",
+				error.message
+			);
 			manifestError.value = error.message;
 			manifestLoaded.value = true;
 		}
@@ -124,7 +224,10 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 		// Handle strings - can be { default: {...} } or flat object
 		if (manifest.strings) {
-			if (manifest.strings.default && typeof manifest.strings.default === "object") {
+			if (
+				manifest.strings.default &&
+				typeof manifest.strings.default === "object"
+			) {
 				stringsList.value = { ...manifest.strings.default };
 			} else if (typeof manifest.strings === "object") {
 				stringsList.value = { ...manifest.strings };
@@ -136,7 +239,12 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		}
 
 		if (manifest.dependencies && Array.isArray(manifest.dependencies)) {
-			dependencyList.value = [...manifest.dependencies];
+			dependencies.value = manifest.dependencies; // Store full dependency objects
+			dependencyList.value = manifest.dependencies.reduce((acc, dependency) => {
+				acc[dependency.identifier] = "1";
+				return acc;
+			}, {});
+			console.log("[GxP Store] Dependency List:", dependencyList.value);
 		}
 
 		if (manifest.permissions && Array.isArray(manifest.permissions)) {
@@ -159,9 +267,9 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			typeof window !== "undefined" && window.location.protocol === "https:"
 				? "https"
 				: "http";
-		const primarySocket = io(
-			`${socketProtocol}://localhost:${import.meta.env.SOCKET_IO_PORT || 3069}`
-		);
+		const socketPort = import.meta.env.VITE_SOCKET_IO_PORT || 3069;
+		console.log(`[GxP Store] Connecting to Socket.IO on port ${socketPort}`);
+		const primarySocket = io(`${socketProtocol}://localhost:${socketPort}`);
 
 		sockets.primary = {
 			broadcast: function (event, data) {
@@ -187,8 +295,8 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		if (!primarySocket) return;
 
 		// Initialize dependency-based sockets based on the new structure
-		if (Array.isArray(dependencyList.value)) {
-			dependencyList.value.forEach((dependency) => {
+		if (Array.isArray(dependencies.value)) {
+			dependencies.value.forEach((dependency) => {
 				if (dependency.events && Object.keys(dependency.events).length > 0) {
 					// Create socket listeners for each event type
 					sockets[dependency.identifier] = {};
@@ -250,6 +358,15 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		}
 	}
 
+	async function apiPatch(endpoint, data = {}) {
+		try {
+			const response = await apiClient.patch(endpoint, data);
+			return response.data;
+		} catch (error) {
+			throw new Error(`PATCH ${endpoint}: ${error.message}`);
+		}
+	}
+
 	async function apiDelete(endpoint) {
 		try {
 			const response = await apiClient.delete(endpoint);
@@ -275,7 +392,12 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	function getState(key, fallback = null) {
 		return triggerState.value[key] || fallback;
 	}
-
+	function findDependency(identifier) {
+		if (Array.isArray(dependencyList.value)) {
+			return dependencyList.value.find((dep) => dep.identifier === identifier);
+		}
+		return null;
+	}
 	function hasPermission(flag) {
 		return permissionFlags.value.includes(flag);
 	}
@@ -300,8 +422,10 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 	// Convenience method to add dev assets with proper URL
 	function addDevAsset(key, filename) {
-		const appPort = typeof window !== "undefined" ? window.location.port || 3000 : 3000;
-		const appProtocol = typeof window !== "undefined" ? window.location.protocol : "http:";
+		const appPort =
+			typeof window !== "undefined" ? window.location.port || 3000 : 3000;
+		const appProtocol =
+			typeof window !== "undefined" ? window.location.protocol : "http:";
 		const assetUrl = `${appProtocol}//localhost:${appPort}/dev-assets/images/${filename}`;
 		updateAsset(key, assetUrl);
 	}
@@ -396,6 +520,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		// API methods
 		apiGet,
 		apiPost,
+		apiPatch,
 		apiPut,
 		apiDelete,
 
@@ -405,6 +530,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		getAsset,
 		getState,
 		hasPermission,
+		findDependency,
 
 		// Update methods (for DevTools and programmatic updates)
 		updateString,

@@ -134,18 +134,47 @@ app.get("/health", (req, res) => {
 	res.json({
 		status: "ok",
 		protocol,
+		mockApiEnabled: process.env.MOCK_API_ENABLED === "true",
 		timestamp: new Date().toISOString(),
 	});
 });
 
-let socketIoPort = process.env.SOCKET_IO_PORT || 3069;
-
-server.listen(socketIoPort, () => {
-	console.log(
-		`🔗 Socket.IO server running on ${protocol} at port ${socketIoPort}`
-	);
-	if (protocol === "HTTPS") {
-		console.log("🔒 Using SSL certificates for secure WebSocket connections");
+/**
+ * Initialize and start the server
+ */
+async function startServer() {
+	// Mount Mock API if enabled
+	if (process.env.MOCK_API_ENABLED === "true") {
+		try {
+			const { createMockApiRouter } = require("./mock-api");
+			const mockRouter = await createMockApiRouter(io, {
+				projectRoot: process.cwd(),
+			});
+			app.use(mockRouter);
+		} catch (error) {
+			console.error("❌ Failed to initialize Mock API:", error.message);
+			console.log("   Continuing without Mock API...");
+		}
 	}
-	console.log("📡 Socket event simulation available at POST /emit");
+
+	const socketIoPort = process.env.SOCKET_IO_PORT || 3069;
+
+	server.listen(socketIoPort, () => {
+		console.log(
+			`\n🔗 Socket.IO server running on ${protocol} at port ${socketIoPort}`
+		);
+		if (protocol === "HTTPS") {
+			console.log("🔒 Using SSL certificates for secure WebSocket connections");
+		}
+		console.log("📡 Socket event simulation available at POST /emit");
+		if (process.env.MOCK_API_ENABLED === "true") {
+			console.log("🎭 Mock API enabled - routes available under /api/*");
+		}
+	});
+}
+
+// Start the server
+startServer().catch((error) => {
+	console.error("Failed to start server:", error);
+	process.exit(1);
 });

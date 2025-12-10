@@ -4,6 +4,35 @@ import path from "path";
 import fs from "fs";
 import externalGlobals from "rollup-plugin-external-globals";
 
+// Environment URL configuration for API proxy
+const ENVIRONMENT_URLS = {
+	production: "https://api.gramercy.cloud",
+	staging: "https://api.efz-staging.env.eventfinity.app",
+	testing: "https://api.zenith-develop-testing.env.eventfinity.app",
+	develop: "https://api.zenith-develop.env.eventfinity.app",
+	local: "https://dashboard.eventfinity.test",
+};
+
+/**
+ * Get the API proxy target URL based on environment
+ */
+function getApiProxyTarget(env) {
+	const apiEnv = env.API_ENV || "mock";
+
+	// Custom URL takes precedence
+	if (env.API_BASE_URL) {
+		return env.API_BASE_URL;
+	}
+
+	// Mock uses local mock-api server (no proxy needed, handled separately)
+	if (apiEnv === "mock") {
+		return null;
+	}
+
+	// Look up environment URL
+	return ENVIRONMENT_URLS[apiEnv] || ENVIRONMENT_URLS.production;
+}
+
 /**
  * Get the library name from package.json
  */
@@ -86,13 +115,19 @@ let gxpInspectorPlugin;
 let gxpSourceTrackerPlugin;
 try {
 	const toolkitPathForPlugin = findToolkitPath();
-	const pluginPath = path.join(toolkitPathForPlugin, "runtime/vite-inspector-plugin.js");
+	const pluginPath = path.join(
+		toolkitPathForPlugin,
+		"runtime/vite-inspector-plugin.js"
+	);
 	if (fs.existsSync(pluginPath)) {
 		const pluginModule = await import(pluginPath);
 		gxpInspectorPlugin = pluginModule.gxpInspectorPlugin;
 	}
 	// Load source tracker plugin for injecting data-gxp-source attributes
-	const trackerPath = path.join(toolkitPathForPlugin, "runtime/vite-source-tracker-plugin.js");
+	const trackerPath = path.join(
+		toolkitPathForPlugin,
+		"runtime/vite-source-tracker-plugin.js"
+	);
 	if (fs.existsSync(trackerPath)) {
 		const trackerModule = await import(trackerPath);
 		gxpSourceTrackerPlugin = trackerModule.gxpSourceTrackerPlugin;
@@ -111,7 +146,34 @@ export default defineConfig(({ mode }) => {
 	// Find the toolkit path for runtime imports
 	const toolkitPath = findToolkitPath();
 
+	// Determine if HTTPS is enabled
+	const useHttps = getHttpsConfig(env) !== false;
+
+	// Get API proxy target for non-mock environments
+	const apiProxyTarget = getApiProxyTarget(env);
+	if (apiProxyTarget) {
+		console.log(`🔀 API Proxy: /api-proxy -> ${apiProxyTarget}`);
+	}
+
 	return {
+		// Expose environment variables to the browser
+		define: {
+			"import.meta.env.VITE_API_ENV": JSON.stringify(env.API_ENV || "mock"),
+			"import.meta.env.VITE_API_BASE_URL": JSON.stringify(
+				env.API_BASE_URL || ""
+			),
+			"import.meta.env.VITE_API_KEY": JSON.stringify(env.API_KEY || ""),
+			"import.meta.env.VITE_API_PROJECT_ID": JSON.stringify(
+				env.API_PROJECT_ID || ""
+			),
+			"import.meta.env.VITE_USE_HTTPS": JSON.stringify(
+				useHttps ? "true" : "false"
+			),
+			"import.meta.env.VITE_NODE_PORT": JSON.stringify(env.NODE_PORT || "3060"),
+			"import.meta.env.VITE_SOCKET_IO_PORT": JSON.stringify(
+				env.SOCKET_IO_PORT || "3069"
+			),
+		},
 		plugins: [
 			// Source tracker must come before vue() to transform templates before compilation
 			...(gxpSourceTrackerPlugin ? [gxpSourceTrackerPlugin()] : []),
@@ -121,6 +183,7 @@ export default defineConfig(({ mode }) => {
 			externalGlobals(
 				{
 					vue: "Vue",
+					pinia: "Pinia",
 					"@/stores/gxpPortalConfigStore":
 						"(window.useGxpStore || (() => { console.warn('useGxpStore not found on window, using fallback'); return {}; }))",
 				},
@@ -188,6 +251,42 @@ export default defineConfig(({ mode }) => {
 					parseInt(env.CLIENT_PORT) || parseInt(env.NODE_PORT) || 3060,
 			},
 			host: true, // Allow access from network
+			// API proxy for non-mock environments
+			proxy: apiProxyTarget
+				? {
+						"/api-proxy": {
+							target: apiProxyTarget,
+							changeOrigin: true,
+							rewrite: (path) => path.replace(/^\/api-proxy/, ""),
+							secure: false,
+							configure: (proxy, options) => {
+								proxy.on("proxyReq", (proxyReq, req) => {
+									// Forward the API key as Authorization header if set
+									const apiKey = env.API_KEY;
+									if (apiKey) {
+										proxyReq.setHeader("Authorization", `Bearer ${apiKey}`);
+									}
+									console.log(
+										`[API Proxy] ${req.method} ${
+											req.url
+										} -> ${apiProxyTarget}${req.url.replace(
+											/^\/api-proxy/,
+											""
+										)}`
+									);
+								});
+								proxy.on("proxyRes", (proxyRes, req) => {
+									console.log(
+										`[API Proxy] ${req.method} ${req.url} <- ${proxyRes.statusCode}`
+									);
+								});
+								proxy.on("error", (err, req) => {
+									console.error(`[API Proxy] Error: ${err.message}`);
+								});
+							},
+						},
+				  }
+				: {},
 		},
 		build: {
 			lib: {
@@ -197,11 +296,12 @@ export default defineConfig(({ mode }) => {
 				formats: ["es"],
 			},
 			rollupOptions: {
-				// Make sure Vue and component kit are treated as external dependencies
-				external: ["vue"],
+				// Make sure Vue and Pinia are treated as external dependencies
+				external: ["vue", "pinia"],
 				output: {
 					globals: {
 						vue: "Vue",
+						pinia: "Pinia",
 					},
 				},
 			},
@@ -214,15 +314,20 @@ export default defineConfig(({ mode }) => {
 				"@layouts": path.resolve(process.cwd(), "theme-layouts"),
 				// GxP Toolkit runtime (PortalContainer, etc.) - from node_modules
 				"@gx-runtime": path.resolve(toolkitPath, "runtime"),
-				// Ensure single Vue instance
+				// Ensure single Vue and Pinia instances
 				vue: path.resolve(process.cwd(), "node_modules/vue"),
+				pinia: path.resolve(process.cwd(), "node_modules/pinia"),
 			},
-			// Dedupe Vue to ensure only one instance is used
-			dedupe: ["vue"],
+			// Dedupe Vue and Pinia to ensure only one instance is used
+			dedupe: ["vue", "pinia"],
+		},
+		// Force Vite to pre-bundle these dependencies to ensure single instances
+		optimizeDeps: {
+			include: ["vue", "pinia"],
 		},
 		// SSR configuration to handle externals properly
 		ssr: {
-			external: ["vue"],
+			external: ["vue", "pinia"],
 		},
 	};
 });

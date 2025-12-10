@@ -87,6 +87,12 @@ yargs
 				type: "boolean",
 				default: false,
 			},
+			"with-mock": {
+				describe: "Enable Mock API server (requires --with-socket)",
+				type: "boolean",
+				default: false,
+				alias: "m",
+			},
 		},
 		devCommand
 	)

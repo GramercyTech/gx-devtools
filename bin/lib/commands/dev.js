@@ -144,6 +144,12 @@ function devCommand(argv) {
 	const finalPort = argv.port || process.env.NODE_PORT || 3000;
 	console.log(`🌐 Development server will start on port: ${finalPort}`);
 
+	// Check if mock API should be enabled
+	const withMock = argv["with-mock"];
+	if (withMock) {
+		console.log("🎭 Mock API will be enabled");
+	}
+
 	// Check if socket server should be started
 	const withSocket = argv["with-socket"];
 	let serverJsPath = "";
@@ -215,6 +221,11 @@ function devCommand(argv) {
 	envVars.push(`${exportCmd} USE_HTTPS=${useHttps ? "true" : "false"}`);
 	envVars.push(`${exportCmd} CERT_PATH=${certPath}`);
 	envVars.push(`${exportCmd} KEY_PATH=${keyPath}`);
+
+	// Set mock API flag if requested
+	if (withMock) {
+		envVars.push(`${exportCmd} MOCK_API_ENABLED=true`);
+	}
 
 	// Check for browser extension flags
 	const launchFirefox = argv.firefox;

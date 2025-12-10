@@ -6,6 +6,9 @@ import TextInput from 'ink-text-input';
 const COMMANDS = [
   { cmd: '/dev', args: '', desc: 'Start Vite (+ Socket if SOCKET_IO_ENABLED)' },
   { cmd: '/dev', args: '--with-socket', desc: 'Start Vite + Socket.IO' },
+  { cmd: '/dev', args: '--with-mock', desc: 'Start Vite + Socket.IO + Mock API server' },
+  { cmd: '/dev', args: '--firefox', desc: 'Start Vite + Firefox extension' },
+  { cmd: '/dev', args: '--chrome', desc: 'Start Vite + Chrome extension' },
   { cmd: '/dev', args: '--no-socket', desc: 'Start Vite without Socket.IO' },
   { cmd: '/dev', args: '--no-https', desc: 'Start Vite without SSL' },
   { cmd: '/socket', args: '', desc: 'Start Socket.IO server' },
