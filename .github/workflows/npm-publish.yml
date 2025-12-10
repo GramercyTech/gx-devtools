@@ -20,7 +20,12 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-
+      - name: Force git pull and overwrite local files
+        run: |
+          # DANGER! This wipes any local changes and untracked files
+          git fetch --all
+          git reset --hard origin/${{ github.ref_name }}
+          git pull
       - uses: actions/setup-node@v4
         with:
           node-version: "22.x"
