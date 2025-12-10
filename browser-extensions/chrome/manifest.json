@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "JavaScript Proxy Extension",
-  "version": "1.0",
-  "description": "Redirect JavaScript files from production uploads to local development server",
-  
+  "name": "GxP Developer Toolkit",
+  "version": "1.2",
+  "description": "JavaScript proxy and component inspector for GxP plugin development",
+
   "permissions": [
     "activeTab",
     "declarativeNetRequest",
@@ -13,24 +13,33 @@
     "browsingData",
     "scripting"
   ],
-  
+
   "host_permissions": [
     "<all_urls>"
   ],
-  
+
   "background": {
     "service_worker": "background.js"
   },
-  
-  "content_scripts": [{
-    "matches": ["<all_urls>"],
-    "js": ["content.js"],
-    "run_at": "document_start"
-  }],
+
+  "devtools_page": "devtools.html",
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["inspector.js"],
+      "run_at": "document_idle"
+    }
+  ],
   
   "action": {
     "default_popup": "popup.html",
-    "default_title": "JavaScript Proxy",
+    "default_title": "GxP Developer Toolkit",
     "default_icon": {
       "16": "icons/gx_off_16.png",
       "32": "icons/gx_off_32.png",
@@ -47,7 +56,7 @@
   },
   
   "web_accessible_resources": [{
-    "resources": ["content.js"],
+    "resources": ["content.js", "inspector.js", "panel.html", "panel.js"],
     "matches": ["<all_urls>"]
   }],
 

@@ -12,6 +12,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 	);
 	const clearCacheButton = document.getElementById("clearCacheButton");
 
+	// Inspector elements
+	const inspectorToggle = document.getElementById("inspectorToggle");
+	const inspectorText = document.getElementById("inspectorText");
+
+	// Inspector state
+	let inspectorEnabled = false;
+
 	// JS Rule elements
 	const jsRuleEnabled = document.getElementById("jsRuleEnabled");
 	const jsRuleContent = document.getElementById("jsRuleContent");
@@ -442,4 +449,67 @@ document.addEventListener("DOMContentLoaded", async function () {
 		action: "updateConfig",
 		config: config,
 	});
+
+	// ============================================================
+	// Component Inspector
+	// ============================================================
+
+	function updateInspectorUI() {
+		if (inspectorEnabled) {
+			inspectorToggle.classList.add("enabled");
+			inspectorText.textContent = "ON";
+		} else {
+			inspectorToggle.classList.remove("enabled");
+			inspectorText.textContent = "OFF";
+		}
+	}
+
+	// Get initial inspector state from content script
+	async function getInspectorState() {
+		try {
+			const [tab] = await chrome.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
+			if (tab?.id) {
+				const response = await chrome.tabs.sendMessage(tab.id, {
+					action: "getInspectorState",
+				});
+				if (response) {
+					inspectorEnabled = response.enabled;
+					updateInspectorUI();
+				}
+			}
+		} catch (error) {
+			// Content script might not be loaded yet
+			console.log("Could not get inspector state:", error);
+		}
+	}
+
+	// Toggle inspector
+	inspectorToggle.addEventListener("click", async function () {
+		try {
+			const [tab] = await chrome.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
+			if (tab?.id) {
+				const response = await chrome.tabs.sendMessage(tab.id, {
+					action: "toggleInspector",
+				});
+				if (response) {
+					inspectorEnabled = response.enabled;
+					updateInspectorUI();
+					showStatus(
+						inspectorEnabled ? "Inspector enabled" : "Inspector disabled"
+					);
+				}
+			}
+		} catch (error) {
+			showStatus("Could not toggle inspector. Make sure you're on a web page.", false);
+		}
+	});
+
+	// Initialize inspector state
+	getInspectorState();
 });

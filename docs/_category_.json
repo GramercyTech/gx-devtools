@@ -1,0 +1,8 @@
+{
+  "label": "GxP Toolkit",
+  "position": 10,
+  "link": {
+    "type": "generated-index",
+    "description": "Documentation for the GxP Dev Toolkit - build plugins for the GxP kiosk platform."
+  }
+}
