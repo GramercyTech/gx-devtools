@@ -32,10 +32,10 @@ function getPluginName(projectPath) {
 }
 
 /**
- * Package the built plugin into a .gxp file
+ * Package the built plugin into a .gxpapp file
  * @param {string} projectPath - Project root path
  * @param {string} buildPath - Path where built files are (dist/build/)
- * @param {string} outputPath - Path where .gxp file should be created (dist/)
+ * @param {string} outputPath - Path where .gxpapp file should be created (dist/)
  */
 async function packagePlugin(projectPath, buildPath, outputPath) {
 	const pluginName = getPluginName(projectPath);
@@ -53,7 +53,9 @@ async function packagePlugin(projectPath, buildPath, outputPath) {
 				assetDir = manifest.asset_dir;
 			}
 		} catch (error) {
-			console.warn("⚠️  Could not parse app-manifest.json, using default asset_dir");
+			console.warn(
+				"⚠️  Could not parse app-manifest.json, using default asset_dir"
+			);
 		}
 	} else {
 		console.warn("⚠️  app-manifest.json not found");
@@ -66,7 +68,9 @@ async function packagePlugin(projectPath, buildPath, outputPath) {
 
 	// Copy assets to dist/build/assets
 	if (fs.existsSync(assetSourcePath)) {
-		console.log(`📂 Copying assets from ${assetDirClean}/ to dist/build/assets/`);
+		console.log(
+			`📂 Copying assets from ${assetDirClean}/ to dist/build/assets/`
+		);
 
 		// Create assets directory in build
 		if (!fs.existsSync(assetDestPath)) {
@@ -88,7 +92,7 @@ async function packagePlugin(projectPath, buildPath, outputPath) {
 	}
 
 	// Create the .gxp package (zip file) in dist/
-	const gxpFileName = `${pluginName}.gxp`;
+	const gxpFileName = `${pluginName}.gxpapp`;
 	const gxpFilePath = path.join(outputPath, gxpFileName);
 
 	console.log(`📦 Creating ${gxpFileName}...`);
@@ -134,7 +138,7 @@ function createGxpPackage(distPath, outputPath) {
 	return new Promise((resolve, reject) => {
 		const output = fs.createWriteStream(outputPath);
 		const archive = archiver("zip", {
-			zlib: { level: 9 } // Maximum compression
+			zlib: { level: 9 }, // Maximum compression
 		});
 
 		output.on("close", () => {
@@ -150,14 +154,14 @@ function createGxpPackage(distPath, outputPath) {
 		archive.pipe(output);
 
 		// Add all JS files from dist
-		const jsFiles = fs.readdirSync(distPath).filter(f => f.endsWith(".js"));
-		jsFiles.forEach(file => {
+		const jsFiles = fs.readdirSync(distPath).filter((f) => f.endsWith(".js"));
+		jsFiles.forEach((file) => {
 			archive.file(path.join(distPath, file), { name: file });
 		});
 
 		// Add all CSS files from dist
-		const cssFiles = fs.readdirSync(distPath).filter(f => f.endsWith(".css"));
-		cssFiles.forEach(file => {
+		const cssFiles = fs.readdirSync(distPath).filter((f) => f.endsWith(".css"));
+		cssFiles.forEach((file) => {
 			archive.file(path.join(distPath, file), { name: file });
 		});
 
@@ -206,7 +210,9 @@ async function buildCommand(argv) {
 	}
 	if (!process.env.COMPONENT_PATH) {
 		envVars.push(
-			`${exportCmd} COMPONENT_PATH=${argv["component-path"] || "./src/Plugin.vue"}`
+			`${exportCmd} COMPONENT_PATH=${
+				argv["component-path"] || "./src/Plugin.vue"
+			}`
 		);
 	}
 
@@ -222,7 +228,7 @@ async function buildCommand(argv) {
 		try {
 			// Move built files from dist/ to dist/build/
 			await moveBuildFiles(distPath, buildPath);
-			// Package the plugin (reads from buildPath, outputs .gxp to distPath)
+			// Package the plugin (reads from buildPath, outputs .gxpapp to distPath)
 			await packagePlugin(projectPath, buildPath, distPath);
 		} catch (error) {
 			console.error("❌ Error packaging plugin:", error.message);
