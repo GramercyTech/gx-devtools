@@ -3,6 +3,9 @@
   "version": "2.0.4",
   "description": "Dev tools to create platform plugins",
   "type": "commonjs",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "concurrently 'vite dev' 'nodemon config/server.js'",
