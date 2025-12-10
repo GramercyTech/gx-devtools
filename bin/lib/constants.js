@@ -26,7 +26,7 @@ const REQUIRED_DEPENDENCIES = {
 };
 
 const REQUIRED_DEV_DEPENDENCIES = {
-	"@gramercytech/gx-devtools": "^1.0.58",
+	"@gxp-dev/tools": "^2.0.0",
 	nodemon: "^3.1.7",
 	concurrently: "^9.0.1",
 	mkcert: "^3.2.0",
