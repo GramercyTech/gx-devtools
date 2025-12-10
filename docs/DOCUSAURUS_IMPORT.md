@@ -25,14 +25,14 @@ module.exports = {
       'docusaurus-plugin-remote-content',
       {
         // Unique name for this remote source
-        name: 'gx-toolkit-docs',
+        name: 'gx-devtools-docs',
 
         // GitHub raw content URL for the docs folder
         sourceBaseUrl:
-          'https://raw.githubusercontent.com/gramercytech/gx-toolkit/develop/docs/',
+          'https://raw.githubusercontent.com/gramercytech/gx-devtools/develop/docs/',
 
         // Where to output the fetched docs
-        outDir: 'docs/gx-toolkit',
+        outDir: 'docs/gx-devtools',
 
         // List of documents to fetch
         documents: [
@@ -63,10 +63,10 @@ module.exports = {
     [
       'docusaurus-plugin-remote-content',
       {
-        name: 'gx-toolkit-docs',
+        name: 'gx-devtools-docs',
         sourceBaseUrl:
-          'https://raw.githubusercontent.com/gramercytech/gx-toolkit/main/docs/',
-        outDir: 'docs/gx-toolkit',
+          'https://raw.githubusercontent.com/gramercytech/gx-devtools/main/docs/',
+        outDir: 'docs/gx-devtools',
         documents: [
           'index.md',
           'getting-started.md',
@@ -87,10 +87,10 @@ module.exports = {
     [
       'docusaurus-plugin-remote-content',
       {
-        name: 'gx-toolkit-category',
+        name: 'gx-devtools-category',
         sourceBaseUrl:
-          'https://raw.githubusercontent.com/gramercytech/gx-toolkit/main/docs/',
-        outDir: 'docs/gx-toolkit',
+          'https://raw.githubusercontent.com/gramercytech/gx-devtools/main/docs/',
+        outDir: 'docs/gx-devtools',
         documents: ['_category_.json'],
         // JSON files need to be stringified before writing (plugin expects {content: string} object)
         modifyContent: (filename, content) => {
@@ -119,17 +119,17 @@ module.exports = {
     [
       'docusaurus-plugin-remote-content',
       {
-        name: 'gx-toolkit-docs',
+        name: 'gx-devtools-docs',
         sourceBaseUrl:
-          'https://raw.githubusercontent.com/gramercytech/gx-toolkit/main/docs/',
-        outDir: 'docs/gx-toolkit',
+          'https://raw.githubusercontent.com/gramercytech/gx-devtools/main/docs/',
+        outDir: 'docs/gx-devtools',
 
         // Dynamically fetch file list
         documents: async () => {
           const octokit = new Octokit();
           const { data } = await octokit.repos.getContent({
             owner: 'gramercytech',
-            repo: 'gx-toolkit',
+            repo: 'gx-devtools',
             path: 'docs',
           });
 
@@ -145,13 +145,13 @@ module.exports = {
 
 ## Option 2: Git Submodule
 
-Add gx-toolkit as a git submodule and reference its docs directly.
+Add gx-devtools as a git submodule and reference its docs directly.
 
 ### Setup
 
 ```bash
 # Add submodule
-git submodule add https://github.com/gramercytech/gx-toolkit.git packages/gx-toolkit
+git submodule add https://github.com/gramercytech/gx-devtools.git packages/gx-devtools
 
 # Update .gitmodules
 git submodule update --init --recursive
@@ -167,8 +167,8 @@ module.exports = {
       '@docusaurus/preset-classic',
       {
         docs: {
-          // Include gx-toolkit docs
-          include: ['**/*.md', '../packages/gx-toolkit/docs/**/*.md'],
+          // Include gx-devtools docs
+          include: ['**/*.md', '../packages/gx-devtools/docs/**/*.md'],
         },
       },
     ],
@@ -186,7 +186,7 @@ git submodule update --remote --merge
 
 ## Option 3: npm Package Docs
 
-Since gx-toolkit is an npm package, reference docs from node_modules.
+Since gx-devtools is an npm package, reference docs from node_modules.
 
 ### Configuration
 
@@ -199,13 +199,13 @@ module.exports = {
     [
       '@docusaurus/plugin-content-docs',
       {
-        id: 'gx-toolkit',
+        id: 'gx-devtools',
         path: path.resolve(
           __dirname,
-          'node_modules/@gramercytech/gx-toolkit/docs'
+          'node_modules/@gramercytech/gx-devtools/docs'
         ),
-        routeBasePath: 'gx-toolkit',
-        sidebarPath: require.resolve('./sidebars-gx-toolkit.js'),
+        routeBasePath: 'gx-devtools',
+        sidebarPath: require.resolve('./sidebars-gx-devtools.js'),
       },
     ],
   ],
@@ -214,7 +214,7 @@ module.exports = {
 
 ### Sidebar Config
 
-Create `sidebars-gx-toolkit.js`:
+Create `sidebars-gx-devtools.js`:
 
 ```javascript
 module.exports = {
@@ -231,7 +231,7 @@ module.exports = {
 
 ## Sidebar Integration
 
-To include gx-toolkit docs in your main sidebar:
+To include gx-devtools docs in your main sidebar:
 
 ```javascript
 // sidebars.js
@@ -241,20 +241,20 @@ module.exports = {
     'quickstart',
     // ... your other docs
 
-    // Link to gx-toolkit section
+    // Link to gx-devtools section
     {
       type: 'category',
       label: 'GxP Toolkit',
       link: {
         type: 'doc',
-        id: 'gx-toolkit/index',
+        id: 'gx-devtools/index',
       },
       items: [
-        'gx-toolkit/getting-started',
-        'gx-toolkit/app-manifest',
-        'gx-toolkit/gxp-store',
-        'gx-toolkit/dev-tools',
-        'gx-toolkit/building-for-platform',
+        'gx-devtools/getting-started',
+        'gx-devtools/app-manifest',
+        'gx-devtools/gxp-store',
+        'gx-devtools/dev-tools',
+        'gx-devtools/building-for-platform',
       ],
     },
   ],
@@ -269,9 +269,9 @@ module.exports = {
 [
   'docusaurus-plugin-remote-content',
   {
-    name: 'gx-toolkit-docs',
+    name: 'gx-devtools-docs',
     sourceBaseUrl: '...',
-    outDir: 'docs/gx-toolkit',
+    outDir: 'docs/gx-devtools',
     documents: ['getting-started.md'],
 
     // Modify content before writing
@@ -282,7 +282,7 @@ module.exports = {
           filename,
           content: content.replace(
             '---',
-            '---\ncustom_edit_url: https://github.com/gramercytech/gx-toolkit/edit/main/docs/index.md'
+            '---\ncustom_edit_url: https://github.com/gramercytech/gx-devtools/edit/main/docs/index.md'
           ),
         };
       }
@@ -298,10 +298,10 @@ Create local overrides that take precedence:
 
 ```
 docs/
-├── gx-toolkit/           # Remote content lands here
+├── gx-devtools/           # Remote content lands here
 │   ├── index.md          # From remote
 │   └── getting-started.md # From remote
-└── gx-toolkit-overrides/
+└── gx-devtools-overrides/
     └── getting-started.md # Your custom version
 ```
 
@@ -309,7 +309,7 @@ Configure path priority in Docusaurus.
 
 ## Adding/Removing Pages
 
-To add new pages to gx-toolkit docs:
+To add new pages to gx-devtools docs:
 
 1. Create the `.md` file in `/docs/` in this repo
 2. Add Docusaurus frontmatter (sidebar_position, title, etc.)
@@ -326,10 +326,10 @@ To remove a page:
 
 ### GitHub Actions (Recommended)
 
-Set up a webhook to rebuild platform docs when gx-toolkit changes:
+Set up a webhook to rebuild platform docs when gx-devtools changes:
 
 ```yaml
-# .github/workflows/docs-update.yml (in gx-toolkit repo)
+# .github/workflows/docs-update.yml (in gx-devtools repo)
 name: Notify Platform Docs
 
 on:
@@ -347,14 +347,14 @@ jobs:
             -H "Authorization: token ${{ secrets.PLATFORM_DOCS_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/gramercytech/platform-docs/dispatches \
-            -d '{"event_type": "gx-toolkit-docs-updated"}'
+            -d '{"event_type": "gx-devtools-docs-updated"}'
 ```
 
 ### Manual Rebuild
 
 ```bash
 # Clear cached remote content
-npx docusaurus clear-remote-gx-toolkit-docs
+npx docusaurus clear-remote-gx-devtools-docs
 
 # Rebuild
 npm run build
@@ -368,10 +368,10 @@ If you need versioned docs:
 [
   'docusaurus-plugin-remote-content',
   {
-    name: 'gx-toolkit-docs-v1',
+    name: 'gx-devtools-docs-v1',
     sourceBaseUrl:
-      'https://raw.githubusercontent.com/gramercytech/gx-toolkit/v1.0.0/docs/',
-    outDir: 'versioned_docs/version-1.0/gx-toolkit',
+      'https://raw.githubusercontent.com/gramercytech/gx-devtools/v1.0.0/docs/',
+    outDir: 'versioned_docs/version-1.0/gx-devtools',
     documents: ['index.md', '...'],
   },
 ];

@@ -16,7 +16,7 @@ export interface ExtensionOptions {
 function getToolkitRoot(): string {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   // Navigate from dist/tui/services to project root (3 levels up)
-  // dist/tui/services -> dist/tui -> dist -> gx-toolkit
+  // dist/tui/services -> dist/tui -> dist -> gx-devtools
   return path.resolve(__dirname, '..', '..', '..');
 }
 

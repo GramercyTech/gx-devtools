@@ -79,7 +79,7 @@ async function initCommand(argv) {
 	const paths = resolveGxPaths();
 	// Note: main.js, index.html, and vite.config.js are NOT copied by default.
 	// They are served from the runtime directory. Users can publish them
-	// for customization using: gxtk publish main.js / index.html / vite.config.js
+	// for customization using: gxdev publish main.js / index.html / vite.config.js
 	const filesToCopy = [
 		{
 			src: "theme-layouts/SystemLayout.vue",
@@ -253,7 +253,9 @@ async function initCommand(argv) {
 	console.log("   • src/Plugin.vue - Your app entry point (customize this!)");
 	console.log("   • src/DemoPage.vue - Example component");
 	console.log("   • theme-layouts/ - Customizable layout templates");
-	console.log("   • main.js - Development entry (loads PortalContainer from toolkit)");
+	console.log(
+		"   • main.js - Development entry (loads PortalContainer from toolkit)"
+	);
 	console.log("📚 Check README.md for detailed usage instructions");
 
 	// For new projects, offer to launch TUI
@@ -262,29 +264,40 @@ async function initCommand(argv) {
 		const launchChoice = await promptUser(
 			"Would you like to open the project in the interactive TUI? (Y/n): "
 		);
-		const shouldLaunch = launchChoice.toLowerCase() !== "n" && launchChoice.toLowerCase() !== "no";
+		const shouldLaunch =
+			launchChoice.toLowerCase() !== "n" && launchChoice.toLowerCase() !== "no";
 
 		if (shouldLaunch) {
-			console.log(`\n🚀 Launching gxtk TUI in ${projectName}...`);
+			console.log(`\n🚀 Launching gxdev TUI in ${projectName}...`);
 			// Change to project directory and launch TUI
 			process.chdir(projectPath);
 
 			// Try to launch TUI
-			const tuiPath = path.join(__dirname, '..', '..', '..', 'dist', 'tui', 'index.js');
+			const tuiPath = path.join(
+				__dirname,
+				"..",
+				"..",
+				"..",
+				"dist",
+				"tui",
+				"index.js"
+			);
 			if (fs.existsSync(tuiPath)) {
 				try {
 					const { startTUI } = await import(tuiPath);
 					startTUI({ autoStart: [], args: {} });
 				} catch (err) {
-					console.error('Could not launch TUI:', err.message);
-					console.log(`\nTo start manually:\n  cd ${projectName}\n  gxtk`);
+					console.error("Could not launch TUI:", err.message);
+					console.log(`\nTo start manually:\n  cd ${projectName}\n  gxdev`);
 				}
 			} else {
-				console.log('TUI not available. Run "npm run build:tui" in gx-toolkit first.');
-				console.log(`\nTo start manually:\n  cd ${projectName}\n  gxtk`);
+				console.log(
+					'TUI not available. Run "npm run build:tui" in gx-devtools first.'
+				);
+				console.log(`\nTo start manually:\n  cd ${projectName}\n  gxdev`);
 			}
 		} else {
-			console.log(`\nTo get started:\n  cd ${projectName}\n  gxtk`);
+			console.log(`\nTo get started:\n  cd ${projectName}\n  gxdev`);
 		}
 	}
 }

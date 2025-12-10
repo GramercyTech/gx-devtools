@@ -1,5 +1,5 @@
 {
-  "name": "@gramercytech/gx-toolkit",
+  "name": "@gxp-dev/tools",
   "version": "1.0.104",
   "description": "Dev tools for create platform plugins",
   "type": "commonjs",
@@ -18,10 +18,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/GramercyTech/gx-toolkit.git"
+    "url": "git+ssh://git@github.com/GramercyTech/gx-devtools.git"
   },
   "bin": {
-    "gxtk": "bin/gx-toolkit.js"
+    "gxdev": "bin/gx-devtools.js"
   },
   "keywords": [
     "tunnel",
@@ -32,9 +32,9 @@
   "author": "Peek",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/GramercyTech/gx-toolkit/issues"
+    "url": "https://github.com/GramercyTech/gx-devtools/issues"
   },
-  "homepage": "https://github.com/GramercyTech/gx-toolkit#readme",
+  "homepage": "https://github.com/GramercyTech/gx-devtools#readme",
   "dependencies": {
     "@faker-js/faker": "^9.9.0",
     "@fal-works/esbuild-plugin-global-externals": "^2.1.2",

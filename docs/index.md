@@ -2,12 +2,12 @@
 sidebar_position: 1
 title: GxP Toolkit Overview
 description: Introduction to the GxP Dev Toolkit for building platform plugins
-slug: /gx-toolkit
+slug: /gx-devtools
 ---
 
 # GxP Dev Toolkit
 
-The GxP Dev Toolkit (`@gramercytech/gx-toolkit`) is an npm package for creating platform plugins for the GxP kiosk platform.
+The GxP Dev Toolkit (`@gramercytech/gx-devtools`) is an npm package for creating platform plugins for the GxP kiosk platform.
 
 ## What You Can Build
 
@@ -22,7 +22,7 @@ With the GxP Toolkit, you can create custom plugins that run on GxP kiosks, incl
 
 | Feature | Description |
 |---------|-------------|
-| **CLI Tool** | `gxtk` command for scaffolding and development |
+| **CLI Tool** | `gxdev` command for scaffolding and development |
 | **Interactive TUI** | Terminal UI for managing dev services |
 | **Hot Reload** | Vite-based dev server with instant updates |
 | **Socket.IO** | Real-time event simulation |

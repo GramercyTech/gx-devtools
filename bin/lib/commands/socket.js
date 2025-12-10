@@ -70,16 +70,16 @@ function listSocketEvents() {
 	});
 
 	console.log("💡 Usage:");
-	console.log("   gxtk socket send --event AiSessionMessageCreated");
+	console.log("   gxdev socket send --event AiSessionMessageCreated");
 	console.log(
-		"   gxtk socket send --event SocialStreamPostCreated --identifier social_stream"
+		"   gxdev socket send --event SocialStreamPostCreated --identifier social_stream"
 	);
 }
 
 async function sendSocketEvent(eventName, identifier) {
 	if (!eventName) {
 		console.error("❌ Event name is required");
-		console.log("💡 Use: gxtk socket send --event <EventName>");
+		console.log("💡 Use: gxdev socket send --event <EventName>");
 		process.exit(1);
 	}
 
@@ -98,7 +98,7 @@ async function sendSocketEvent(eventName, identifier) {
 	if (!fs.existsSync(eventPath)) {
 		console.error(`❌ Event file not found: ${eventName}.json`);
 		console.log(`📁 Looking in: ${eventsDir}`);
-		console.log("💡 Use 'gxtk socket list' to see available events");
+		console.log("💡 Use 'gxdev socket list' to see available events");
 		process.exit(1);
 	}
 

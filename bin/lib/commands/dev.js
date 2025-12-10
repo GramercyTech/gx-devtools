@@ -68,7 +68,11 @@ function getBrowserExtensionConfig(browser, projectPath, paths, options = {}) {
 			);
 			if (fs.existsSync(toolkitExtensionPath)) {
 				extensionPath = toolkitExtensionPath;
-				scriptPath = path.join(paths.packageRoot, "scripts", "launch-chrome.js");
+				scriptPath = path.join(
+					paths.packageRoot,
+					"scripts",
+					"launch-chrome.js"
+				);
 			} else {
 				return null;
 			}
@@ -159,7 +163,7 @@ function devCommand(argv) {
 		if (!fs.existsSync(serverJs.path)) {
 			console.error("❌ server.js not found. Cannot start Socket.IO server.");
 			console.log(
-				"💡 Run 'gxtk publish server.js' to create a local copy, or ensure you're in a GxP project directory"
+				"💡 Run 'gxdev publish server.js' to create a local copy, or ensure you're in a GxP project directory"
 			);
 			process.exit(1);
 		}
@@ -173,7 +177,7 @@ function devCommand(argv) {
 	}
 
 	// Check for local dev files, otherwise use runtime versions
-	// These files can be published for customization: gxtk publish vite.config.js
+	// These files can be published for customization: gxdev publish vite.config.js
 	let viteConfigPath = paths.viteConfigPath;
 	const localViteConfigPath = path.join(projectPath, "vite.config.js");
 	const localIndexHtml = path.join(projectPath, "index.html");
@@ -213,7 +217,9 @@ function devCommand(argv) {
 	}
 	if (!process.env.COMPONENT_PATH) {
 		envVars.push(
-			`${exportCmd} COMPONENT_PATH=${argv["component-path"] || "./src/Plugin.vue"}`
+			`${exportCmd} COMPONENT_PATH=${
+				argv["component-path"] || "./src/Plugin.vue"
+			}`
 		);
 	}
 
@@ -236,7 +242,10 @@ function devCommand(argv) {
 	let chromeConfig = null;
 
 	if (launchFirefox) {
-		firefoxConfig = getBrowserExtensionConfig("firefox", projectPath, paths, { useHttps, port: finalPort });
+		firefoxConfig = getBrowserExtensionConfig("firefox", projectPath, paths, {
+			useHttps,
+			port: finalPort,
+		});
 		if (firefoxConfig) {
 			console.log("🦊 Firefox extension will launch with dev server");
 			console.log(`📁 Extension path: ${firefoxConfig.extensionPath}`);
@@ -247,7 +256,10 @@ function devCommand(argv) {
 	}
 
 	if (launchChrome) {
-		chromeConfig = getBrowserExtensionConfig("chrome", projectPath, paths, { useHttps, port: finalPort });
+		chromeConfig = getBrowserExtensionConfig("chrome", projectPath, paths, {
+			useHttps,
+			port: finalPort,
+		});
 		if (chromeConfig) {
 			console.log("🚀 Chrome extension will launch with dev server");
 			console.log(`📁 Extension path: ${chromeConfig.extensionPath}`);
@@ -298,7 +310,9 @@ function devCommand(argv) {
 	// Build the final command
 	if (processes.length > 1) {
 		// Use concurrently to run multiple processes
-		command = `npx concurrently --names "${names.join(",")}" --prefix-colors "${colors.join(",")}" ${processes.join(" ")}`;
+		command = `npx concurrently --names "${names.join(
+			","
+		)}" --prefix-colors "${colors.join(",")}" ${processes.join(" ")}`;
 	} else {
 		// Just run Vite dev server alone
 		command = [...envVars, `npx vite dev --config "${viteConfigPath}"`].join(

@@ -35,7 +35,7 @@ function findProjectRoot() {
 }
 
 /**
- * Resolves paths for gx-toolkit resources based on installation context
+ * Resolves paths for gx-devtools resources based on installation context
  *
  * Directory structure:
  * - /template/     - Files copied to new projects during init
@@ -118,7 +118,7 @@ function resolveFilePath(fileName, subDir = "", packageLocation = "template") {
  * Loads global configuration if available
  */
 function loadGlobalConfig() {
-	const globalConfigPath = path.join(os.homedir(), "gxtk-default-config.json");
+	const globalConfigPath = path.join(os.homedir(), "gxdev-default-config.json");
 	if (fs.existsSync(globalConfigPath)) {
 		try {
 			return JSON.parse(fs.readFileSync(globalConfigPath, "utf-8"));

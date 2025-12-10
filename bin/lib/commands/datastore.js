@@ -7,7 +7,12 @@
 const path = require("path");
 const fs = require("fs");
 const shell = require("shelljs");
-const { findProjectRoot, resolveGxPaths, promptUser, safeCopyFile } = require("../utils");
+const {
+	findProjectRoot,
+	resolveGxPaths,
+	promptUser,
+	safeCopyFile,
+} = require("../utils");
 
 /**
  * Datastore commands for managing test data
@@ -48,7 +53,7 @@ function listDatastoreVariables() {
 	const testDataPath = path.join(projectPath, "src/stores/test-data.json");
 
 	if (!fs.existsSync(testDataPath)) {
-		console.error('❌ No datastore found. Run "gxtk datastore init" first.');
+		console.error('❌ No datastore found. Run "gxdev datastore init" first.');
 		return;
 	}
 
@@ -281,7 +286,7 @@ async function switchDatastoreConfig(argv) {
 			console.log("Available configurations:");
 			files.forEach((config) => console.log(`  ${config}`));
 			console.log("");
-			console.log("Switch with: gxtk datastore config <name>");
+			console.log("Switch with: gxdev datastore config <name>");
 		}
 	}
 }
@@ -322,10 +327,10 @@ async function initDatastoreInExistingProject() {
 			packageJson.scripts = {};
 		}
 
-		packageJson.scripts["datastore:list"] = "gxtk datastore list";
-		packageJson.scripts["datastore:add"] = "gxtk datastore add";
-		packageJson.scripts["datastore:scan"] = "gxtk datastore scan-strings";
-		packageJson.scripts["datastore:config"] = "gxtk datastore config";
+		packageJson.scripts["datastore:list"] = "gxdev datastore list";
+		packageJson.scripts["datastore:add"] = "gxdev datastore add";
+		packageJson.scripts["datastore:scan"] = "gxdev datastore scan-strings";
+		packageJson.scripts["datastore:config"] = "gxdev datastore config";
 
 		// Write updated package.json
 		fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));

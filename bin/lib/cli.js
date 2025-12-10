@@ -3,7 +3,7 @@
 /**
  * GxToolkit CLI Entry Point
  *
- * This is the main entry point for the gxtk CLI tool.
+ * This is the main entry point for the gxdev CLI tool.
  * It sets up yargs commands and delegates to the appropriate command modules.
  */
 

@@ -1,6 +1,6 @@
 # GxP Plugin Project
 
-This project was created with `@gramercytech/gx-toolkit` and includes the `@gramercytech/gx-componentkit` component library for rapid kiosk development.
+This project was created with `@gramercytech/gx-devtools` and includes the `@gramercytech/gx-componentkit` component library for rapid kiosk development.
 
 ## Quick Start
 
@@ -263,7 +263,7 @@ npm run socket:list
 npm run socket:send
 
 # Send to specific channel
-gxtk socket send --event SocialStreamPostCreated --identifier "stream_123"
+gxdev socket send --event SocialStreamPostCreated --identifier "stream_123"
 ```
 
 Socket event templates are in `socket-events/` directory. Add your own JSON files to simulate custom events.
@@ -279,8 +279,8 @@ npm run assets:init
 
 # Generate placeholder images (requires ImageMagick)
 npm run assets:generate
-gxtk assets generate --size 800x600 --name product-image
-gxtk assets generate --name logo --size 200x200 --color "#FF5722" --text "My Logo"
+gxdev assets generate --size 800x600 --name product-image
+gxdev assets generate --name logo --size 200x200 --color "#FF5722" --text "My Logo"
 ```
 
 ### ImageMagick Installation

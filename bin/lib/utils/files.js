@@ -42,7 +42,8 @@ function createPackageJson(projectPath, projectName) {
 		main: "main.js",
 		scripts: {
 			...DEFAULT_SCRIPTS,
-			placeholder: "gxtk assets generate --size 400x300 --name custom-placeholder",
+			placeholder:
+				"gxdev assets generate --size 400x300 --name custom-placeholder",
 		},
 		dependencies: REQUIRED_DEPENDENCIES,
 		devDependencies: REQUIRED_DEV_DEPENDENCIES,
@@ -164,8 +165,8 @@ function ensureImageMagickInstalled() {
 	);
 	console.log("");
 	console.log("💡 After installation, you can generate placeholders with:");
-	console.log("   gxtk assets generate --size 400x300 --name my-placeholder");
-	console.log("   gxtk assets generate --name icons --count 3 --size 64x64");
+	console.log("   gxdev assets generate --size 400x300 --name my-placeholder");
+	console.log("   gxdev assets generate --name icons --count 3 --size 64x64");
 	return false;
 }
 

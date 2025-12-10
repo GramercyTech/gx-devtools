@@ -92,10 +92,10 @@ function getHttpsConfig(env) {
 }
 
 /**
- * Find the gx-toolkit package directory (works for both local and global installs)
+ * Find the gx-devtools package directory (works for both local and global installs)
  */
 function findToolkitPath() {
-	const packageName = "@gramercytech/gx-toolkit";
+	const packageName = "@gramercytech/gx-devtools";
 
 	// Try local node_modules first
 	const localPath = path.resolve(process.cwd(), "node_modules", packageName);

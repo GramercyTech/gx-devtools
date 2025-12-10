@@ -9,25 +9,25 @@ All major refactoring phases have been completed. This document is kept for refe
 ## Phase 1: CLI Refactoring ✅ COMPLETED
 
 ### Goal
-Break `bin/gx-toolkit.js` (2407 lines) into focused modules while maintaining backward compatibility.
+Break `bin/gx-devtools.js` (2407 lines) into focused modules while maintaining backward compatibility.
 
 ### Final Structure
 ```
 bin/
-├── gx-toolkit.js          # Entry point (~25 lines) - delegates to lib/cli.js
+├── gx-devtools.js          # Entry point (~25 lines) - delegates to lib/cli.js
 └── lib/
     ├── cli.js             # Yargs command definitions
     ├── constants.js       # Dependencies, scripts, ports
     ├── commands/
-    │   ├── init.js        # gxtk init
-    │   ├── dev.js         # gxtk dev
-    │   ├── build.js       # gxtk build
-    │   ├── publish.js     # gxtk publish
-    │   ├── ssl.js         # gxtk setup-ssl
-    │   ├── datastore.js   # gxtk datastore <action>
-    │   ├── socket.js      # gxtk socket <action>
-    │   ├── assets.js      # gxtk assets <action>
-    │   ├── extensions.js  # gxtk ext:*
+    │   ├── init.js        # gxdev init
+    │   ├── dev.js         # gxdev dev
+    │   ├── build.js       # gxdev build
+    │   ├── publish.js     # gxdev publish
+    │   ├── ssl.js         # gxdev setup-ssl
+    │   ├── datastore.js   # gxdev datastore <action>
+    │   ├── socket.js      # gxdev socket <action>
+    │   ├── assets.js      # gxdev assets <action>
+    │   ├── extensions.js  # gxdev ext:*
     │   └── index.js       # Re-exports all commands
     └── utils/
         ├── paths.js       # Path resolution (findProjectRoot, resolveGxPaths, etc.)
@@ -47,7 +47,7 @@ bin/
 - [x] Create individual command modules
 - [x] Update main entry point to use modular CLI
 - [x] Test all commands work identically
-- [x] Renamed CLI command from `gxto` to `gxtk`
+- [x] Renamed CLI command from `gxto` to `gxdev`
 
 ---
 
@@ -58,7 +58,7 @@ Clean up the template system and establish clear boundaries.
 
 ### Final Structure
 ```
-gx-toolkit/
+gx-devtools/
 ├── bin/                    # CLI (refactored)
 │   └── lib/                # Modular CLI components
 ├── template/               # Files copied to new projects during init
@@ -100,7 +100,7 @@ gx-toolkit/
 - [x] Update CLI path resolution
 - [x] Update template/main.js to import from @gx-runtime
 - [x] Update template/vite.config.js with aliases (@, @layouts, @gx-runtime)
-- [x] Test `gxtk init` creates correct project structure
+- [x] Test `gxdev init` creates correct project structure
 
 ---
 
@@ -168,8 +168,8 @@ runtime/dev-tools/
 
 ### Completed Tasks
 - [x] Update CLAUDE.md with new structure and dev tools docs
-- [x] Update template/README.md with gxtk commands
-- [x] Rename CLI from `gxto` to `gxtk`
+- [x] Update template/README.md with gxdev commands
+- [x] Rename CLI from `gxto` to `gxdev`
 - [x] Update all code references and documentation
 - [x] Add .gitignore template file
 - [x] Fix init command paths for new folder structure
@@ -180,7 +180,7 @@ runtime/dev-tools/
 
 ### CLI Command Rename
 - Old: `gxto`
-- New: `gxtk`
+- New: `gxdev`
 
 ### Key Architecture Changes
 1. **Monolithic CLI** → **Modular structure** in `bin/lib/`

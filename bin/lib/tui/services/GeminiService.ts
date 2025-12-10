@@ -20,10 +20,10 @@ interface AuthTokens {
   expiresAt: number;
 }
 
-// Get the gxtk config directory
+// Get the gxdev config directory
 function getConfigDir(): string {
   const home = process.env.HOME || process.env.USERPROFILE || '';
-  return path.join(home, '.gxtk');
+  return path.join(home, '.gxdev');
 }
 
 // Ensure config directory exists
@@ -149,7 +149,7 @@ export class GeminiService extends EventEmitter {
               .then((tokens) => {
                 saveAuthTokens(tokens);
                 res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.end('<html><body><h1>Authentication Successful!</h1><p>You can close this window and return to gxtk.</p></body></html>');
+                res.end('<html><body><h1>Authentication Successful!</h1><p>You can close this window and return to gxdev.</p></body></html>');
                 server.close();
                 resolve({ success: true, message: 'Successfully authenticated with Google.' });
               })

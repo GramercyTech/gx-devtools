@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-GxP Dev Toolkit (`@gramercytech/gx-toolkit`) is an npm package for creating platform plugins for the GxP kiosk platform. It provides:
+GxP Dev Devtools (`@gramercytech/gx-devtools`) is an npm package for creating platform plugins for the GxP kiosk platform. It provides:
 
 ## Quick Start (New Developer)
 
 ```bash
 # 1. Clone and install dependencies
 git clone <repo>
-cd gx-toolkit
+cd gx-devtools
 npm install
 
 # 2. Build the TUI (required for CLI to work)
@@ -22,16 +22,16 @@ npm link
 
 # 4. Create a new test project
 mkdir ~/test-plugin && cd ~/test-plugin
-gxtk init my-plugin
+gxdev init my-plugin
 
 # 5. Start development
-gxtk dev --no-https  # or just: npm run dev-http
+gxdev dev --no-https  # or just: npm run dev-http
 ```
 
 ## Features
 
-GxP Dev Toolkit provides:
-- CLI tool (`gxtk`) for project scaffolding and development
+GxP Dev Devtools provides:
+- CLI tool (`gxdev`) for project scaffolding and development
 - Interactive TUI (Terminal UI) for managing dev services
 - Vite-based development server with HTTPS support
 - Socket.IO server for real-time event simulation
@@ -51,44 +51,44 @@ npm run build            # Build plugin for production
 # SSL Setup
 npm run setup-ssl        # Generate SSL certificates via mkcert
 
-# CLI Commands (gxtk)
-gxtk                     # Launch interactive TUI
-gxtk init [name]         # Create new project or update existing
-gxtk dev                 # Start dev server (launches TUI + auto-starts Vite)
-gxtk dev --no-https      # Start without SSL
-gxtk dev --with-socket   # Start with Socket.IO server
-gxtk dev --chrome        # Start dev server and launch Chrome with extension
-gxtk dev --firefox       # Start dev server and launch Firefox with extension
-gxtk build               # Build for production
-gxtk publish <file>      # Copy package files to local project
+# CLI Commands (gxdev)
+gxdev                     # Launch interactive TUI
+gxdev init [name]         # Create new project or update existing
+gxdev dev                 # Start dev server (launches TUI + auto-starts Vite)
+gxdev dev --no-https      # Start without SSL
+gxdev dev --with-socket   # Start with Socket.IO server
+gxdev dev --chrome        # Start dev server and launch Chrome with extension
+gxdev dev --firefox       # Start dev server and launch Firefox with extension
+gxdev build               # Build for production
+gxdev publish <file>      # Copy package files to local project
 
 # Datastore Management
-gxtk datastore list      # List store variables
-gxtk datastore add       # Add new variable
-gxtk datastore scan-strings  # Scan components for hardcoded strings
+gxdev datastore list      # List store variables
+gxdev datastore add       # Add new variable
+gxdev datastore scan-strings  # Scan components for hardcoded strings
 
 # Socket Simulation
-gxtk socket list         # List available socket events
-gxtk socket send --event <EventName>  # Send test socket event
+gxdev socket list         # List available socket events
+gxdev socket send --event <EventName>  # Send test socket event
 
 # Asset Management
-gxtk assets list         # List development assets
-gxtk assets init         # Initialize asset directories
-gxtk assets generate --size 400x300 --name placeholder  # Generate placeholder images
+gxdev assets list         # List development assets
+gxdev assets init         # Initialize asset directories
+gxdev assets generate --size 400x300 --name placeholder  # Generate placeholder images
 
 # Browser Extensions
-gxtk ext:firefox         # Launch Firefox with extension
-gxtk ext:chrome          # Launch Chrome with extension
-gxtk ext:build           # Build extensions for distribution
+gxdev ext:firefox         # Launch Firefox with extension
+gxdev ext:chrome          # Launch Chrome with extension
+gxdev ext:build           # Build extensions for distribution
 ```
 
 ## Architecture
 
 ### Directory Structure
 ```
-gx-toolkit/
+gx-devtools/
 ├── bin/                    # CLI tool
-│   ├── gx-toolkit.js       # Main CLI entry point
+│   ├── gx-devtools.js       # Main CLI entry point
 │   └── lib/
 │       ├── cli.js          # Yargs CLI setup and command routing
 │       ├── constants.js    # Shared constants (dependencies, scripts, ports)
@@ -112,7 +112,7 @@ gx-toolkit/
 │   │   └── MockDataEditor.vue
 │   └── stores/
 │       └── gxpPortalConfigStore.js  # Core Pinia store
-├── template/               # Files copied to new projects during `gxtk init`
+├── template/               # Files copied to new projects during `gxdev init`
 │   ├── src/
 │   │   ├── Plugin.vue      # User's app entry point
 │   │   ├── DemoPage.vue    # Example component with gxp-string usage
@@ -135,7 +135,7 @@ gx-toolkit/
 
 **Runtime vs Template:**
 - `/runtime/` - Files that stay in node_modules and are imported at runtime
-- `/template/` - Files copied to user projects during `gxtk init`
+- `/template/` - Files copied to user projects during `gxdev init`
 
 **Plugin Architecture:**
 1. **PortalContainer.vue** (runtime) - Platform emulator with mock router, theme, data
@@ -145,7 +145,7 @@ gx-toolkit/
 **Vite Aliases (in template/vite.config.js):**
 - `@` → Project's `src/` directory
 - `@layouts` → Project's `theme-layouts/` directory
-- `@gx-runtime` → Toolkit's `runtime/` directory (from node_modules)
+- `@gx-runtime` → Devtools's `runtime/` directory (from node_modules)
 
 ## App Manifest Configuration
 
@@ -181,7 +181,7 @@ The manifest is hot-reloaded during development - changes are reflected immediat
 
 ## GxP Strings Plugin
 
-The toolkit provides Vue directives for reactive string and asset replacement from the store.
+The devtools provides Vue directives for reactive string and asset replacement from the store.
 
 ### String Directives
 
@@ -297,9 +297,9 @@ The browser extensions provide a DevTools panel for inspecting Vue components an
 ### Extension Launch
 Extensions automatically open to the dev server URL when launched:
 ```bash
-gxtk dev --chrome    # Launches Chrome to https://localhost:3060
-gxtk dev --firefox   # Launches Firefox to https://localhost:3060
-gxtk dev --no-https --chrome  # Launches to http://localhost:3060
+gxdev dev --chrome    # Launches Chrome to https://localhost:3060
+gxdev dev --firefox   # Launches Firefox to https://localhost:3060
+gxdev dev --no-https --chrome  # Launches to http://localhost:3060
 ```
 
 ### Reloading Extensions
@@ -309,7 +309,7 @@ After modifying extension code in `browser-extensions/`:
 
 ## Interactive TUI
 
-The `gxtk` command launches an interactive terminal UI:
+The `gxdev` command launches an interactive terminal UI:
 
 ### TUI Slash Commands
 - `/dev` - Start Vite dev server
@@ -345,7 +345,7 @@ Key environment variables (set in `.env`):
 - Ink (React-based TUI framework) for CLI interface
 - `@gramercytech/gx-componentkit` - Component library for kiosk UI
 
-## Building the Toolkit
+## Building the Devtools
 
 ```bash
 # Build the TUI (TypeScript → JavaScript)
@@ -365,16 +365,16 @@ npm run build
 
 If you need to customize files from the runtime directory:
 ```bash
-gxtk publish server.js              # Copy server.js to project root
-gxtk publish gxpPortalConfigStore.js  # Copy store to src/stores/
+gxdev publish server.js              # Copy server.js to project root
+gxdev publish gxpPortalConfigStore.js  # Copy store to src/stores/
 ```
 The CLI will automatically update imports when publishing.
 
 ## Testing Plugins
 
-1. Run `npm run dev` or `gxtk dev` to start the development server
-2. Use browser extensions (`gxtk dev --chrome` or `gxtk dev --firefox`) to inject and test plugins
-3. Use `gxtk socket send --event <name>` to simulate real-time events
+1. Run `npm run dev` or `gxdev dev` to start the development server
+2. Use browser extensions (`gxdev dev --chrome` or `gxdev dev --firefox`) to inject and test plugins
+3. Use `gxdev socket send --event <name>` to simulate real-time events
 4. Edit `app-manifest.json` to test different configurations (hot-reloaded)
 5. Use Dev Tools (Ctrl+Shift+D) to inspect and modify store state in real-time
 

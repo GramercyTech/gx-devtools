@@ -568,7 +568,7 @@ Keyboard shortcuts:
 
   return (
     <Box flexDirection="column" height={terminalHeight}>
-      <Header projectName={process.cwd().split('/').pop() || 'gxtk'} />
+      <Header projectName={process.cwd().split('/').pop() || 'gxdev'} />
 
       {services.length > 0 && (
         <TabBar

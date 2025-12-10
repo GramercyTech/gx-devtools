@@ -41,7 +41,7 @@ function listDevelopmentAssets(argv) {
 
 	if (!fs.existsSync(devAssetsDir)) {
 		console.log("❌ No dev-assets directory found");
-		console.log("💡 Run 'gxtk assets init' to set up development assets");
+		console.log("💡 Run 'gxdev assets init' to set up development assets");
 		return;
 	}
 	const finalPort = argv.port || process.env.NODE_PORT || 3000;
@@ -319,16 +319,16 @@ async function initDevelopmentAssets() {
 	console.log("");
 	console.log("💡 Commands:");
 	console.log(
-		"   gxtk assets list                           # List all assets"
+		"   gxdev assets list                           # List all assets"
 	);
 	console.log(
-		"   gxtk assets generate --size 800x600       # Generate placeholder"
+		"   gxdev assets generate --size 800x600       # Generate placeholder"
 	);
 	console.log(
-		"   gxtk assets generate --name logo --size 200x200  # Custom placeholder"
+		"   gxdev assets generate --name logo --size 200x200  # Custom placeholder"
 	);
 	console.log(
-		"   gxtk assets generate --name banner --count 5    # Generate 5 variants"
+		"   gxdev assets generate --name banner --count 5    # Generate 5 variants"
 	);
 }
 

@@ -26,7 +26,7 @@ const REQUIRED_DEPENDENCIES = {
 };
 
 const REQUIRED_DEV_DEPENDENCIES = {
-	"@gramercytech/gx-toolkit": "^1.0.58",
+	"@gramercytech/gx-devtools": "^1.0.58",
 	nodemon: "^3.1.7",
 	concurrently: "^9.0.1",
 	mkcert: "^3.2.0",
@@ -34,21 +34,21 @@ const REQUIRED_DEV_DEPENDENCIES = {
 
 // Default scripts for package.json
 const DEFAULT_SCRIPTS = {
-	dev: "gxtk dev --with-socket",
-	"dev-app": "gxtk dev",
-	"dev-http": "gxtk dev --no-https",
-	build: "gxtk build",
-	"setup-ssl": "gxtk setup-ssl",
-	"socket:list": "gxtk socket list",
-	"socket:send": "gxtk socket send",
-	"assets:list": "gxtk assets list",
-	"assets:init": "gxtk assets init",
-	"assets:generate": "gxtk assets generate",
-	placeholder: "gxtk assets generate",
-	"datastore:list": "gxtk datastore list",
-	"datastore:add": "gxtk datastore add",
-	"datastore:scan": "gxtk datastore scan-strings",
-	"datastore:config": "gxtk datastore config",
+	dev: "gxdev dev --with-socket",
+	"dev-app": "gxdev dev",
+	"dev-http": "gxdev dev --no-https",
+	build: "gxdev build",
+	"setup-ssl": "gxdev setup-ssl",
+	"socket:list": "gxdev socket list",
+	"socket:send": "gxdev socket send",
+	"assets:list": "gxdev assets list",
+	"assets:init": "gxdev assets init",
+	"assets:generate": "gxdev assets generate",
+	placeholder: "gxdev assets generate",
+	"datastore:list": "gxdev datastore list",
+	"datastore:add": "gxdev datastore add",
+	"datastore:scan": "gxdev datastore scan-strings",
+	"datastore:config": "gxdev datastore config",
 };
 
 // Default ports
@@ -106,7 +106,7 @@ const ENVIRONMENT_URLS = {
 };
 
 // Package name for path resolution
-const PACKAGE_NAME = "@gramercytech/gx-toolkit";
+const PACKAGE_NAME = "@gramercytech/gx-devtools";
 
 module.exports = {
 	isWin,

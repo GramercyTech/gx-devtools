@@ -13,7 +13,7 @@ This guide covers how to build and prepare your plugin for deployment to the GxP
 Run the build command to create a production-ready bundle:
 
 ```bash
-gxtk build
+gxdev build
 # or
 npm run build
 ```
@@ -58,7 +58,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@layouts': path.resolve(__dirname, './theme-layouts'),
-      '@gx-runtime': path.resolve(__dirname, './node_modules/@gramercytech/gx-toolkit/runtime'),
+      '@gx-runtime': path.resolve(__dirname, './node_modules/@gramercytech/gx-devtools/runtime'),
     },
   },
   build: {
@@ -114,7 +114,7 @@ if (import.meta.env.DEV) {
 Run the string scanner to find hardcoded text:
 
 ```bash
-gxtk datastore scan-strings
+gxdev datastore scan-strings
 ```
 
 Ensure all user-facing text uses `gxp-string` directives.
@@ -257,7 +257,7 @@ Use the browser extensions to test your plugin on production kiosks:
 
 ```bash
 # Build extensions for distribution
-gxtk ext:build
+gxdev ext:build
 ```
 
 This creates installable extension packages for Chrome and Firefox.
@@ -273,7 +273,7 @@ Check that all imports use the correct aliases:
 import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
 
 // Wrong - path won't resolve in production
-import { useGxpStore } from '../../node_modules/@gramercytech/gx-toolkit/runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from '../../node_modules/@gramercytech/gx-devtools/runtime/stores/gxpPortalConfigStore';
 ```
 
 ### CSS Not Loading

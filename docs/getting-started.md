@@ -20,10 +20,10 @@ Before you begin, ensure you have:
 
 ### Option 1: Global Installation (Recommended)
 
-Install the toolkit globally to use the `gxtk` command anywhere:
+Install the toolkit globally to use the `gxdev` command anywhere:
 
 ```bash
-npm install -g @gramercytech/gx-toolkit
+npm install -g @gramercytech/gx-devtools
 ```
 
 ### Option 2: Project-Level Installation
@@ -31,7 +31,7 @@ npm install -g @gramercytech/gx-toolkit
 Or install as a dev dependency in an existing project:
 
 ```bash
-npm install --save-dev @gramercytech/gx-toolkit
+npm install --save-dev @gramercytech/gx-devtools
 ```
 
 ## Create a New Plugin
@@ -44,7 +44,7 @@ Create a new plugin project using the CLI:
 # Create a new directory and initialize
 mkdir my-plugin
 cd my-plugin
-gxtk init my-plugin
+gxdev init my-plugin
 ```
 
 This creates a complete project structure with:
@@ -131,10 +131,10 @@ This uses [mkcert](https://github.com/FiloSottile/mkcert) to generate trusted lo
 
 ## Using the Interactive TUI
 
-Run `gxtk` without arguments to launch the interactive Terminal UI:
+Run `gxdev` without arguments to launch the interactive Terminal UI:
 
 ```bash
-gxtk
+gxdev
 ```
 
 The TUI provides:
@@ -163,18 +163,18 @@ The TUI provides:
 
 ```bash
 # Development
-gxtk dev                    # Start with TUI + Vite
-gxtk dev --no-https         # Start without SSL
-gxtk dev --with-socket      # Include Socket.IO server
-gxtk dev --chrome           # Launch with Chrome extension
-gxtk dev --firefox          # Launch with Firefox extension
+gxdev dev                    # Start with TUI + Vite
+gxdev dev --no-https         # Start without SSL
+gxdev dev --with-socket      # Include Socket.IO server
+gxdev dev --chrome           # Launch with Chrome extension
+gxdev dev --firefox          # Launch with Firefox extension
 
 # Building
-gxtk build                  # Build for production
+gxdev build                  # Build for production
 
 # Utilities
-gxtk datastore list         # List store variables
-gxtk datastore scan-strings # Find hardcoded strings
-gxtk socket list            # List socket events
-gxtk assets generate        # Generate placeholder images
+gxdev datastore list         # List store variables
+gxdev datastore scan-strings # Find hardcoded strings
+gxdev socket list            # List socket events
+gxdev assets generate        # Generate placeholder images
 ```

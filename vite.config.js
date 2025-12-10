@@ -75,7 +75,7 @@ export default defineConfig(({ mode }) => {
 			gxpInspectorPlugin(),
 			externalGlobals(
 				{
-					"@gramercytech/gx-toolkit/config/stores/gxpPortalConfigStore":
+					"@gramercytech/gx-devtools/config/stores/gxpPortalConfigStore":
 						"(window.useGxpStoreBuilder || (() => { console.warn('useGxpStoreBuilder not found on window, using fallback'); return {}; }))",
 					vue: "Vue",
 					"@/stores/gxpPortalConfigStore":

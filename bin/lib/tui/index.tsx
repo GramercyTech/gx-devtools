@@ -34,7 +34,7 @@ export function startTUI(options: TUIOptions = {}) {
     console.error('Alternatively, use the non-TUI commands:');
     console.error('  npm run dev        # Start Vite dev server');
     console.error('  npm run dev-http   # Start HTTP dev server');
-    console.error('  gxtk socket list   # List socket events');
+    console.error('  gxdev socket list   # List socket events');
     process.exit(1);
     return;
   }

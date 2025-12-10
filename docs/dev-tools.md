@@ -92,7 +92,7 @@ The toolkit includes browser extensions for Chrome and Firefox that provide adva
 
 ```bash
 # Launch Chrome with extension auto-loaded
-gxtk dev --chrome
+gxdev dev --chrome
 
 # Or install manually:
 # 1. Go to chrome://extensions
@@ -105,7 +105,7 @@ gxtk dev --chrome
 
 ```bash
 # Launch Firefox with extension auto-loaded
-gxtk dev --firefox
+gxdev dev --firefox
 
 # Or install manually:
 # 1. Go to about:debugging
@@ -176,19 +176,19 @@ After modifying extension code in `browser-extensions/`:
 
 ```bash
 # List all store variables
-gxtk datastore list
+gxdev datastore list
 
 # Add a new variable interactively
-gxtk datastore add
+gxdev datastore add
 
 # Scan components for hardcoded strings
-gxtk datastore scan-strings
+gxdev datastore scan-strings
 ```
 
 The scan-strings command finds text that should be extracted to your manifest:
 
 ```bash
-$ gxtk datastore scan-strings
+$ gxdev datastore scan-strings
 
 Scanning components for hardcoded strings...
 
@@ -206,27 +206,27 @@ Found 3 hardcoded strings in 2 files.
 
 ```bash
 # List available socket events
-gxtk socket list
+gxdev socket list
 
 # Send a test event
-gxtk socket send --event SessionUpdated
+gxdev socket send --event SessionUpdated
 
 # Send with custom data
-gxtk socket send --event AttendeeCheckedIn --data '{"id": 123}'
+gxdev socket send --event AttendeeCheckedIn --data '{"id": 123}'
 ```
 
 ### Asset Commands
 
 ```bash
 # List development assets
-gxtk assets list
+gxdev assets list
 
 # Initialize asset directories
-gxtk assets init
+gxdev assets init
 
 # Generate placeholder images
-gxtk assets generate --size 400x300 --name hero
-gxtk assets generate --size 200x200 --name avatar --format png
+gxdev assets generate --size 400x300 --name hero
+gxdev assets generate --size 200x200 --name avatar --format png
 ```
 
 ## Debugging Tips

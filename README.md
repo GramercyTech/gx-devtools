@@ -1,17 +1,17 @@
-# GxP Dev Toolkit
+# GxP Dev Tools
 
-A development toolkit for creating plugins for the GxP kiosk platform. This package provides CLI tools, project scaffolding, and a development environment that emulates the GxP platform.
+A development devtools for creating plugins for the GxP kiosk platform. This package provides CLI tools, project scaffolding, and a development environment that emulates the GxP platform.
 
 ## Installation
 
 ```bash
-npm install -g @gramercytech/gx-toolkit
+npm install -g @gramercytech/gx-devtools
 ```
 
 Or use it as a dev dependency in your project:
 
 ```bash
-npm install --save-dev @gramercytech/gx-toolkit
+npm install --save-dev @gramercytech/gx-devtools
 ```
 
 ## Quick Start
@@ -19,7 +19,7 @@ npm install --save-dev @gramercytech/gx-toolkit
 Create a new GxP plugin project:
 
 ```bash
-gxtk init my-plugin
+gxdev init my-plugin
 cd my-plugin
 npm run dev
 ```
@@ -28,18 +28,18 @@ npm run dev
 
 | Command | Description |
 |---------|-------------|
-| `gxtk init [name]` | Create a new project or update an existing one |
-| `gxtk dev` | Start development server with HTTPS and Socket.IO |
-| `gxtk dev --no-https` | Start development server with HTTP only |
-| `gxtk build` | Build plugin for production |
-| `gxtk setup-ssl` | Generate SSL certificates for HTTPS development |
-| `gxtk publish <file>` | Copy runtime files to your project for customization |
-| `gxtk datastore <action>` | Manage GxP datastore (list, add, scan-strings, config) |
-| `gxtk socket <action>` | Simulate socket events (list, send) |
-| `gxtk assets <action>` | Manage development assets (list, init, generate) |
-| `gxtk ext:firefox` | Launch Firefox with browser extension |
-| `gxtk ext:chrome` | Launch Chrome with browser extension |
-| `gxtk ext:build` | Build browser extensions for distribution |
+| `gxdev init [name]` | Create a new project or update an existing one |
+| `gxdev dev` | Start development server with HTTPS and Socket.IO |
+| `gxdev dev --no-https` | Start development server with HTTP only |
+| `gxdev build` | Build plugin for production |
+| `gxdev setup-ssl` | Generate SSL certificates for HTTPS development |
+| `gxdev publish <file>` | Copy runtime files to your project for customization |
+| `gxdev datastore <action>` | Manage GxP datastore (list, add, scan-strings, config) |
+| `gxdev socket <action>` | Simulate socket events (list, send) |
+| `gxdev assets <action>` | Manage development assets (list, init, generate) |
+| `gxdev ext:firefox` | Launch Firefox with browser extension |
+| `gxdev ext:chrome` | Launch Chrome with browser extension |
+| `gxdev ext:build` | Build browser extensions for distribution |
 
 ## Features
 
@@ -53,25 +53,25 @@ npm run dev
 
 ---
 
-# Toolkit Development Guide
+# DevTools Development Guide
 
-This section is for developers contributing to the toolkit itself.
+This section is for developers contributing to the devtools itself.
 
 ## Repository Structure
 
 ```
-gx-toolkit/
+gx-devtools/
 ├── bin/                    # CLI tool
-│   ├── gx-toolkit.js       # Entry point (delegates to lib/cli.js)
+│   ├── gx-devtools.js       # Entry point (delegates to lib/cli.js)
 │   └── lib/                # Modular CLI components
 │       ├── cli.js          # Yargs command definitions
 │       ├── constants.js    # Dependencies, scripts, ports
 │       ├── commands/       # Individual command modules
-│       │   ├── init.js     # gxtk init
-│       │   ├── dev.js      # gxtk dev
-│       │   ├── build.js    # gxtk build
-│       │   ├── publish.js  # gxtk publish
-│       │   ├── ssl.js      # gxtk setup-ssl
+│       │   ├── init.js     # gxdev init
+│       │   ├── dev.js      # gxdev dev
+│       │   ├── build.js    # gxdev build
+│       │   ├── publish.js  # gxdev publish
+│       │   ├── ssl.js      # gxdev setup-ssl
 │       │   ├── datastore.js
 │       │   ├── socket.js
 │       │   ├── assets.js
@@ -115,7 +115,7 @@ gx-toolkit/
 
 - **`/runtime/`**: Files that stay in node_modules and are imported at runtime via the `@gx-runtime` Vite alias. Users cannot modify these files directly.
 
-- **`/template/`**: Files copied to user projects during `gxtk init`. Users can edit these files.
+- **`/template/`**: Files copied to user projects during `gxdev init`. Users can edit these files.
 
 ### Vite Aliases
 
@@ -123,7 +123,7 @@ Projects use these aliases (defined in `template/vite.config.js`):
 
 - `@` → Project's `src/` directory
 - `@layouts` → Project's `theme-layouts/` directory
-- `@gx-runtime` → Toolkit's `runtime/` directory (from node_modules)
+- `@gx-runtime` → DevTools's `runtime/` directory (from node_modules)
 
 ### PortalContainer.vue
 
@@ -137,8 +137,8 @@ The platform emulator that wraps user plugins during development. It:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/GramercyTech/gx-toolkit.git
-   cd gx-toolkit
+   git clone https://github.com/GramercyTech/gx-devtools.git
+   cd gx-devtools
    ```
 
 2. **Install dependencies**:
@@ -155,13 +155,13 @@ The platform emulator that wraps user plugins during development. It:
    ```bash
    mkdir /tmp/test-project
    cd /tmp/test-project
-   gxtk init test-app
+   gxdev init test-app
    cd test-app
 
-   # Link to local toolkit instead of npm version
-   rm -rf node_modules/@gramercytech/gx-toolkit
+   # Link to local devtools instead of npm version
+   rm -rf node_modules/@gramercytech/gx-devtools
    mkdir -p node_modules/@gramercytech
-   ln -s /path/to/gx-toolkit node_modules/@gramercytech/gx-toolkit
+   ln -s /path/to/gx-devtools node_modules/@gramercytech/gx-devtools
 
    npm run dev-http
    ```
@@ -188,7 +188,7 @@ The platform emulator that wraps user plugins during development. It:
 
 ### Modifying the Dev Tools Modal
 
-Dev tools components are in `/runtime/dev-tools/`. Changes here affect all projects using the toolkit.
+Dev tools components are in `/runtime/dev-tools/`. Changes here affect all projects using the devtools.
 
 ### Adding Template Files
 
@@ -200,11 +200,11 @@ Add files to `/template/` and update `bin/lib/commands/init.js` to copy them dur
 
 ```bash
 # Test CLI help
-node bin/gx-toolkit.js --help
+node bin/gx-devtools.js --help
 
 # Test init command
 cd /tmp && rm -rf test-project
-node /path/to/gx-toolkit/bin/gx-toolkit.js init test-project
+node /path/to/gx-devtools/bin/gx-devtools.js init test-project
 
 # Test dev server (after linking)
 cd test-project
@@ -217,7 +217,7 @@ npm run build
 ### Verifying Changes
 
 1. Create a fresh test project
-2. Link the local toolkit
+2. Link the local devtools
 3. Run `npm run dev-http` and verify the app loads
 4. Run `npm run build` and check `dist/` output
 5. Test dev tools with Ctrl+Shift+D
@@ -230,7 +230,7 @@ npm run build
 
 ## Dependencies
 
-The toolkit uses:
+The devtools uses:
 - **Vite** - Build tool and dev server
 - **Vue 3** - UI framework
 - **Pinia** - State management

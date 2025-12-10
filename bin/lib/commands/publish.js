@@ -6,7 +6,12 @@
 
 const path = require("path");
 const fs = require("fs");
-const { findProjectRoot, resolveGxPaths, promptUser, safeCopyFile } = require("../utils");
+const {
+	findProjectRoot,
+	resolveGxPaths,
+	promptUser,
+	safeCopyFile,
+} = require("../utils");
 
 /**
  * Publish command - copies package files to local project
@@ -30,9 +35,9 @@ async function publishCommand(argv) {
 		console.log("  • gxpPortalConfigStore.js - GxP datastore");
 		console.log("");
 		console.log("💡 Usage:");
-		console.log("  gxtk publish main.js");
-		console.log("  gxtk publish vite.config.js");
-		console.log("  gxtk publish server.js");
+		console.log("  gxdev publish main.js");
+		console.log("  gxdev publish vite.config.js");
+		console.log("  gxdev publish server.js");
 		return;
 	}
 
@@ -80,7 +85,8 @@ async function publishCommand(argv) {
 	}
 
 	// Get source path from appropriate directory
-	const sourceDir = fileConfig.location === "runtime" ? paths.runtimeDir : paths.templateDir;
+	const sourceDir =
+		fileConfig.location === "runtime" ? paths.runtimeDir : paths.templateDir;
 	const srcPath = path.join(sourceDir, fileConfig.src);
 	const destPath = path.join(projectPath, fileConfig.dest);
 
@@ -118,10 +124,15 @@ async function publishCommand(argv) {
 			let content = fs.readFileSync(destPath, "utf-8");
 			// Update the runtime reference to local reference
 			if (content.includes('src="/@gx-runtime/main.js"')) {
-				content = content.replace('src="/@gx-runtime/main.js"', 'src="/main.js"');
+				content = content.replace(
+					'src="/@gx-runtime/main.js"',
+					'src="/main.js"'
+				);
 				fs.writeFileSync(destPath, content);
 				console.log("📝 Updated index.html to reference local main.js");
-				console.log("💡 Make sure to also publish main.js: gxtk publish main.js");
+				console.log(
+					"💡 Make sure to also publish main.js: gxdev publish main.js"
+				);
 			}
 		} catch (error) {
 			console.warn("⚠️ Could not update index.html:", error.message);
@@ -136,11 +147,11 @@ async function publishCommand(argv) {
 				let content = fs.readFileSync(storeIndexPath, "utf-8");
 				// Match both old (config) and new (runtime) import paths
 				const oldImportPatterns = [
-					"import { useGxpStore } from '@gramercytech/gx-toolkit/config/stores/gxpPortalConfigStore.js';",
-					"import { useGxpStore } from '@gramercytech/gx-toolkit/config/stores/gxpPortalConfigStore';",
-					"import { useGxpStore } from '@gramercytech/gx-toolkit/runtime/stores/gxpPortalConfigStore.js';",
-					"import { useGxpStore } from '@gramercytech/gx-toolkit/runtime/stores/gxpPortalConfigStore';",
-					'import { useGxpStore } from "@gramercytech/gx-toolkit/runtime/stores/gxpPortalConfigStore";',
+					"import { useGxpStore } from '@gramercytech/gx-devtools/config/stores/gxpPortalConfigStore.js';",
+					"import { useGxpStore } from '@gramercytech/gx-devtools/config/stores/gxpPortalConfigStore';",
+					"import { useGxpStore } from '@gramercytech/gx-devtools/runtime/stores/gxpPortalConfigStore.js';",
+					"import { useGxpStore } from '@gramercytech/gx-devtools/runtime/stores/gxpPortalConfigStore';",
+					'import { useGxpStore } from "@gramercytech/gx-devtools/runtime/stores/gxpPortalConfigStore";',
 				];
 				const newImport =
 					"import { useGxpStore } from './gxpPortalConfigStore.js';";
@@ -169,7 +180,7 @@ async function publishCommand(argv) {
 		}
 	}
 
-	console.log("💡 Future gxtk commands will now use your local copy");
+	console.log("💡 Future gxdev commands will now use your local copy");
 	console.log("   Delete the local file to fall back to package version");
 }
 

@@ -35,7 +35,7 @@ function extensionFirefoxCommand() {
 				path.join(projectPath, "browser-extensions", "firefox")
 			);
 			console.log(
-				"💡 Run 'gxtk init' to create a project with browser extensions"
+				"💡 Run 'gxdev init' to create a project with browser extensions"
 			);
 			process.exit(1);
 		}
@@ -69,11 +69,7 @@ function extensionChromeCommand() {
 			console.log("🔍 Using GxToolkit's built-in Chrome extension");
 			extensionPath = toolkitExtensionPath;
 			// Use the toolkit's script instead
-			scriptPath = path.join(
-				paths.packageRoot,
-				"scripts",
-				"launch-chrome.js"
-			);
+			scriptPath = path.join(paths.packageRoot, "scripts", "launch-chrome.js");
 		} else {
 			console.error("❌ Chrome extension directory not found");
 			console.log(
@@ -81,7 +77,7 @@ function extensionChromeCommand() {
 				path.join(projectPath, "browser-extensions", "chrome")
 			);
 			console.log(
-				"💡 Run 'gxtk init' to create a project with browser extensions"
+				"💡 Run 'gxdev init' to create a project with browser extensions"
 			);
 			process.exit(1);
 		}
@@ -92,7 +88,7 @@ function extensionChromeCommand() {
 	// Verify script exists
 	if (!fs.existsSync(scriptPath)) {
 		console.error(
-			"❌ Chrome launcher script not found. Run 'gxtk init' to create it."
+			"❌ Chrome launcher script not found. Run 'gxdev init' to create it."
 		);
 		process.exit(1);
 	}
@@ -113,7 +109,7 @@ function extensionInstallCommand(argv) {
 	const paths = resolveGxPaths();
 
 	if (!browser || !["chrome", "firefox"].includes(browser)) {
-		console.log("Usage: gxtk ext:install <chrome|firefox>");
+		console.log("Usage: gxdev ext:install <chrome|firefox>");
 		console.log("");
 		console.log("This command helps you permanently install the extension");
 		console.log("in your local browser for development.");
@@ -127,7 +123,10 @@ function extensionInstallCommand(argv) {
 	);
 
 	if (!fs.existsSync(extensionPath)) {
-		console.error(`❌ ${browser} extension directory not found at:`, extensionPath);
+		console.error(
+			`❌ ${browser} extension directory not found at:`,
+			extensionPath
+		);
 		process.exit(1);
 	}
 
@@ -182,7 +181,9 @@ function extensionInstallCommand(argv) {
 		console.log("⚠️  Note: Temporary add-ons are removed when Firefox closes.");
 		console.log("");
 		console.log("─".repeat(50));
-		console.log("Option 2: Persistent Installation (Firefox Developer/Nightly)");
+		console.log(
+			"Option 2: Persistent Installation (Firefox Developer/Nightly)"
+		);
 		console.log("─".repeat(50));
 		console.log("1. Use Firefox Developer Edition or Firefox Nightly");
 		console.log("");
