@@ -241,6 +241,10 @@ export default function App({ autoStart, args }: AppProps) {
         handleExtractConfig(cmdArgs);
         break;
 
+      case 'add-dependency':
+        handleAddDependency(cmdArgs);
+        break;
+
       default:
         addSystemLog(`Unknown command: ${command}. Type /help for available commands.`);
     }
@@ -630,6 +634,55 @@ export default function App({ autoStart, args }: AppProps) {
     }
   };
 
+  const handleAddDependency = async (cmdArgs: string[]) => {
+    // The add-dependency command is interactive and requires full terminal access
+    // We need to exit TUI and run it separately
+    addSystemLog('Launching Add Dependency wizard...');
+    addSystemLog('This command requires interactive terminal access.');
+
+    try {
+      const { spawn } = await import('child_process');
+      const path = await import('path');
+      const url = await import('url');
+
+      const __filename = url.fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+
+      // Resolve to package root, then to gx-devtools.js
+      const packageRoot = path.resolve(__dirname, '..', '..');
+      const cliPath = path.join(packageRoot, 'bin', 'gx-devtools.js');
+
+      // Build args for the command
+      const args = ['add-dependency', ...cmdArgs];
+
+      // Stop all services before exiting
+      serviceManager.forceStopAll();
+
+      // Clear screen and exit TUI
+      process.stdout.write('\x1B[2J\x1B[0f');
+
+      // Spawn the add-dependency command with inherited stdio
+      const child = spawn('node', [cliPath, ...args], {
+        cwd: process.cwd(),
+        stdio: 'inherit',
+        shell: true,
+      });
+
+      child.on('close', (code) => {
+        console.log('\n');
+        console.log('─'.repeat(50));
+        console.log('To return to the TUI, run: gxdev');
+        console.log('─'.repeat(50));
+        process.exit(code || 0);
+      });
+
+      // Exit the ink app
+      exit();
+    } catch (err) {
+      addSystemLog(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
   const getDefaultManifest = () => ({
     name: 'GxToolkit',
     version: '1.0.0',
@@ -674,6 +727,10 @@ Available commands:
     /extract-config       Extract GxP config from source
     /extract-config -d    Dry run (preview changes)
     /extract-config -o    Overwrite existing values
+
+  Dependencies:
+    /add-dependency       Add API dependency wizard
+    /add-dependency -e    Specify environment (staging, production, local)
 
   AI Assistant:
     /ai                   Open AI chat with current provider
