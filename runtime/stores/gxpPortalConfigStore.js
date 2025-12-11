@@ -48,6 +48,7 @@ function getApiConfig() {
 	const projectId = import.meta.env.VITE_API_PROJECT_ID || "";
 	const useHttps = import.meta.env.VITE_USE_HTTPS !== "false";
 	const nodePort = import.meta.env.VITE_NODE_PORT || "3060";
+	const mockPort = import.meta.env.VITE_SOCKET_IO_PORT || "3061";
 
 	// Check if we're in development mode (Vite dev server)
 	const isDev = import.meta.env.DEV;
@@ -56,7 +57,7 @@ function getApiConfig() {
 		// Mock API: use local dev server with random token
 		const protocol = useHttps ? "https" : "http";
 		return {
-			apiBaseUrl: `${protocol}://localhost:${nodePort}/mock-api`,
+			apiBaseUrl: `${protocol}://localhost:${mockPort}/mock-api`,
 			authToken: generateMockToken(),
 			projectId: "team/project",
 		};
@@ -67,7 +68,7 @@ function getApiConfig() {
 	if (isDev) {
 		const protocol = useHttps ? "https" : "http";
 		return {
-			apiBaseUrl: `${protocol}://localhost:${nodePort}/api-proxy`,
+			apiBaseUrl: `${protocol}://localhost:${mockPort}/api-proxy`,
 			authToken: "", // Proxy injects the token server-side
 			projectId: projectId,
 		};
