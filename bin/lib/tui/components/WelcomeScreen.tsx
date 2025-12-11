@@ -1,9 +1,16 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 const require = createRequire(import.meta.url);
-const pkg = require('../../../../../package.json');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Navigate up from dist/tui/components to package root
+const pkgPath = join(__dirname, '..', '..', '..', 'package.json');
+const pkg = require(pkgPath);
 
 const LOGO = `
    ██████╗ ██╗  ██╗██████╗
