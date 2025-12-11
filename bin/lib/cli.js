@@ -23,6 +23,7 @@ const {
 	extensionBuildCommand,
 	extensionInstallCommand,
 	extractConfigCommand,
+	addDependencyCommand,
 } = require("./commands");
 
 // Load global configuration
