@@ -4,6 +4,8 @@
 	"description": "GxToolkit Plugin",
 	"manifest_version": 3,
 	"asset_dir": "/src/assets/",
+	"appInstructionsFile": "app-instructions.md",
+	"defaultStylingFile": "default-styling.css",
 	"settings": {
 		"primary_color": "#FFD600",
 		"background_color": "#ffffff",

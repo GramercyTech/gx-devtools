@@ -85,10 +85,23 @@ async function packagePlugin(projectPath, buildPath, outputPath) {
 	}
 
 	// Copy app-manifest.json to dist/build/
+	let manifest = null;
 	if (fs.existsSync(manifestPath)) {
 		const manifestDestPath = path.join(buildPath, "app-manifest.json");
 		fs.copyFileSync(manifestPath, manifestDestPath);
 		console.log("✓ app-manifest.json copied to dist/build/");
+
+		// Parse manifest for optional bundle files
+		try {
+			manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+		} catch (error) {
+			// Already parsed above for asset_dir, but we need the full object
+		}
+	}
+
+	// Process optional bundle files (appInstructions, defaultStyling)
+	if (manifest) {
+		processOptionalBundleFiles(manifest, projectPath, buildPath);
 	}
 
 	// Create the .gxp package (zip file) in dist/
@@ -104,6 +117,50 @@ async function packagePlugin(projectPath, buildPath, outputPath) {
 	console.log(`📁 Package: dist/${gxpFileName}`);
 
 	return gxpFilePath;
+}
+
+/**
+ * Process optional bundle files from manifest (appInstructions, defaultStyling)
+ * @param {object} manifest - Parsed app-manifest.json
+ * @param {string} projectPath - Project root path
+ * @param {string} buildPath - Path where built files are (dist/build/)
+ */
+function processOptionalBundleFiles(manifest, projectPath, buildPath) {
+	// Handle appInstructions
+	if (manifest.appInstructionsFile) {
+		// Copy file from specified path
+		const srcPath = path.join(projectPath, manifest.appInstructionsFile);
+		const destPath = path.join(buildPath, "appInstructions.md");
+		if (fs.existsSync(srcPath)) {
+			fs.copyFileSync(srcPath, destPath);
+			console.log(`✓ appInstructions.md copied from ${manifest.appInstructionsFile}`);
+		} else {
+			console.warn(`⚠️  appInstructionsFile not found: ${manifest.appInstructionsFile}`);
+		}
+	} else if (manifest.appInstructions) {
+		// Write text content to file
+		const destPath = path.join(buildPath, "appInstructions.md");
+		fs.writeFileSync(destPath, manifest.appInstructions, "utf-8");
+		console.log("✓ appInstructions.md created from manifest text");
+	}
+
+	// Handle defaultStyling
+	if (manifest.defaultStylingFile) {
+		// Copy file from specified path
+		const srcPath = path.join(projectPath, manifest.defaultStylingFile);
+		const destPath = path.join(buildPath, "default-styling.css");
+		if (fs.existsSync(srcPath)) {
+			fs.copyFileSync(srcPath, destPath);
+			console.log(`✓ default-styling.css copied from ${manifest.defaultStylingFile}`);
+		} else {
+			console.warn(`⚠️  defaultStylingFile not found: ${manifest.defaultStylingFile}`);
+		}
+	} else if (manifest.defaultStyling) {
+		// Write text content to file
+		const destPath = path.join(buildPath, "default-styling.css");
+		fs.writeFileSync(destPath, manifest.defaultStyling, "utf-8");
+		console.log("✓ default-styling.css created from manifest text");
+	}
 }
 
 /**
@@ -175,6 +232,17 @@ function createGxpPackage(distPath, outputPath) {
 		const assetsPath = path.join(distPath, "assets");
 		if (fs.existsSync(assetsPath)) {
 			archive.directory(assetsPath, "assets");
+		}
+
+		// Add optional bundle files
+		const appInstructionsPath = path.join(distPath, "appInstructions.md");
+		if (fs.existsSync(appInstructionsPath)) {
+			archive.file(appInstructionsPath, { name: "appInstructions.md" });
+		}
+
+		const defaultStylingPath = path.join(distPath, "default-styling.css");
+		if (fs.existsSync(defaultStylingPath)) {
+			archive.file(defaultStylingPath, { name: "default-styling.css" });
 		}
 
 		archive.finalize();
