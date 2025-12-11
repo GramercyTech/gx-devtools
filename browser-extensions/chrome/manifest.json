@@ -56,7 +56,7 @@
   },
   
   "web_accessible_resources": [{
-    "resources": ["content.js", "inspector.js", "panel.html", "panel.js"],
+    "resources": ["content.js", "inspector.js", "panel.html", "panel.js", "defaults.json"],
     "matches": ["<all_urls>"]
   }],
 

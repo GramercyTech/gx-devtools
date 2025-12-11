@@ -524,11 +524,21 @@ export default function App({ autoStart, args }: AppProps) {
       // Use dynamic imports for ES modules
       const path = await import('path');
       const fs = await import('fs');
+      const url = await import('url');
       const { createRequire } = await import('module');
 
+      // Get the directory of this file and resolve to the utils directory
+      const __filename = url.fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+
+      // The compiled JS is in dist/tui/, utils is in bin/lib/utils/
+      // From dist/tui/ we need to go up to package root, then into bin/lib/utils/
+      const packageRoot = path.resolve(__dirname, '..', '..');
+      const utilsPath = path.join(packageRoot, 'bin', 'lib', 'utils', 'extract-config.js');
+
       // Create a require function to load CommonJS modules
-      const require = createRequire(import.meta.url);
-      const extractConfigUtils = require('../utils/extract-config.js') as {
+      const requireCjs = createRequire(import.meta.url);
+      const extractConfigUtils = requireCjs(utilsPath) as {
         extractConfigFromSource: (srcDir: string) => ExtractedConfig;
         mergeConfig: (existing: Record<string, unknown>, extracted: ExtractedConfig, options: { overwrite: boolean }) => Record<string, unknown>;
         generateSummary: (config: ExtractedConfig) => string;

@@ -20,6 +20,37 @@ function getToolkitRoot(): string {
   return path.resolve(__dirname, '..', '..', '..');
 }
 
+/**
+ * Generate extension defaults based on environment variables
+ * This creates a defaults.json file that the popup.js reads on load
+ */
+function generateExtensionDefaults(extensionPath: string, useHttps: boolean, port: number | string): void {
+  const protocol = useHttps ? 'https' : 'http';
+  const baseUrl = `${protocol}://localhost:${port}`;
+
+  const defaults = {
+    // Extension should be enabled by default when launched from CLI
+    enabled: true,
+    // JS redirect URL based on env
+    jsRedirectUrl: `${baseUrl}/src/Plugin.vue`,
+    // CSS redirect URL (empty by default, uses blank CSS)
+    cssRedirectUrl: '',
+    // CSS override should be enabled by default
+    cssRuleEnabled: true,
+    // Return blank CSS by default
+    cssReturnBlank: true,
+    // Use custom URL pattern by default
+    jsUseCustomPattern: true,
+    cssUseCustomPattern: true,
+    // Cache settings
+    clearCacheOnEnable: true,
+    disableCacheForRedirects: true,
+  };
+
+  const defaultsPath = path.join(extensionPath, 'defaults.json');
+  fs.writeFileSync(defaultsPath, JSON.stringify(defaults, null, 2));
+}
+
 // Find the extension path (project-local or toolkit built-in)
 function findExtensionPath(browser: BrowserType, cwd: string): string | null {
   // Check local project first
@@ -63,6 +94,9 @@ export function startExtension(options: ExtensionOptions): void {
     });
     return;
   }
+
+  // Generate defaults.json for the extension based on environment
+  generateExtensionDefaults(extensionPath, useHttps, port);
 
   if (browser === 'firefox') {
     const config: ServiceConfig = {

@@ -22,6 +22,42 @@ function getDevServerUrl() {
 }
 
 /**
+ * Generate extension defaults based on environment variables
+ * This creates a defaults.json file that the popup.js reads on load
+ */
+function generateExtensionDefaults(extensionPath) {
+	const useHttps = process.env.USE_HTTPS !== "false";
+	const protocol = useHttps ? "https" : "http";
+	const port = process.env.NODE_PORT || 3060;
+	const baseUrl = `${protocol}://localhost:${port}`;
+
+	const defaults = {
+		// Extension should be enabled by default when launched from CLI
+		enabled: true,
+		// JS redirect URL based on env
+		jsRedirectUrl: `${baseUrl}/src/Plugin.vue`,
+		// CSS redirect URL (empty by default, uses blank CSS)
+		cssRedirectUrl: "",
+		// CSS override should be enabled by default
+		cssRuleEnabled: true,
+		// Return blank CSS by default
+		cssReturnBlank: true,
+		// Use custom URL pattern by default
+		jsUseCustomPattern: true,
+		cssUseCustomPattern: true,
+		// Cache settings
+		clearCacheOnEnable: true,
+		disableCacheForRedirects: true,
+	};
+
+	const defaultsPath = path.join(extensionPath, "defaults.json");
+	fs.writeFileSync(defaultsPath, JSON.stringify(defaults, null, 2));
+	console.log("📝 Generated extension defaults:", defaultsPath);
+
+	return defaults;
+}
+
+/**
  * Launches Chrome with the browser extension loaded
  */
 async function launchChromeWithExtension() {
@@ -44,6 +80,9 @@ async function launchChromeWithExtension() {
 		console.error("❌ Chrome extension manifest.json not found");
 		process.exit(1);
 	}
+
+	// Generate extension defaults based on environment
+	generateExtensionDefaults(extensionPath);
 
 	// Get the starting URL
 	const startingUrl = getDevServerUrl();
