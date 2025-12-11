@@ -304,17 +304,41 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 					Object.keys(dependency.operations).length > 0
 				) {
 					Object.keys(dependency.operations).forEach((operation) => {
-						let method = "get";
-						let path = dependency.operations[operation];
-						if (path.includes(":")) {
-							let pathSplit = path.split(":");
-							method = pathSplit[0];
-							path = pathSplit[1];
+						if (
+							Object.keys(apiOperations.value[dependency.identifier]).every(
+								(key) =>
+									[
+										"identifier",
+										"model",
+										"permissionKey",
+										"operations",
+									].includes(key)
+							)
+						) {
+							let method = "get";
+							let path = dependency.operations[operation];
+							if (path.includes(":")) {
+								let pathSplit = path.split(":");
+								method = pathSplit[0];
+								path = pathSplit[1];
+							}
+							path = path.replace(
+								"{teamSlug}/{projectSlug}",
+								pluginVars.value.projectId
+							);
+							path = path.replace(
+								`{${dependency.permissionKey}}`,
+								dependencyList.value[dependency.identifier]
+							);
+							if (!apiOperations.value[dependency.identifier]) {
+								apiOperations.value[dependency.identifier] = {};
+							}
+							apiOperations.value[dependency.identifier][operation] = {
+								method: method,
+								path: path,
+								model_key: dependency.permissionKey,
+							};
 						}
-						apiOperations.value[operation] = {
-							method: method,
-							path: path,
-						};
 					});
 				}
 				if (dependency.events && Object.keys(dependency.events).length > 0) {
@@ -397,8 +421,14 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	}
 	async function callApi(operation, identifier, data = {}) {
 		try {
-			const operation = apiOperations.value[operation];
-			const response = await apiClient[operation.method](operation.path, data);
+			const operationConfig = apiOperations.value[identifier][operation];
+			if (!operationConfig) {
+				throw new Error(`Operation not found: ${operation}`);
+			}
+			const response = await apiClient[operationConfig.method](
+				operationConfig.path,
+				data
+			);
 			return response.data;
 		} catch (error) {
 			throw new Error(`${method} ${endpoint}: ${error.message}`);

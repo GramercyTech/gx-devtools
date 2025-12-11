@@ -133,9 +133,80 @@ store.addDevAsset('temp_image', 'screenshot.png');
 // Result: https://localhost:3060/dev-assets/images/screenshot.png
 ```
 
-## API Client
+## Dependency API Client
 
-The store includes an Axios-based API client for making HTTP requests:
+The recommended way to make API calls is through the dependency system using `callApi()`. This method uses the operations defined in your `app-manifest.json` dependencies.
+
+### `callApi(operationId, identifier, additionalData)`
+
+Call an API operation defined in your dependencies:
+
+```javascript
+const store = useGxpStore();
+
+// GET request - list resources
+const items = await store.callApi('access-points.index', 'access_points');
+
+// GET request - single resource (path parameter)
+const item = await store.callApi('access-points.show', 'access_points', {
+  access_point: 123  // Path parameter
+});
+
+// POST request - create resource
+const newItem = await store.callApi('access-points.store', 'access_points', {
+  name: 'Main Entrance',
+  location: 'Building A'
+});
+
+// PUT request - update resource
+const updated = await store.callApi('access-points.update', 'access_points', {
+  access_point: 123,  // Path parameter
+  name: 'Updated Name' // Body data
+});
+
+// DELETE request
+await store.callApi('access-points.destroy', 'access_points', {
+  access_point: 123
+});
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `operationId` | string | The operation key from your dependency's `operations` object |
+| `identifier` | string | The dependency identifier from `app-manifest.json` |
+| `additionalData` | object | Path parameters and/or request body data (optional) |
+
+**Returns:** `response.data` from the API response
+
+**How it works:**
+
+1. Looks up the dependency by `identifier` in `dependencyList`
+2. Finds the operation by `operationId` in the dependency's `operations`
+3. Parses the method and path from the operation value (e.g., `"get:/v1/..."`)
+4. Substitutes path parameters from `additionalData` (e.g., `{access_point}` → `123`)
+5. Makes the HTTP request with remaining data as query params (GET) or body (POST/PUT)
+6. Returns `response.data`
+
+**Example with error handling:**
+
+```javascript
+try {
+  const accessPoints = await store.callApi('access-points.index', 'access_points');
+  console.log('Loaded', accessPoints.length, 'access points');
+} catch (error) {
+  console.error('Failed to load access points:', error.message);
+}
+```
+
+:::tip Define Dependencies First
+Before using `callApi`, make sure you've added the dependency to your `app-manifest.json`. Use `gxdev add-dependency` to generate the configuration automatically.
+:::
+
+## Low-Level API Client
+
+For direct API calls without the dependency system, use these methods:
 
 ### `apiGet(endpoint, params)`
 

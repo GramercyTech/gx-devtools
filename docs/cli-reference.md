@@ -35,6 +35,8 @@ npm install --save-dev @gxp-dev/tools
 | `gxdev ext:install <browser>` | Permanent extension install guide |
 | `gxdev setup-ssl` | Generate SSL certificates |
 | `gxdev publish <file>` | Copy runtime files to project |
+| `gxdev add-dependency` | Add API dependency via wizard |
+| `gxdev extract-config` | Extract GxP config from source |
 
 ---
 
@@ -840,3 +842,178 @@ Create a `.gxdevrc.json` file in your home directory for global defaults:
 ```
 
 Project-level `.gxdevrc.json` overrides global settings.
+
+---
+
+## gxdev add-dependency
+
+Interactive wizard for adding API dependencies to your `app-manifest.json`.
+
+```bash
+gxdev add-dependency [options]
+```
+
+### Options
+
+| Option | Alias | Default | Description |
+|--------|-------|---------|-------------|
+| `--env` | `-e` | `develop` | API environment: `develop` or `local` |
+
+### What It Does
+
+The wizard:
+1. Loads OpenAPI and AsyncAPI specifications from the selected environment
+2. Groups API endpoints by tags/models
+3. Displays a type-ahead selection for choosing a model
+4. Shows available endpoints with multi-select
+5. Shows available socket events with multi-select
+6. Prompts for a dependency identifier
+7. Generates and saves the dependency configuration
+
+### Interactive Flow
+
+```
+╔════════════════════════════════════════════╗
+║       Add API Dependency Wizard            ║
+╚════════════════════════════════════════════╝
+
+Environment: develop
+Loading API specifications...
+
+✓ Loaded OpenAPI spec (156 paths)
+✓ Loaded AsyncAPI spec (23 events)
+
+Select a model/tag (type to filter):
+  → AccessPoint (5 paths, 2 events)
+    Attendee (12 paths, 4 events)
+    Badge (8 paths, 1 event)
+    ...
+
+Select API endpoints:
+  [x] GET /v1/projects/.../access-points
+  [x] GET /v1/projects/.../access-points/{access_point}
+  [ ] POST /v1/projects/.../access-points
+  [ ] PUT /v1/projects/.../access-points/{access_point}
+  ...
+
+Select socket events:
+  [x] AccessPointUpdated
+  [x] AccessPointDeleted
+
+Enter dependency identifier: access_points
+
+─────────────────────────────────────────────
+Generated Dependency Configuration:
+─────────────────────────────────────────────
+{
+  "identifier": "access_points",
+  "model": "AccessPoint",
+  "permissionKey": "access_point",
+  "permissions": ["view_access_points"],
+  "operations": {
+    "access-points.index": "get:/v1/projects/{teamSlug}/{projectSlug}/access-points",
+    "access-points.show": "get:/v1/projects/{teamSlug}/{projectSlug}/access-points/{access_point}"
+  },
+  "events": {
+    "AccessPointUpdated": "AccessPointUpdated",
+    "AccessPointDeleted": "AccessPointDeleted"
+  }
+}
+
+✓ Added dependency to app-manifest.json
+```
+
+### Generated Dependency Structure
+
+| Field | Description |
+|-------|-------------|
+| `identifier` | Unique ID used when calling `store.callApi()` |
+| `model` | The API model/resource name |
+| `permissionKey` | Permission key for access control |
+| `permissions` | Required permissions extracted from API spec |
+| `operations` | Map of operationId → `method:path` |
+| `events` | Map of socket events for this resource |
+
+### Using the Dependency
+
+Once added, call any operation using `gxpStore.callApi()`:
+
+```javascript
+const store = useGxpStore();
+
+// Use the operationId and identifier
+const items = await store.callApi('access-points.index', 'access_points');
+
+const item = await store.callApi('access-points.show', 'access_points', {
+  access_point: 123
+});
+```
+
+### Examples
+
+```bash
+# Use default environment (develop)
+gxdev add-dependency
+
+# Use local API
+gxdev add-dependency --env local
+gxdev add-dependency -e local
+```
+
+### TUI Usage
+
+The command is also available in the interactive TUI:
+
+```
+/add-dependency
+/add-dependency --env local
+```
+
+**Note:** Running from TUI will exit and launch the wizard in a separate terminal session (required for interactive prompts).
+
+---
+
+## gxdev extract-config
+
+Scan source files and extract GxP configuration to `app-manifest.json`.
+
+```bash
+gxdev extract-config [options]
+```
+
+### Options
+
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--dry-run` | `-d` | Preview changes without modifying files |
+| `--overwrite` | `-o` | Overwrite existing values in manifest |
+
+### What It Extracts
+
+- `gxp-string` attributes → `strings` section
+- `gxp-src` attributes → `assets` section
+- `gxp-settings` attributes → `settings` section
+- `gxp-state` attributes → `triggerState` section
+- `store.getString()` calls → `strings` section
+- `store.getAsset()` calls → `assets` section
+
+### Examples
+
+```bash
+# Preview what would be extracted
+gxdev extract-config --dry-run
+
+# Extract and merge with existing manifest
+gxdev extract-config
+
+# Extract and overwrite existing values
+gxdev extract-config --overwrite
+```
+
+### TUI Usage
+
+```
+/extract-config
+/extract-config --dry-run
+/extract-config --overwrite
+```

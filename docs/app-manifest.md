@@ -172,24 +172,107 @@ const step = store.getState('current_step', 1);
 
 ### Dependencies
 
-Define external services or plugins this plugin depends on:
+Dependencies define external API services your plugin can interact with. Each dependency maps API operations to endpoints that can be called via `gxpStore.callApi()`.
+
+#### Dependency Structure
 
 ```json
 {
   "dependencies": [
     {
-      "id": "badge-printer",
-      "type": "hardware",
-      "required": true
-    },
-    {
-      "id": "registration-api",
-      "type": "api",
-      "required": true
+      "identifier": "access_points",
+      "model": "AccessPoint",
+      "permissionKey": "access_point",
+      "permissions": ["view_access_points", "manage_access_points"],
+      "operations": {
+        "access-points.index": "get:/v1/projects/{teamSlug}/{projectSlug}/access-points",
+        "access-points.show": "get:/v1/projects/{teamSlug}/{projectSlug}/access-points/{access_point}",
+        "access-points.store": "post:/v1/projects/{teamSlug}/{projectSlug}/access-points",
+        "access-points.update": "put:/v1/projects/{teamSlug}/{projectSlug}/access-points/{access_point}",
+        "access-points.destroy": "delete:/v1/projects/{teamSlug}/{projectSlug}/access-points/{access_point}"
+      },
+      "events": {
+        "AccessPointUpdated": "AccessPointUpdated",
+        "AccessPointDeleted": "AccessPointDeleted"
+      }
     }
   ]
 }
 ```
+
+#### Dependency Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `identifier` | string | Unique identifier for this dependency (used in `callApi`) |
+| `model` | string | The model/resource name from the API |
+| `permissionKey` | string | The permission key used for access control |
+| `permissions` | array | List of permissions required to use this dependency |
+| `operations` | object | Map of operationId to `method:path` (e.g., `"get:/v1/..."`) |
+| `events` | object | Map of socket event names this dependency can emit/receive |
+
+#### Using the Add Dependency Wizard
+
+The easiest way to add dependencies is using the CLI wizard:
+
+```bash
+gxdev add-dependency
+```
+
+This interactive wizard will:
+1. Load the OpenAPI specification from the API
+2. Display available API tags/models
+3. Let you select which endpoints to include
+4. Let you select which socket events to include
+5. Generate the complete dependency configuration
+6. Add it to your `app-manifest.json`
+
+#### Calling Dependency APIs
+
+Once defined, call any operation using `gxpStore.callApi()`:
+
+```javascript
+import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+
+const store = useGxpStore();
+
+// List all access points
+const accessPoints = await store.callApi('access-points.index', 'access_points');
+
+// Get a specific access point
+const accessPoint = await store.callApi('access-points.show', 'access_points', {
+  access_point: 123
+});
+
+// Create a new access point
+const newAccessPoint = await store.callApi('access-points.store', 'access_points', {
+  name: 'Main Entrance',
+  location: 'Building A'
+});
+
+// Update an access point
+await store.callApi('access-points.update', 'access_points', {
+  access_point: 123,
+  name: 'Updated Name'
+});
+
+// Delete an access point
+await store.callApi('access-points.destroy', 'access_points', {
+  access_point: 123
+});
+```
+
+The `callApi` method signature:
+
+```javascript
+store.callApi(operationId, identifier, additionalData = {})
+```
+
+- **operationId**: The operation key from `operations` (e.g., `'access-points.index'`)
+- **identifier**: The dependency identifier (e.g., `'access_points'`)
+- **additionalData**: Object containing path parameters and/or request body data
+
+Returns `response.data` from the API response.
 
 ### Permissions
 
