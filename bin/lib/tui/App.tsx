@@ -55,6 +55,11 @@ export default function App({ autoStart, args }: AppProps) {
   // Get terminal height for full screen
   const terminalHeight = stdout?.rows || 24;
 
+  // Stable callback for suggestion row changes to prevent unnecessary re-renders
+  const handleSuggestionsChange = useCallback((count: number) => {
+    setSuggestionRows(count);
+  }, []);
+
   // Sync services from ServiceManager
   const syncServices = useCallback(() => {
     const managerServices = serviceManager.getAllServices();
@@ -743,7 +748,7 @@ Keyboard shortcuts:
           name: currentService.name,
           status: currentService.status
         } : null}
-        onSuggestionsChange={setSuggestionRows}
+        onSuggestionsChange={handleSuggestionsChange}
       />
     </Box>
   );

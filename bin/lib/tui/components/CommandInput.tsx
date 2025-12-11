@@ -68,10 +68,10 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
 
-  // Use ref to track if we should skip the next onChange (after programmatic update)
-  const skipNextChange = useRef(false);
   // Track previous suggestion count to avoid unnecessary parent updates
   const prevSuggestionCount = useRef(0);
+  // Track if suggestions are currently shown to avoid flicker
+  const prevShowSuggestions = useRef(false);
 
   // Maximum visible suggestions in the dropdown
   const MAX_VISIBLE = 8;
@@ -123,12 +123,13 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
     return suggestion.cmd;
   }, []);
 
-  // Notify parent when suggestions change (use visible count, not total)
+  // Notify parent when suggestions visibility changes (not on every count change)
+  // This reduces flicker by only updating when suggestions appear/disappear
   useEffect(() => {
-    const visibleCount = Math.min(suggestions.length, MAX_VISIBLE);
-    const count = showSuggestions ? visibleCount + 2 : 0; // +2 for border and hint line
-    if (count !== prevSuggestionCount.current) {
-      prevSuggestionCount.current = count;
+    if (showSuggestions !== prevShowSuggestions.current) {
+      prevShowSuggestions.current = showSuggestions;
+      const visibleCount = Math.min(suggestions.length, MAX_VISIBLE);
+      const count = showSuggestions ? visibleCount + 4 : 0; // +4 for borders, scroll indicators, hint line
       onSuggestionsChange?.(count);
     }
   }, [showSuggestions, suggestions.length, onSuggestionsChange]);
@@ -145,8 +146,7 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
     if (key.tab && showSuggestions && suggestions[selectedSuggestion]) {
       const suggestion = suggestions[selectedSuggestion];
       const fullCmd = buildFullCommand(suggestion);
-      skipNextChange.current = true;
-      setValue(fullCmd);
+      setValue(fullCmd + ' '); // Add space to move cursor to end and allow continuing to type
       setSelectedSuggestion(0);
       return;
     }
@@ -174,7 +174,6 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
       if (key.upArrow && history.length > 0) {
         const newIndex = Math.min(historyIndex + 1, history.length - 1);
         setHistoryIndex(newIndex);
-        skipNextChange.current = true;
         setValue(history[history.length - 1 - newIndex] || '');
         return;
       }
@@ -182,7 +181,6 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
       if (key.downArrow) {
         const newIndex = Math.max(historyIndex - 1, -1);
         setHistoryIndex(newIndex);
-        skipNextChange.current = true;
         if (newIndex < 0) {
           setValue('');
         } else {
@@ -218,10 +216,6 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
 
   // Handle text input changes
   const handleChange = useCallback((v: string) => {
-    if (skipNextChange.current) {
-      skipNextChange.current = false;
-      return;
-    }
     setValue(v);
     setSelectedSuggestion(0);
   }, []);
