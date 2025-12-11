@@ -22,6 +22,7 @@ const {
 	extensionChromeCommand,
 	extensionBuildCommand,
 	extensionInstallCommand,
+	extractConfigCommand,
 } = require("./commands");
 
 // Load global configuration
@@ -38,6 +39,22 @@ yargs
 			name: {
 				describe: "Project name (for new projects)",
 				type: "string",
+			},
+			description: {
+				describe: "Project description",
+				type: "string",
+				alias: "d",
+			},
+			build: {
+				describe: "AI build prompt - describe what to build for auto-scaffolding",
+				type: "string",
+				alias: "b",
+			},
+			provider: {
+				describe: "AI provider for scaffolding (claude, codex, gemini)",
+				type: "string",
+				alias: "p",
+				choices: ["claude", "codex", "gemini"],
 			},
 		},
 		initCommand
@@ -244,6 +261,31 @@ yargs
 			},
 		},
 		assetsCommand
+	)
+	.command(
+		"extract-config",
+		"Extract GxP configuration from source files to app-manifest.json",
+		{
+			"dry-run": {
+				describe: "Show what would be extracted without making changes",
+				type: "boolean",
+				default: false,
+				alias: "d",
+			},
+			overwrite: {
+				describe: "Overwrite existing values in manifest",
+				type: "boolean",
+				default: false,
+				alias: "o",
+			},
+			verbose: {
+				describe: "Show detailed output",
+				type: "boolean",
+				default: false,
+				alias: "v",
+			},
+		},
+		extractConfigCommand
 	)
 	.demandCommand(1, "Please provide a valid command")
 	.help("h")

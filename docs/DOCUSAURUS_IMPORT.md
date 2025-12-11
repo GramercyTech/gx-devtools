@@ -42,6 +42,13 @@ module.exports = {
           'gxp-store.md',
           'dev-tools.md',
           'building-for-platform.md',
+          'cli-reference.md',
+          'browser-extensions.md',
+          'strings-plugin.md',
+          'interactive-tui.md',
+          'architecture.md',
+          'socket-events.md',
+          'troubleshooting.md',
         ],
 
         // Fetch category config too
@@ -74,6 +81,13 @@ module.exports = {
           'gxp-store.md',
           'dev-tools.md',
           'building-for-platform.md',
+          'cli-reference.md',
+          'browser-extensions.md',
+          'strings-plugin.md',
+          'interactive-tui.md',
+          'architecture.md',
+          'socket-events.md',
+          'troubleshooting.md',
         ],
         // Ensure content is returned as string (plugin expects {content: string} object)
         modifyContent: (filename, content) => {
@@ -221,10 +235,17 @@ module.exports = {
   gxToolkitSidebar: [
     'index',
     'getting-started',
+    'architecture',
     'app-manifest',
     'gxp-store',
+    'strings-plugin',
     'dev-tools',
+    'interactive-tui',
+    'browser-extensions',
+    'socket-events',
+    'cli-reference',
     'building-for-platform',
+    'troubleshooting',
   ],
 };
 ```
@@ -251,10 +272,17 @@ module.exports = {
       },
       items: [
         'gx-devtools/getting-started',
+        'gx-devtools/architecture',
         'gx-devtools/app-manifest',
         'gx-devtools/gxp-store',
+        'gx-devtools/strings-plugin',
         'gx-devtools/dev-tools',
+        'gx-devtools/interactive-tui',
+        'gx-devtools/browser-extensions',
+        'gx-devtools/socket-events',
+        'gx-devtools/cli-reference',
         'gx-devtools/building-for-platform',
+        'gx-devtools/troubleshooting',
       ],
     },
   ],

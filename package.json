@@ -9,6 +9,7 @@
   "files": [
     "bin",
     "dist/tui",
+    "mcp",
     "README.md",
     "runtime",
     "template",
@@ -34,7 +35,8 @@
     "url": "git+ssh://git@github.com/GramercyTech/gx-devtools.git"
   },
   "bin": {
-    "gxdev": "bin/gx-devtools.js"
+    "gxdev": "bin/gx-devtools.js",
+    "gxp-api-server": "mcp/gxp-api-server.js"
   },
   "keywords": [
     "tunnel",

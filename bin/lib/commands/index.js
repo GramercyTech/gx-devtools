@@ -18,6 +18,7 @@ const {
 	extensionBuildCommand,
 	extensionInstallCommand,
 } = require("./extensions");
+const { extractConfigCommand } = require("./extract-config");
 
 module.exports = {
 	initCommand,
@@ -32,4 +33,5 @@ module.exports = {
 	extensionChromeCommand,
 	extensionBuildCommand,
 	extensionInstallCommand,
+	extractConfigCommand,
 };

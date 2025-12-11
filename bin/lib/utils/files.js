@@ -30,15 +30,18 @@ function safeCopyFile(src, dest, description) {
 
 /**
  * Creates package.json for new projects
+ * @param {string} projectPath - Path to project directory
+ * @param {string} projectName - Name of the project
+ * @param {string} description - Optional project description
  */
-function createPackageJson(projectPath, projectName) {
+function createPackageJson(projectPath, projectName, description = "") {
 	const packageJsonPath = path.join(projectPath, "package.json");
 	const globalConfig = loadGlobalConfig();
 
 	const packageJson = {
 		name: projectName,
 		version: "1.0.0",
-		description: `GxP Plugin: ${projectName}`,
+		description: description || `GxP Plugin: ${projectName}`,
 		main: "main.js",
 		scripts: {
 			...DEFAULT_SCRIPTS,
@@ -53,6 +56,43 @@ function createPackageJson(projectPath, projectName) {
 
 	fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 	console.log("✓ Created package.json");
+}
+
+/**
+ * Updates app-manifest.json with project name and description
+ * @param {string} projectPath - Path to project directory
+ * @param {string} projectName - Name of the project
+ * @param {string} description - Optional project description
+ */
+function updateAppManifest(projectPath, projectName, description = "") {
+	const manifestPath = path.join(projectPath, "app-manifest.json");
+
+	if (!fs.existsSync(manifestPath)) {
+		console.warn("⚠ app-manifest.json not found, skipping update");
+		return;
+	}
+
+	try {
+		const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+
+		// Update name and description
+		manifest.name = projectName;
+		if (description) {
+			manifest.description = description;
+		} else {
+			manifest.description = `GxP Plugin: ${projectName}`;
+		}
+
+		// Update strings with project name
+		if (manifest.strings && manifest.strings.default) {
+			manifest.strings.default.welcome_text = `Welcome to ${projectName}`;
+		}
+
+		fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, "\t"));
+		console.log("✓ Updated app-manifest.json with project details");
+	} catch (error) {
+		console.warn("⚠ Could not update app-manifest.json:", error.message);
+	}
 }
 
 /**
@@ -173,6 +213,7 @@ function ensureImageMagickInstalled() {
 module.exports = {
 	safeCopyFile,
 	createPackageJson,
+	updateAppManifest,
 	installDependencies,
 	updateExistingProject,
 	isImageMagickInstalled,

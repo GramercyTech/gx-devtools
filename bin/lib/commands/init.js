@@ -1,85 +1,48 @@
 /**
  * Init Command
  *
- * Sets up a new GxP project or updates an existing one.
+ * Sets up a new GxP project with interactive configuration.
+ *
+ * Flow:
+ * 1. Create project directory with provided name
+ * 2. Copy template files and install dependencies
+ * 3. Run interactive configuration:
+ *    - App name (prepopulated from package.json)
+ *    - Description (prepopulated from package.json)
+ *    - AI scaffolding (optional)
+ * 4. Prompt to start the app
+ * 5. Prompt to launch browser with extension
  */
 
 const path = require("path");
 const fs = require("fs");
+const { spawn } = require("child_process");
 const { REQUIRED_DEPENDENCIES } = require("../constants");
 const {
 	findProjectRoot,
 	resolveGxPaths,
 	promptUser,
+	arrowSelectPrompt,
+	inputWithDefault,
+	multiLinePrompt,
 	safeCopyFile,
 	createPackageJson,
+	updateAppManifest,
 	installDependencies,
 	updateExistingProject,
 	ensureMkcertInstalled,
 	generateSSLCertificates,
 	updateEnvWithCertPaths,
+	runAIScaffolding,
+	getAvailableProviders,
 } = require("../utils");
 
 /**
- * Initialize command - sets up a new GxP project or updates existing one
+ * Copy template files to project
+ * @param {string} projectPath - Target project path
+ * @param {object} paths - Resolved GxP paths
  */
-async function initCommand(argv) {
-	const currentDir = process.cwd();
-	const hasPackageJson = fs.existsSync(path.join(currentDir, "package.json"));
-	let projectPath = currentDir;
-	let projectName;
-	let sslSetup = false;
-
-	if (!hasPackageJson && !argv.name) {
-		// New project - prompt for name
-		projectName = await promptUser("Enter project name: ");
-		if (!projectName) {
-			console.error("Project name is required!");
-			process.exit(1);
-		}
-
-		// Create project directory
-		projectPath = path.join(currentDir, projectName);
-		if (fs.existsSync(projectPath)) {
-			console.error(`Directory ${projectName} already exists!`);
-			process.exit(1);
-		}
-
-		console.log(`Creating new project: ${projectName}`);
-		fs.mkdirSync(projectPath, { recursive: true });
-
-		// Create package.json
-		createPackageJson(projectPath, projectName);
-
-		// Install dependencies
-		installDependencies(projectPath);
-	} else if (hasPackageJson) {
-		// Existing project - update it
-		console.log("Updating existing project...");
-		updateExistingProject(projectPath);
-	} else if (argv.name) {
-		// New project with provided name
-		projectName = argv.name;
-		projectPath = path.join(currentDir, projectName);
-
-		if (fs.existsSync(projectPath)) {
-			console.error(`Directory ${projectName} already exists!`);
-			process.exit(1);
-		}
-
-		console.log(`Creating new project: ${projectName}`);
-		fs.mkdirSync(projectPath, { recursive: true });
-		createPackageJson(projectPath, projectName);
-		installDependencies(projectPath);
-	}
-
-	// Copy template files
-	// Note: PortalContainer.vue (formerly App.vue) is now in runtime/ and accessed via @gx-runtime alias
-	// Users don't need a copy - it's immutable and loaded from node_modules
-	const paths = resolveGxPaths();
-	// Note: main.js, index.html, and vite.config.js are NOT copied by default.
-	// They are served from the runtime directory. Users can publish them
-	// for customization using: gxdev publish main.js / index.html / vite.config.js
+function copyTemplateFiles(projectPath, paths) {
 	const filesToCopy = [
 		{
 			src: "theme-layouts/SystemLayout.vue",
@@ -143,6 +106,27 @@ async function initCommand(argv) {
 			dest: "README.md",
 			desc: "README.md (Project documentation)",
 		},
+		// AI Agent configuration files
+		{
+			src: "AGENTS.md",
+			dest: "AGENTS.md",
+			desc: "AGENTS.md (Codex/AI agent instructions)",
+		},
+		{
+			src: "GEMINI.md",
+			dest: "GEMINI.md",
+			desc: "GEMINI.md (Gemini Code Assist instructions)",
+		},
+		{
+			src: ".claude/agents/gxp-developer.md",
+			dest: ".claude/agents/gxp-developer.md",
+			desc: "Claude Code subagent (GxP developer)",
+		},
+		{
+			src: ".claude/settings.json",
+			dest: ".claude/settings.json",
+			desc: "Claude Code MCP settings (GxP API server)",
+		},
 	];
 
 	// Copy template files
@@ -151,12 +135,67 @@ async function initCommand(argv) {
 		const destPath = path.join(projectPath, file.dest);
 		safeCopyFile(srcPath, destPath, file.desc);
 	});
+}
 
-	// Create /src/assets/ directory for user assets
+/**
+ * Copy extension scripts to project
+ * @param {string} projectPath - Target project path
+ * @param {object} paths - Resolved GxP paths
+ */
+function copyExtensionScripts(projectPath, paths) {
+	const scriptsDir = path.join(projectPath, "scripts");
+	if (!fs.existsSync(scriptsDir)) {
+		fs.mkdirSync(scriptsDir, { recursive: true });
+	}
+
+	// Copy launch-chrome.js script
+	const launchChromeSource = path.join(
+		paths.templateDir,
+		"../scripts/launch-chrome.js"
+	);
+	const launchChromeDest = path.join(scriptsDir, "launch-chrome.js");
+	if (fs.existsSync(launchChromeSource)) {
+		safeCopyFile(launchChromeSource, launchChromeDest, "Chrome launcher script");
+	}
+
+	// Copy pack-chrome.js script
+	const packChromeSource = path.join(
+		paths.templateDir,
+		"../scripts/pack-chrome.js"
+	);
+	const packChromeDest = path.join(scriptsDir, "pack-chrome.js");
+	if (fs.existsSync(packChromeSource)) {
+		safeCopyFile(packChromeSource, packChromeDest, "Chrome packaging script");
+	}
+
+	// Copy socket events directory
+	const socketEventsSource = paths.socketEventsDir;
+	const socketEventsDest = path.join(projectPath, "socket-events");
+	if (fs.existsSync(socketEventsSource)) {
+		if (!fs.existsSync(socketEventsDest)) {
+			fs.mkdirSync(socketEventsDest, { recursive: true });
+		}
+
+		const eventFiles = fs
+			.readdirSync(socketEventsSource)
+			.filter((file) => file.endsWith(".json"));
+		eventFiles.forEach((file) => {
+			const srcPath = path.join(socketEventsSource, file);
+			const destPath = path.join(socketEventsDest, file);
+			safeCopyFile(srcPath, destPath, `Socket event: ${file}`);
+		});
+	}
+}
+
+/**
+ * Create supporting directories and files
+ * @param {string} projectPath - Target project path
+ */
+function createSupportingFiles(projectPath) {
+	// Create /src/assets/ directory
 	const assetsDir = path.join(projectPath, "src", "assets");
 	if (!fs.existsSync(assetsDir)) {
 		fs.mkdirSync(assetsDir, { recursive: true });
-		// Add a .gitkeep to ensure the directory is tracked
 		fs.writeFileSync(path.join(assetsDir, ".gitkeep"), "");
 		console.log("✓ Created src/assets/ directory for project assets");
 	}
@@ -168,153 +207,367 @@ async function initCommand(argv) {
 		fs.copyFileSync(envExamplePath, envPath);
 		console.log("✓ Created .env file from .env.example");
 	}
+}
 
-	// Copy extension management scripts for new projects
-	if (!hasPackageJson || argv.name) {
-		const scriptsDir = path.join(projectPath, "scripts");
-		if (!fs.existsSync(scriptsDir)) {
-			fs.mkdirSync(scriptsDir, { recursive: true });
-		}
+/**
+ * Read project info from package.json
+ * @param {string} projectPath - Project path
+ * @returns {object} - { name, description }
+ */
+function readProjectInfo(projectPath) {
+	const packageJsonPath = path.join(projectPath, "package.json");
+	if (fs.existsSync(packageJsonPath)) {
+		const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+		return {
+			name: pkg.name || "",
+			description: pkg.description || "",
+		};
+	}
+	return { name: "", description: "" };
+}
 
-		// Copy launch-chrome.js script
-		const launchChromeSource = path.join(
-			paths.templateDir,
-			"../scripts/launch-chrome.js"
-		);
-		const launchChromeDest = path.join(scriptsDir, "launch-chrome.js");
-		if (fs.existsSync(launchChromeSource)) {
-			safeCopyFile(
-				launchChromeSource,
-				launchChromeDest,
-				"Chrome launcher script"
-			);
-		}
+/**
+ * Update package.json with new name and description
+ * @param {string} projectPath - Project path
+ * @param {string} name - New name
+ * @param {string} description - New description
+ */
+function updatePackageJson(projectPath, name, description) {
+	const packageJsonPath = path.join(projectPath, "package.json");
+	if (fs.existsSync(packageJsonPath)) {
+		const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+		pkg.name = name;
+		pkg.description = description;
+		fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, "\t"));
+	}
+}
 
-		// Copy pack-chrome.js script
-		const packChromeSource = path.join(
-			paths.templateDir,
-			"../scripts/pack-chrome.js"
-		);
-		const packChromeDest = path.join(scriptsDir, "pack-chrome.js");
-		if (fs.existsSync(packChromeSource)) {
-			safeCopyFile(packChromeSource, packChromeDest, "Chrome packaging script");
-		}
+/**
+ * Launch the development server
+ * @param {string} projectPath - Project path
+ * @param {object} options - { withMock: boolean, noHttps: boolean }
+ * @returns {ChildProcess} - The spawned process
+ */
+function launchDevServer(projectPath, options = {}) {
+	const args = ["run"];
 
-		// Copy socket events directory for simulation (root level for CLI access)
-		const socketEventsSource = paths.socketEventsDir;
-		const socketEventsDest = path.join(projectPath, "socket-events");
-		if (fs.existsSync(socketEventsSource)) {
-			if (!fs.existsSync(socketEventsDest)) {
-				fs.mkdirSync(socketEventsDest, { recursive: true });
+	if (options.withMock) {
+		args.push("dev");
+		// The dev script with mock runs through TUI
+	} else {
+		args.push(options.noHttps ? "dev-http" : "dev");
+	}
+
+	console.log(`\n🚀 Starting development server...`);
+
+	const child = spawn("npm", args, {
+		cwd: projectPath,
+		stdio: "inherit",
+		shell: true,
+	});
+
+	return child;
+}
+
+/**
+ * Launch browser with extension
+ * @param {string} projectPath - Project path
+ * @param {string} browser - 'chrome' or 'firefox'
+ */
+function launchBrowserExtension(projectPath, browser) {
+	console.log(`\n🌐 Launching ${browser} with GxP extension...`);
+
+	const gxdevPath = path.join(__dirname, "..", "..", "gx-devtools.js");
+
+	spawn("node", [gxdevPath, `ext:${browser}`], {
+		cwd: projectPath,
+		stdio: "inherit",
+		shell: true,
+		detached: true,
+	}).unref();
+}
+
+/**
+ * Run interactive configuration after project creation
+ * @param {string} projectPath - Path to project directory
+ * @param {string} initialName - Initial project name from CLI
+ */
+async function runInteractiveConfig(projectPath, initialName) {
+	console.log("");
+	console.log("─".repeat(50));
+	console.log("📝 Configure Your Plugin");
+	console.log("─".repeat(50));
+
+	// Read current values from package.json
+	const projectInfo = readProjectInfo(projectPath);
+	const defaultName = projectInfo.name || initialName || path.basename(projectPath);
+	const defaultDescription = projectInfo.description || "A GxP kiosk plugin";
+
+	// 1. App Name - with prepopulated value and custom option
+	const appName = await arrowSelectPrompt("App name", [
+		{ label: defaultName, value: defaultName, description: "From package.json" },
+		{ label: "Enter custom name", value: "__custom__", isCustomInput: true, defaultValue: defaultName },
+	]);
+
+	// 2. Description - with prepopulated value and custom option
+	const description = await arrowSelectPrompt("Description", [
+		{ label: defaultDescription, value: defaultDescription, description: "From package.json" },
+		{ label: "Enter custom description", value: "__custom__", isCustomInput: true, defaultValue: "" },
+	]);
+
+	// Update package.json and app-manifest with new values
+	updatePackageJson(projectPath, appName, description);
+	updateAppManifest(projectPath, appName, description);
+
+	// 3. AI Scaffolding
+	console.log("");
+	console.log("─".repeat(50));
+	console.log("🤖 AI-Powered Scaffolding");
+	console.log("─".repeat(50));
+	console.log("   Describe what you want to build and AI will generate");
+	console.log("   starter components, views, and manifest configuration.");
+	console.log("");
+
+	// Check available AI providers
+	const providers = await getAvailableProviders();
+	const availableProviders = providers.filter((p) => p.available);
+
+	let aiChoice = "skip";
+	let selectedProvider = null;
+
+	if (availableProviders.length === 0) {
+		console.log("   ⚠️  No AI providers available.");
+		console.log("   To enable AI scaffolding, set up one of:");
+		console.log("   • Claude CLI: npm install -g @anthropic-ai/claude-code && claude login");
+		console.log("   • Codex CLI: npm install -g @openai/codex && codex auth");
+		console.log("   • Gemini: export GEMINI_API_KEY=your_key or gcloud auth login");
+		console.log("");
+		aiChoice = "skip";
+	} else {
+		// Build provider options
+		const providerOptions = [
+			{ label: "Skip AI scaffolding", value: "skip" },
+		];
+
+		for (const provider of availableProviders) {
+			let authInfo = "";
+			if (provider.id === "gemini") {
+				authInfo = provider.method === "api_key" ? "via API key" : "via gcloud";
+			} else {
+				authInfo = "logged in";
 			}
-
-			const eventFiles = fs
-				.readdirSync(socketEventsSource)
-				.filter((file) => file.endsWith(".json"));
-			eventFiles.forEach((file) => {
-				const srcPath = path.join(socketEventsSource, file);
-				const destPath = path.join(socketEventsDest, file);
-				safeCopyFile(srcPath, destPath, `Socket event: ${file}`);
+			providerOptions.push({
+				label: `${provider.name}`,
+				value: provider.id,
+				description: `${authInfo}`,
 			});
 		}
-	}
 
-	// Setup SSL certificates for new projects
-	if (!hasPackageJson || argv.name) {
-		// Ask user if they want to set up SSL certificates
-		const sslChoice = await promptUser(
-			"Do you want to set up SSL certificates for HTTPS development? (Y/n): "
-		);
-		sslSetup =
-			sslChoice.toLowerCase() !== "n" && sslChoice.toLowerCase() !== "no";
-
-		if (sslSetup) {
-			console.log("\n🔒 Setting up HTTPS development environment...");
-			ensureMkcertInstalled();
-			const certs = generateSSLCertificates(projectPath);
-
-			// Update .env file with actual certificate names if SSL setup was successful
-			if (certs) {
-				updateEnvWithCertPaths(projectPath, certs);
-			}
-		} else {
-			console.log(
-				"\n⚠️  Skipping SSL setup. You can set it up later with: npm run setup-ssl"
-			);
+		aiChoice = await arrowSelectPrompt("Choose AI provider for scaffolding", providerOptions);
+		if (aiChoice !== "skip") {
+			selectedProvider = aiChoice;
 		}
 	}
 
-	console.log("✅ Project setup complete!");
-	console.log(
-		"🎨 GX ComponentKit component library included for rapid kiosk development!"
-	);
-	console.log("🗃️ GxP Datastore included with Pinia integration!");
-	if (!hasPackageJson) {
-		console.log(`📁 Navigate to your project: cd ${projectName}`);
-	}
-	console.log("⚙️ Environment file (.env) ready - customize as needed");
+	let buildPrompt = "";
+	if (selectedProvider) {
+		buildPrompt = await multiLinePrompt(
+			"📝 Describe your plugin (what it does, key features, UI elements):",
+			"Press Enter twice when done"
+		);
 
-	if (sslSetup) {
-		console.log("🔒 Start HTTPS development with Socket.IO: npm run dev");
-		console.log("🔒 Start HTTPS development only: npm run dev-app");
-		console.log("🌐 Start HTTP development: npm run dev-http");
-	} else {
-		console.log("🌐 Start development: npm run dev-http");
-		console.log("🔧 Setup SSL certificates: npm run setup-ssl");
-		console.log("🔒 Then use HTTPS development: npm run dev");
+		if (buildPrompt) {
+			await runAIScaffolding(projectPath, appName, description, buildPrompt, selectedProvider);
+		}
 	}
+
+	// 4. SSL Setup
+	console.log("");
+	console.log("─".repeat(50));
+	console.log("🔒 SSL Configuration");
+	console.log("─".repeat(50));
+
+	const sslChoice = await arrowSelectPrompt("Set up SSL certificates for HTTPS development?", [
+		{ label: "Yes, set up SSL", value: "yes", description: "Recommended for full feature access" },
+		{ label: "Skip SSL setup", value: "no", description: "Can be set up later with npm run setup-ssl" },
+	]);
+
+	let sslSetup = false;
+	if (sslChoice === "yes") {
+		console.log("\n🔒 Setting up HTTPS development environment...");
+		ensureMkcertInstalled();
+		const certs = generateSSLCertificates(projectPath);
+		if (certs) {
+			updateEnvWithCertPaths(projectPath, certs);
+			sslSetup = true;
+		}
+	}
+
+	// 5. Start App
+	console.log("");
+	console.log("─".repeat(50));
+	console.log("🚀 Start Development");
+	console.log("─".repeat(50));
+
+	const startOptions = [
+		{ label: "Start app", value: "start", description: sslSetup ? "HTTPS dev server" : "HTTP dev server" },
+		{ label: "Start app with Mock API", value: "start-mock", description: "Dev server + Socket.IO + Mock API" },
+		{ label: "Skip", value: "skip" },
+	];
+
+	const startChoice = await arrowSelectPrompt("How would you like to start the development server?", startOptions);
+
+	let devProcess = null;
+	if (startChoice === "start") {
+		// 6. Browser Extension (only if starting)
+		console.log("");
+		const browserChoice = await arrowSelectPrompt("Launch browser with GxP extension?", [
+			{ label: "Chrome", value: "chrome", description: "Launch Chrome with DevTools panel" },
+			{ label: "Firefox", value: "firefox", description: "Launch Firefox with DevTools panel" },
+			{ label: "Skip", value: "skip" },
+		]);
+
+		if (browserChoice !== "skip") {
+			// Launch browser first (it will connect when server starts)
+			setTimeout(() => {
+				launchBrowserExtension(projectPath, browserChoice);
+			}, 3000); // Wait a bit for server to start
+		}
+
+		devProcess = launchDevServer(projectPath, { noHttps: !sslSetup });
+	} else if (startChoice === "start-mock") {
+		// 6. Browser Extension (only if starting)
+		console.log("");
+		const browserChoice = await arrowSelectPrompt("Launch browser with GxP extension?", [
+			{ label: "Chrome", value: "chrome", description: "Launch Chrome with DevTools panel" },
+			{ label: "Firefox", value: "firefox", description: "Launch Firefox with DevTools panel" },
+			{ label: "Skip", value: "skip" },
+		]);
+
+		if (browserChoice !== "skip") {
+			setTimeout(() => {
+				launchBrowserExtension(projectPath, browserChoice);
+			}, 3000);
+		}
+
+		devProcess = launchDevServer(projectPath, { withMock: true, noHttps: !sslSetup });
+	} else {
+		// Print final instructions
+		printFinalInstructions(projectPath, appName, sslSetup);
+	}
+
+	return devProcess;
+}
+
+/**
+ * Print final setup instructions
+ * @param {string} projectPath - Project path
+ * @param {string} projectName - Project name
+ * @param {boolean} sslSetup - Whether SSL was set up
+ */
+function printFinalInstructions(projectPath, projectName, sslSetup) {
+	console.log("");
+	console.log("─".repeat(50));
+	console.log("✅ Project setup complete!");
+	console.log("─".repeat(50));
+	console.log("");
+	console.log("🎨 GX ComponentKit component library included!");
+	console.log("🗃️ GxP Datastore included with Pinia integration!");
+	console.log("");
+	console.log(`📁 Project location: ${projectPath}`);
 	console.log("");
 	console.log("📖 Project structure:");
 	console.log("   • src/Plugin.vue - Your app entry point (customize this!)");
 	console.log("   • src/DemoPage.vue - Example component");
 	console.log("   • theme-layouts/ - Customizable layout templates");
-	console.log(
-		"   • main.js - Development entry (loads PortalContainer from toolkit)"
-	);
-	console.log("📚 Check README.md for detailed usage instructions");
-
-	// For new projects, offer to launch TUI
-	if (projectName) {
-		console.log("");
-		const launchChoice = await promptUser(
-			"Would you like to open the project in the interactive TUI? (Y/n): "
-		);
-		const shouldLaunch =
-			launchChoice.toLowerCase() !== "n" && launchChoice.toLowerCase() !== "no";
-
-		if (shouldLaunch) {
-			console.log(`\n🚀 Launching gxdev TUI in ${projectName}...`);
-			// Change to project directory and launch TUI
-			process.chdir(projectPath);
-
-			// Try to launch TUI
-			const tuiPath = path.join(
-				__dirname,
-				"..",
-				"..",
-				"..",
-				"dist",
-				"tui",
-				"index.js"
-			);
-			if (fs.existsSync(tuiPath)) {
-				try {
-					const { startTUI } = await import(tuiPath);
-					startTUI({ autoStart: [], args: {} });
-				} catch (err) {
-					console.error("Could not launch TUI:", err.message);
-					console.log(`\nTo start manually:\n  cd ${projectName}\n  gxdev`);
-				}
-			} else {
-				console.log(
-					'TUI not available. Run "npm run build:tui" in gx-devtools first.'
-				);
-				console.log(`\nTo start manually:\n  cd ${projectName}\n  gxdev`);
-			}
-		} else {
-			console.log(`\nTo get started:\n  cd ${projectName}\n  gxdev`);
-		}
+	console.log("   • app-manifest.json - Plugin configuration");
+	console.log("");
+	console.log("🚀 To start development:");
+	console.log(`   cd ${projectName}`);
+	if (sslSetup) {
+		console.log("   npm run dev          # HTTPS with TUI");
+		console.log("   npm run dev-http     # HTTP only");
+	} else {
+		console.log("   npm run dev-http     # HTTP dev server");
+		console.log("   npm run setup-ssl    # Then npm run dev for HTTPS");
 	}
+	console.log("");
+	console.log("📚 Documentation: https://docs.gramercytech.com/gxp-toolkit");
+	console.log("");
+}
+
+/**
+ * Initialize command - sets up a new GxP project or updates existing one
+ */
+async function initCommand(argv) {
+	const currentDir = process.cwd();
+	const hasPackageJson = fs.existsSync(path.join(currentDir, "package.json"));
+	let projectPath = currentDir;
+	let projectName;
+
+	// Handle existing project update
+	if (hasPackageJson && !argv.name) {
+		console.log("Updating existing project...");
+		updateExistingProject(projectPath);
+		console.log("✅ Project updated!");
+		return;
+	}
+
+	// New project - require a name
+	if (!argv.name) {
+		console.log("");
+		console.log("🚀 GxP Plugin Creator");
+		console.log("─".repeat(40));
+		console.log("");
+		projectName = await promptUser("📝 Project name: ");
+		if (!projectName) {
+			console.error("❌ Project name is required!");
+			process.exit(1);
+		}
+	} else {
+		projectName = argv.name;
+	}
+
+	// Create project directory
+	projectPath = path.join(currentDir, projectName);
+	if (fs.existsSync(projectPath)) {
+		console.error(`\n❌ Directory ${projectName} already exists!`);
+		process.exit(1);
+	}
+
+	console.log("");
+	console.log(`📁 Creating project: ${projectName}`);
+	console.log("─".repeat(40));
+	fs.mkdirSync(projectPath, { recursive: true });
+
+	// Create package.json
+	const initialDescription = argv.description || "A GxP kiosk plugin";
+	createPackageJson(projectPath, projectName, initialDescription);
+
+	// Copy template files
+	const paths = resolveGxPaths();
+	copyTemplateFiles(projectPath, paths);
+	copyExtensionScripts(projectPath, paths);
+	createSupportingFiles(projectPath);
+
+	// Install dependencies
+	console.log("");
+	installDependencies(projectPath);
+
+	// Change to project directory
+	process.chdir(projectPath);
+
+	// If CLI provided build prompt, skip interactive and just run AI
+	if (argv.build) {
+		updateAppManifest(projectPath, projectName, initialDescription);
+		const provider = argv.provider || "gemini"; // Default to gemini for backward compatibility
+		await runAIScaffolding(projectPath, projectName, initialDescription, argv.build, provider);
+		printFinalInstructions(projectPath, projectName, false);
+		return;
+	}
+
+	// Run interactive configuration
+	await runInteractiveConfig(projectPath, projectName);
 }
 
 module.exports = {

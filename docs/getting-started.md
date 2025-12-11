@@ -38,39 +38,153 @@ npm install --save-dev @gramercytech/gx-devtools
 
 ### 1. Initialize Your Project
 
-Create a new plugin project using the CLI:
+Create a new plugin project using the interactive CLI:
 
 ```bash
-# Create a new directory and initialize
-mkdir my-plugin
-cd my-plugin
 gxdev init my-plugin
 ```
 
-This creates a complete project structure with:
-
-- `src/Plugin.vue` - Your main plugin component
-- `app-manifest.json` - Plugin configuration
-- `theme-layouts/` - Layout components for different contexts
-- `dev-assets/` - Development placeholder assets
-
-### 2. Install Dependencies
+Or run without arguments to be prompted for a name:
 
 ```bash
-npm install
+gxdev init
 ```
 
-### 3. Start Development Server
+### 2. Interactive Configuration
 
-Start the development server with hot reload:
+After the project files are created and dependencies installed, you'll enter an interactive configuration wizard:
+
+```
+──────────────────────────────────────────────────
+📝 Configure Your Plugin
+──────────────────────────────────────────────────
+
+? App name
+❯ my-plugin - From package.json
+  Enter custom name
+
+? Description
+❯ A GxP kiosk plugin - From package.json
+  Enter custom description
+```
+
+Use **arrow keys** to select options:
+- First option is prepopulated from package.json
+- Second option lets you enter a custom value
+
+### 3. AI-Powered Scaffolding (Optional)
+
+Next, you'll be asked if you want AI to help scaffold your plugin. The wizard detects which AI providers are available on your system:
+
+```
+──────────────────────────────────────────────────
+🤖 AI-Powered Scaffolding
+──────────────────────────────────────────────────
+   Describe what you want to build and AI will generate
+   starter components, views, and manifest configuration.
+
+? Choose AI provider for scaffolding
+❯ Skip AI scaffolding
+  Claude - logged in
+  Codex - logged in
+  Gemini - via API key
+```
+
+If you select a provider, describe your plugin:
+
+```
+📝 Describe your plugin (what it does, key features, UI elements):
+  (Press Enter twice when done)
+
+  > A conference check-in kiosk with a welcome screen,
+  > badge scanner input field, and confirmation display
+  >
+```
+
+#### Supported AI Providers
+
+| Provider | Authentication |
+|----------|----------------|
+| **Claude** | Claude CLI logged in (`claude login`) |
+| **Codex** | Codex CLI logged in (`codex auth`) |
+| **Gemini** | API key (`GEMINI_API_KEY`) or gcloud CLI (`gcloud auth login`) |
+
+**Setting up providers:**
 
 ```bash
-# With HTTPS (recommended)
-npm run dev
+# Claude (uses your Anthropic account)
+npm install -g @anthropic-ai/claude-code
+claude login
 
-# Without HTTPS (simpler setup)
-npm run dev-http
+# Codex (uses your OpenAI account)
+npm install -g @openai/codex
+codex auth
+
+# Gemini (API key)
+export GEMINI_API_KEY=your_google_ai_api_key
+
+# Gemini (gcloud)
+gcloud auth login
 ```
+
+### 4. SSL Setup
+
+Choose whether to set up SSL certificates:
+
+```
+──────────────────────────────────────────────────
+🔒 SSL Configuration
+──────────────────────────────────────────────────
+
+? Set up SSL certificates for HTTPS development?
+❯ Yes, set up SSL - Recommended for full feature access
+  Skip SSL setup - Can be set up later with npm run setup-ssl
+```
+
+### 5. Start Development
+
+Choose how to start the development server:
+
+```
+──────────────────────────────────────────────────
+🚀 Start Development
+──────────────────────────────────────────────────
+
+? How would you like to start the development server?
+❯ Start app - HTTPS dev server
+  Start app with Mock API - Dev server + Socket.IO + Mock API
+  Skip
+```
+
+### 6. Browser Extension (Optional)
+
+If starting the app, choose to launch a browser with the GxP extension:
+
+```
+? Launch browser with GxP extension?
+❯ Chrome - Launch Chrome with DevTools panel
+  Firefox - Launch Firefox with DevTools panel
+  Skip
+```
+
+### Non-Interactive Mode
+
+For CI/CD or scripting, use command-line flags:
+
+```bash
+# Basic creation
+gxdev init my-plugin -d "My awesome plugin"
+
+# With AI scaffolding (defaults to Gemini)
+gxdev init checkin-kiosk -d "Conference check-in" \
+  -b "A check-in kiosk with welcome screen and badge scanner"
+
+# With specific AI provider
+gxdev init checkin-kiosk -d "Conference check-in" \
+  -b "A check-in kiosk" -p claude
+```
+
+Available providers: `claude`, `codex`, `gemini`
 
 Your plugin is now running at `https://localhost:3060` (or `http://localhost:3060`).
 
@@ -89,9 +203,15 @@ my-plugin/
 │   ├── PublicLayout.vue    # Public-facing layout
 │   ├── PrivateLayout.vue   # Authenticated layout
 │   └── SystemLayout.vue    # System/admin layout
+├── .claude/
+│   ├── agents/
+│   │   └── gxp-developer.md # Claude Code subagent
+│   └── settings.json       # MCP server configuration
 ├── dev-assets/
 │   └── images/             # Development placeholder images
 ├── app-manifest.json       # Plugin configuration
+├── AGENTS.md               # Codex/AI agent instructions
+├── GEMINI.md               # Gemini Code Assist instructions
 ├── vite.config.js          # Vite configuration
 ├── main.js                 # Development entry point
 ├── index.html              # Development HTML template
@@ -131,11 +251,16 @@ This uses [mkcert](https://github.com/FiloSottile/mkcert) to generate trusted lo
 
 ## Using the Interactive TUI
 
-Run `gxdev` without arguments to launch the interactive Terminal UI:
+After creating your project, run `gxdev` without arguments from the project directory to launch the interactive Terminal UI:
 
 ```bash
+cd my-plugin
 gxdev
 ```
+
+:::tip
+After `gxdev init` completes, you'll be prompted to launch the TUI automatically. The TUI is for managing services within an existing project—use `gxdev init` from the CLI to create new projects.
+:::
 
 The TUI provides:
 

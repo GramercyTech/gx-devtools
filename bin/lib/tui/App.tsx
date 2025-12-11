@@ -30,6 +30,14 @@ export interface Service {
   logs: string[];
 }
 
+interface ExtractedConfig {
+  strings: Record<string, string>;
+  settings: Record<string, unknown>;
+  assets: Record<string, string>;
+  triggerState: Record<string, unknown>;
+  dependencies: Array<{ identifier: string; path: string; events?: Record<string, string> }>;
+}
+
 export interface AppProps {
   autoStart?: string[];
   args?: Record<string, unknown>;
@@ -230,6 +238,11 @@ export default function App({ autoStart, args }: AppProps) {
       case 'gemini':
       case 'ai':
         handleGeminiCommand(cmdArgs);
+        break;
+
+      case 'extract-config':
+      case 'extract':
+        handleExtractConfig(cmdArgs);
         break;
 
       default:
@@ -510,6 +523,97 @@ export default function App({ autoStart, args }: AppProps) {
     addSystemLog(message);
   };
 
+  const handleExtractConfig = async (cmdArgs: string[]) => {
+    const dryRun = cmdArgs.includes('--dry-run') || cmdArgs.includes('-d');
+    const overwrite = cmdArgs.includes('--overwrite') || cmdArgs.includes('-o');
+
+    addSystemLog('Scanning source files for GxP configuration...');
+
+    try {
+      // Use require for CommonJS modules
+      const path = require('path');
+      const fs = require('fs');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const extractConfigUtils = require('../utils/extract-config.js') as {
+        extractConfigFromSource: (srcDir: string) => ExtractedConfig;
+        mergeConfig: (existing: Record<string, unknown>, extracted: ExtractedConfig, options: { overwrite: boolean }) => Record<string, unknown>;
+        generateSummary: (config: ExtractedConfig) => string;
+      };
+
+      const projectPath = process.cwd();
+      const srcDir = path.join(projectPath, 'src');
+      const manifestPath = path.join(projectPath, 'app-manifest.json');
+
+      // Check if src directory exists
+      if (!fs.existsSync(srcDir)) {
+        addSystemLog('Source directory not found: src/');
+        return;
+      }
+
+      // Extract configuration
+      const extractedConfig = extractConfigUtils.extractConfigFromSource(srcDir);
+      const summary = extractConfigUtils.generateSummary(extractedConfig);
+      addSystemLog(summary);
+
+      // Count total items
+      const totalItems =
+        Object.keys(extractedConfig.strings).length +
+        Object.keys(extractedConfig.settings).length +
+        Object.keys(extractedConfig.assets).length +
+        Object.keys(extractedConfig.triggerState).length +
+        extractedConfig.dependencies.length;
+
+      if (totalItems === 0) {
+        addSystemLog('No GxP configuration found in source files.');
+        return;
+      }
+
+      if (dryRun) {
+        addSystemLog('Dry run mode - no changes made.');
+        addSystemLog('Run /extract-config without --dry-run to apply changes.');
+        return;
+      }
+
+      // Load or create manifest
+      let existingManifest: Record<string, unknown> = {};
+      if (fs.existsSync(manifestPath)) {
+        try {
+          existingManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+        } catch {
+          addSystemLog('Could not parse existing manifest, creating new one.');
+          existingManifest = getDefaultManifest();
+        }
+      } else {
+        addSystemLog('Creating new app-manifest.json');
+        existingManifest = getDefaultManifest();
+      }
+
+      // Merge and write
+      const mergedManifest = extractConfigUtils.mergeConfig(existingManifest, extractedConfig, { overwrite });
+      fs.writeFileSync(manifestPath, JSON.stringify(mergedManifest, null, '\t'));
+      addSystemLog('Updated app-manifest.json');
+    } catch (err) {
+      addSystemLog(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const getDefaultManifest = () => ({
+    name: 'GxToolkit',
+    version: '1.0.0',
+    description: 'GxToolkit Plugin',
+    manifest_version: 3,
+    asset_dir: '/src/assets/',
+    configurationFile: 'configuration.json',
+    appInstructionsFile: 'app-instructions.md',
+    defaultStylingFile: 'default-styling.css',
+    settings: {},
+    strings: { default: {} },
+    assets: {},
+    triggerState: {},
+    dependencies: [],
+    permissions: [],
+  });
+
   const getHelpText = () => `
 Available commands:
   /dev                  Start Vite (+ Socket if SOCKET_IO_ENABLED=true)
@@ -526,6 +630,9 @@ Available commands:
   /mock                 Start Socket.IO + Mock API (shorthand)
   /ext chrome           Launch Chrome extension
   /ext firefox          Launch Firefox extension
+  /extract-config       Extract GxP config from source to manifest
+  /extract-config -d    Dry run (show what would be extracted)
+  /extract-config -o    Overwrite existing values in manifest
   /stop [service]       Stop a running service
   /restart [service]    Restart a service
   /clear                Clear current log panel

@@ -375,6 +375,14 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			throw new Error(`DELETE ${endpoint}: ${error.message}`);
 		}
 	}
+	async function callApi(endpoint, method, data = {}) {
+		try {
+			const response = await apiClient[method](endpoint, data);
+			return response.data;
+		} catch (error) {
+			throw new Error(`${method} ${endpoint}: ${error.message}`);
+		}
+	}
 
 	// Utility methods
 	function getString(key, fallback = "") {
@@ -523,6 +531,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		apiPatch,
 		apiPut,
 		apiDelete,
+		callApi,
 
 		// Utility methods
 		getString,
