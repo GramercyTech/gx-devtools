@@ -82,12 +82,15 @@ function groupPathsByTag(openApiSpec) {
 					};
 				}
 
+				// Extract permission from x-permission.permission (singular)
+				const permission = pathInfo["x-permission"]?.permission;
+
 				tagGroups[tag].paths.push({
 					path: pathUrl,
 					method: method.toUpperCase(),
 					operationId: pathInfo.operationId || "",
 					summary: pathInfo.summary || "",
-					permissions: pathInfo["x-permissions"]?.permissions || [],
+					permission: permission || null,
 				});
 			}
 		}
@@ -681,8 +684,8 @@ async function addDependencyCommand(argv) {
 	// Collect all permissions from selected paths
 	const allPermissions = new Set();
 	for (const pathInfo of selectedPaths) {
-		for (const perm of pathInfo.permissions || []) {
-			allPermissions.add(perm);
+		if (pathInfo.permission) {
+			allPermissions.add(pathInfo.permission);
 		}
 	}
 
