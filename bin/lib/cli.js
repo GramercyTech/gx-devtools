@@ -288,6 +288,20 @@ yargs
 		},
 		extractConfigCommand
 	)
+	.command(
+		"add-dependency",
+		"Add an API dependency to app-manifest.json via interactive wizard",
+		{
+			env: {
+				describe: "API environment to load specs from",
+				type: "string",
+				default: "staging",
+				choices: ["production", "staging", "testing", "develop", "local"],
+				alias: "e",
+			},
+		},
+		addDependencyCommand
+	)
 	.demandCommand(1, "Please provide a valid command")
 	.help("h")
 	.alias("h", "help")
