@@ -117,6 +117,21 @@ async function initCommand(argv) {
 			desc: "DemoPage.vue (Example component)",
 		},
 		{
+			src: "default-styling.css",
+			dest: "default-styling.css",
+			desc: "default-styling.css",
+		},
+		{
+			src: "app-instructions.md",
+			dest: "app-instructions.md",
+			desc: "app-instructions.md",
+		},
+		{
+			src: "configuration.json",
+			dest: "configuration.json",
+			desc: "configuration.json",
+		},
+		{
 			src: "app-manifest.json",
 			dest: "app-manifest.json",
 			desc: "app-manifest.json",
