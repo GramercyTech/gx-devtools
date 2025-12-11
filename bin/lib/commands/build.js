@@ -84,24 +84,34 @@ async function packagePlugin(projectPath, buildPath, outputPath) {
 		console.log(`ℹ️  No assets directory found at ${assetDirClean}/`);
 	}
 
-	// Copy app-manifest.json to dist/build/
+	// Process app-manifest.json for bundle
 	let manifest = null;
 	if (fs.existsSync(manifestPath)) {
-		const manifestDestPath = path.join(buildPath, "app-manifest.json");
-		fs.copyFileSync(manifestPath, manifestDestPath);
-		console.log("✓ app-manifest.json copied to dist/build/");
-
 		// Parse manifest for optional bundle files
 		try {
 			manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
 		} catch (error) {
-			// Already parsed above for asset_dir, but we need the full object
+			console.warn("⚠️  Could not parse app-manifest.json");
 		}
 	}
 
-	// Process optional bundle files (appInstructions, defaultStyling)
+	// Process optional bundle files (appInstructions, defaultStyling, configuration)
 	if (manifest) {
 		processOptionalBundleFiles(manifest, projectPath, buildPath);
+
+		// Create a clean copy of manifest without the optional file keys (to avoid duplication)
+		const cleanedManifest = { ...manifest };
+		delete cleanedManifest.appInstructionsFile;
+		delete cleanedManifest.appInstructions;
+		delete cleanedManifest.defaultStylingFile;
+		delete cleanedManifest.defaultStyling;
+		delete cleanedManifest.configurationFile;
+		delete cleanedManifest.configuration;
+
+		// Write cleaned manifest to dist/build/
+		const manifestDestPath = path.join(buildPath, "app-manifest.json");
+		fs.writeFileSync(manifestDestPath, JSON.stringify(cleanedManifest, null, 2), "utf-8");
+		console.log("✓ app-manifest.json written to dist/build/ (cleaned)");
 	}
 
 	// Create the .gxp package (zip file) in dist/
@@ -160,6 +170,27 @@ function processOptionalBundleFiles(manifest, projectPath, buildPath) {
 		const destPath = path.join(buildPath, "default-styling.css");
 		fs.writeFileSync(destPath, manifest.defaultStyling, "utf-8");
 		console.log("✓ default-styling.css created from manifest text");
+	}
+
+	// Handle configuration
+	if (manifest.configurationFile) {
+		// Copy file from specified path
+		const srcPath = path.join(projectPath, manifest.configurationFile);
+		const destPath = path.join(buildPath, "configuration.json");
+		if (fs.existsSync(srcPath)) {
+			fs.copyFileSync(srcPath, destPath);
+			console.log(`✓ configuration.json copied from ${manifest.configurationFile}`);
+		} else {
+			console.warn(`⚠️  configurationFile not found: ${manifest.configurationFile}`);
+		}
+	} else if (manifest.configuration) {
+		// Write JSON content to file
+		const destPath = path.join(buildPath, "configuration.json");
+		const jsonContent = typeof manifest.configuration === "string"
+			? manifest.configuration
+			: JSON.stringify(manifest.configuration, null, 2);
+		fs.writeFileSync(destPath, jsonContent, "utf-8");
+		console.log("✓ configuration.json created from manifest JSON");
 	}
 }
 
@@ -243,6 +274,11 @@ function createGxpPackage(distPath, outputPath) {
 		const defaultStylingPath = path.join(distPath, "default-styling.css");
 		if (fs.existsSync(defaultStylingPath)) {
 			archive.file(defaultStylingPath, { name: "default-styling.css" });
+		}
+
+		const configurationPath = path.join(distPath, "configuration.json");
+		if (fs.existsSync(configurationPath)) {
+			archive.file(configurationPath, { name: "configuration.json" });
 		}
 
 		archive.finalize();
