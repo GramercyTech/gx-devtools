@@ -1,5 +1,9 @@
 import React from 'react';
 import { Box, Text } from 'ink';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const pkg = require('../../../../../package.json');
 
 const LOGO = `
    ██████╗ ██╗  ██╗██████╗
@@ -21,8 +25,9 @@ export default function WelcomeScreen() {
     >
       <Text color="blue">{LOGO}</Text>
 
-      <Box marginTop={1}>
+      <Box marginTop={1} flexDirection="column" alignItems="center">
         <Text bold color="white">GxP DevStudio</Text>
+        <Text dimColor>v{pkg.version}</Text>
       </Box>
 
       <Box marginTop={1}>
