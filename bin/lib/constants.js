@@ -106,7 +106,7 @@ const ENVIRONMENT_URLS = {
 };
 
 // Package name for path resolution
-const PACKAGE_NAME = "@gramercytech/gx-devtools";
+const PACKAGE_NAME = "@gxp-dev/tools";
 
 module.exports = {
 	isWin,

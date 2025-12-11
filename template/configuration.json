@@ -1,0 +1,15 @@
+{
+    "additionalTabs": [
+        {
+            "type": "card_list",
+            "cards": [
+                {
+                    "cols": 12,
+                    "type": "fields_list",
+                    "title": "Configuration",
+                    "fieldsList": []
+				}
+			]
+		}
+	]
+}
