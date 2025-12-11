@@ -129,6 +129,8 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	const portalAssets = ref({ ...defaultData.portalAssets });
 	const portal = ref(defaultData.portal);
 
+	const apiOperations = ref({});
+
 	// Loading state for manifest
 	const manifestLoaded = ref(false);
 	const manifestError = ref(null);
@@ -297,6 +299,24 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		// Initialize dependency-based sockets based on the new structure
 		if (Array.isArray(dependencies.value)) {
 			dependencies.value.forEach((dependency) => {
+				if (
+					dependency.operations &&
+					Object.keys(dependency.operations).length > 0
+				) {
+					Object.keys(dependency.operations).forEach((operation) => {
+						let method = "get";
+						let path = dependency.operations[operation];
+						if (path.includes(":")) {
+							let pathSplit = path.split(":");
+							method = pathSplit[0];
+							path = pathSplit[1];
+						}
+						apiOperations.value[operation] = {
+							method: method,
+							path: path,
+						};
+					});
+				}
 				if (dependency.events && Object.keys(dependency.events).length > 0) {
 					// Create socket listeners for each event type
 					sockets[dependency.identifier] = {};
@@ -375,9 +395,10 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			throw new Error(`DELETE ${endpoint}: ${error.message}`);
 		}
 	}
-	async function callApi(endpoint, method, data = {}) {
+	async function callApi(operation, identifier, data = {}) {
 		try {
-			const response = await apiClient[method](endpoint, data);
+			const operation = apiOperations.value[operation];
+			const response = await apiClient[operation.method](operation.path, data);
 			return response.data;
 		} catch (error) {
 			throw new Error(`${method} ${endpoint}: ${error.message}`);

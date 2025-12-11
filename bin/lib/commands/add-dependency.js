@@ -82,8 +82,9 @@ function groupPathsByTag(openApiSpec) {
 					};
 				}
 
-				// Extract permission from x-permission.permission (singular)
+				// Extract permission and permission_key from x-permission
 				const permission = pathInfo["x-permission"]?.permission;
+				const permissionKey = pathInfo["x-permission"]?.permission_key;
 
 				tagGroups[tag].paths.push({
 					path: pathUrl,
@@ -91,6 +92,7 @@ function groupPathsByTag(openApiSpec) {
 					operationId: pathInfo.operationId || "",
 					summary: pathInfo.summary || "",
 					permission: permission || null,
+					permissionKey: permissionKey || null,
 				});
 			}
 		}
@@ -683,9 +685,25 @@ async function addDependencyCommand(argv) {
 
 	// Collect all permissions from selected paths
 	const allPermissions = new Set();
+	let permissionKey = null;
 	for (const pathInfo of selectedPaths) {
 		if (pathInfo.permission) {
 			allPermissions.add(pathInfo.permission);
+		}
+		// Get permission_key from first path that has it (should be same for all)
+		if (!permissionKey && pathInfo.permissionKey) {
+			permissionKey = pathInfo.permissionKey;
+		}
+	}
+
+	// Build operations object from selected paths
+	const operations = {};
+	for (const pathInfo of selectedPaths) {
+		if (pathInfo.operationId) {
+			// Remove "portal.v1.project." prefix from operationId
+			const cleanOperationId = pathInfo.operationId.replace(/^portal\.v1\.project\./, "");
+			// Prepend method to path (e.g., "get:/v1/projects/...")
+			operations[cleanOperationId] = `${pathInfo.method.toLowerCase()}:${pathInfo.path}`;
 		}
 	}
 
@@ -699,7 +717,9 @@ async function addDependencyCommand(argv) {
 	const dependency = {
 		identifier,
 		model: selectedTag.name,
+		permissionKey: permissionKey,
 		permissions: Array.from(allPermissions).sort(),
+		operations,
 		events,
 	};
 
