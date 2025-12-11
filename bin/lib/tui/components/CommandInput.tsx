@@ -124,14 +124,22 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
       return;
     }
 
-    // Up/Down to navigate suggestions when showing
+    // Up/Down to navigate suggestions when showing (circular navigation)
     if (showSuggestions) {
       if (key.upArrow) {
-        setSelectedSuggestion(prev => Math.max(0, prev - 1));
+        setSelectedSuggestion(prev => {
+          // Wrap to bottom when at top
+          if (prev <= 0) return suggestions.length - 1;
+          return prev - 1;
+        });
         return;
       }
       if (key.downArrow) {
-        setSelectedSuggestion(prev => Math.min(suggestions.length - 1, prev + 1));
+        setSelectedSuggestion(prev => {
+          // Wrap to top when at bottom
+          if (prev >= suggestions.length - 1) return 0;
+          return prev + 1;
+        });
         return;
       }
     } else {
