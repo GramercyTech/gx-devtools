@@ -451,30 +451,33 @@ export default function App({ autoStart, args }: AppProps) {
   };
 
   const addSystemLog = (message: string) => {
-    // Find or create system service for general messages
-    let systemService = services.find(s => s.id === 'system');
-    if (!systemService) {
-      const newService: Service = {
-        id: 'system',
-        name: 'System',
-        status: 'running',
-        logs: [message],
-      };
-      setServices(prev => {
-        const updated = [...prev, newService];
-        return updated;
-      });
-      if (services.length === 0) setActiveTab(0);
-    } else {
-      setServices(prev => prev.map(s =>
-        s.id === 'system' ? { ...s, logs: [...s.logs, message] } : s
-      ));
-    }
+    // Use functional update to properly handle rapid successive calls
+    setServices(prev => {
+      const existingSystem = prev.find(s => s.id === 'system');
+      if (existingSystem) {
+        // Add message to existing system service
+        return prev.map(s =>
+          s.id === 'system' ? { ...s, logs: [...s.logs, message] } : s
+        );
+      } else {
+        // Create new system service with the message
+        const newService: Service = {
+          id: 'system',
+          name: 'System',
+          status: 'running',
+          logs: [message],
+        };
+        return [...prev, newService];
+      }
+    });
 
     // Switch to system tab
     setTimeout(() => {
-      const sysIdx = services.findIndex(s => s.id === 'system');
-      if (sysIdx >= 0) setActiveTab(sysIdx);
+      setServices(current => {
+        const sysIdx = current.findIndex(s => s.id === 'system');
+        if (sysIdx >= 0) setActiveTab(sysIdx);
+        return current; // Don't modify, just read
+      });
     }, 50);
   };
 
