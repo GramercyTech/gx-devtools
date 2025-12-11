@@ -22,7 +22,7 @@
  */
 
 // Commands that should use the traditional CLI (one-shot commands)
-const ONE_SHOT_COMMANDS = ['init', 'build', 'publish', 'setup-ssl', 'ext:build', '--help', '-h', '--version'];
+const ONE_SHOT_COMMANDS = ['init', 'build', 'publish', 'setup-ssl', 'ext:build', 'add-dependency', 'extract-config', '--help', '-h', '--version'];
 
 // Commands that should launch TUI with auto-start
 const TUI_AUTO_START_COMMANDS = ['dev', 'socket', 'ext:firefox', 'ext:chrome', 'datastore', 'assets'];

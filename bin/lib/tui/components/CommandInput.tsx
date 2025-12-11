@@ -35,10 +35,8 @@ const COMMANDS = [
   { cmd: '/extract-config', args: '--overwrite', desc: 'Overwrite existing config values' },
 
   // Dependency management
-  { cmd: '/add-dependency', args: '', desc: 'Add API dependency wizard' },
-  { cmd: '/add-dependency', args: '--env staging', desc: 'Add dependency from staging' },
-  { cmd: '/add-dependency', args: '--env production', desc: 'Add dependency from production' },
-  { cmd: '/add-dependency', args: '--env local', desc: 'Add dependency from local' },
+  { cmd: '/add-dependency', args: '', desc: 'Add API dependency wizard (develop)' },
+  { cmd: '/add-dependency', args: '--env local', desc: 'Add dependency from local API' },
 
   // AI commands
   { cmd: '/ai', args: '', desc: 'Open AI chat with current provider' },

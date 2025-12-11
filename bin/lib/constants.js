@@ -60,31 +60,44 @@ const DEFAULT_PORTS = {
 const ENVIRONMENT_URLS = {
 	production: {
 		apiBaseUrl: "https://api.gramercy.cloud",
-		documentation: "https://api.gramercy.cloud/docs/",
-		openApiSpec: "https://api.gramercy.cloud/api-specs/openapi.json",
-		asyncApiSpec: "https://api.gramercy.cloud/api-specs/asyncapi.json",
-		webhookSpec: "https://api.gramercy.cloud/api-specs/webhooks.json",
+		// documentation: "https://api.gramercy.cloud/docs/",
+		// openApiSpec: "https://api.gramercy.cloud/api-specs/openapi.json",
+		// asyncApiSpec: "https://api.gramercy.cloud/api-specs/asyncapi.json",
+		// webhookSpec: "https://api.gramercy.cloud/api-specs/webhooks.json",
+		documentation: "https://api.zenith-develop.env.eventfinity.app/docs/",
+		openApiSpec:
+			"https://api.zenith-develop.env.eventfinity.app/api-specs/openapi.json",
+		asyncApiSpec:
+			"https://api.zenith-develop.env.eventfinity.app/api-specs/asyncapi.json",
+		webhookSpec:
+			"https://api.zenith-develop.env.eventfinity.app/api-specs/webhooks.json",
 	},
 	staging: {
 		apiBaseUrl: "https://api.efz-staging.env.eventfinity.app",
-		documentation: "https://api.eventfinity.test/docs/",
+		// documentation: "https://api.eventfinity.test/docs/",
+		// openApiSpec:
+		// 	"https://api.efz-staging.env.eventfinity.app/api-specs/openapi.json",
+		// asyncApiSpec:
+		// 	"https://api.efz-staging.env.eventfinity.app/api-specs/asyncapi.json",
+		// webhookSpec:
+		// 	"https://api.efz-staging.env.eventfinity.app/api-specs/webhooks.json",
+		documentation: "https://api.zenith-develop.env.eventfinity.app/docs/",
 		openApiSpec:
-			"https://api.efz-staging.env.eventfinity.app/api-specs/openapi.json",
+			"https://api.zenith-develop.env.eventfinity.app/api-specs/openapi.json",
 		asyncApiSpec:
-			"https://api.efz-staging.env.eventfinity.app/api-specs/asyncapi.json",
+			"https://api.zenith-develop.env.eventfinity.app/api-specs/asyncapi.json",
 		webhookSpec:
-			"https://api.efz-staging.env.eventfinity.app/api-specs/webhooks.json",
+			"https://api.zenith-develop.env.eventfinity.app/api-specs/webhooks.json",
 	},
 	testing: {
 		apiBaseUrl: "https://api.zenith-develop-testing.env.eventfinity.app",
-		documentation:
-			"https://api.zenith-develop-testing.env.eventfinity.app/docs/",
+		documentation: "https://api.zenith-develop.env.eventfinity.app/docs/",
 		openApiSpec:
-			"https://api.zenith-develop-testing.env.eventfinity.app/api-specs/openapi.json",
+			"https://api.zenith-develop.env.eventfinity.app/api-specs/openapi.json",
 		asyncApiSpec:
-			"https://api.zenith-develop-testing.env.eventfinity.app/api-specs/asyncapi.json",
+			"https://api.zenith-develop.env.eventfinity.app/api-specs/asyncapi.json",
 		webhookSpec:
-			"https://api.zenith-develop-testing.env.eventfinity.app/api-specs/webhooks.json",
+			"https://api.zenith-develop.env.eventfinity.app/api-specs/webhooks.json",
 	},
 	develop: {
 		apiBaseUrl: "https://api.zenith-develop.env.eventfinity.app",

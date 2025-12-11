@@ -13,17 +13,24 @@ const { ENVIRONMENT_URLS } = require("../constants");
 const { findProjectRoot } = require("../utils");
 
 /**
- * Fetch JSON from a URL
+ * Fetch JSON from a URL with timeout
  */
-function fetchJson(url) {
+function fetchJson(url, timeoutMs = 15000) {
 	return new Promise((resolve, reject) => {
 		const client = url.startsWith("https") ? https : http;
 		const options = {
 			rejectUnauthorized: false, // Allow self-signed certs for local dev
+			timeout: timeoutMs,
 		};
 
-		client
+		const req = client
 			.get(url, options, (res) => {
+				// Check for non-200 status
+				if (res.statusCode !== 200) {
+					reject(new Error(`HTTP ${res.statusCode} from ${url}`));
+					return;
+				}
+
 				let data = "";
 				res.on("data", (chunk) => (data += chunk));
 				res.on("end", () => {
@@ -34,7 +41,11 @@ function fetchJson(url) {
 					}
 				});
 			})
-			.on("error", reject);
+			.on("error", reject)
+			.on("timeout", () => {
+				req.destroy();
+				reject(new Error(`Request timeout after ${timeoutMs}ms for ${url}`));
+			});
 	});
 }
 

@@ -295,8 +295,8 @@ yargs
 			env: {
 				describe: "API environment to load specs from",
 				type: "string",
-				default: "staging",
-				choices: ["production", "staging", "testing", "develop", "local"],
+				default: "develop",
+				choices: ["develop", "local"],
 				alias: "e",
 			},
 		},
