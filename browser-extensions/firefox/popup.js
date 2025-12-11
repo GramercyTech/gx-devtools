@@ -16,8 +16,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const cssBadge = document.getElementById("cssBadge");
 
 	// Inspector elements
-	const inspectorToggle = document.getElementById("inspectorToggle");
-	const inspectorText = document.getElementById("inspectorText");
+	const inspectorCard = document.getElementById("inspectorCard");
+	const inspectorBadge = document.getElementById("inspectorBadge");
 
 	// Inspector state
 	let inspectorEnabled = false;
@@ -85,9 +85,29 @@ document.addEventListener("DOMContentLoaded", async function () {
 	let config = {};
 	try {
 		const result = await browser.runtime.sendMessage({ action: "getConfig" });
+
+		// Check if defaults.json has enabled=true (launched from CLI)
+		// In this case, we should apply the CLI defaults over stored config
+		const cliLaunched = envDefaults.enabled === true;
+
 		if (!result || Object.keys(result).length === 0) {
 			config = defaultConfig;
 			console.log("[GxP DevTools] Initialized with environment defaults");
+		} else if (cliLaunched) {
+			// CLI launch - apply defaults over stored config for key settings
+			config = { ...defaultConfig, ...result };
+			config.enabled = true; // Force enabled when launched from CLI
+			config = migrateConfig(config, defaultConfig);
+			// Also ensure rules use CLI defaults
+			if (config.rules) {
+				config.rules.js.useCustomPattern = envDefaults.jsUseCustomPattern !== false;
+				config.rules.css.useCustomPattern = envDefaults.cssUseCustomPattern !== false;
+				config.rules.css.enabled = envDefaults.cssRuleEnabled !== false;
+				config.rules.css.returnBlank = envDefaults.cssReturnBlank !== false;
+			}
+			// Save the updated config
+			await browser.runtime.sendMessage({ action: "updateConfig", config: config });
+			console.log("[GxP DevTools] Applied CLI defaults over stored config");
 		} else {
 			config = { ...defaultConfig, ...result };
 			config = migrateConfig(config, defaultConfig);
@@ -100,6 +120,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Initialize UI
 	updateUI();
 	setupTabNavigation();
+
+	// If CLI launched and config is enabled, notify background script to activate
+	if (config.enabled) {
+		browser.runtime.sendMessage({
+			action: "toggleProxy",
+			enabled: true,
+		});
+	}
 
 	function migrateConfig(config, defaults = defaultConfig) {
 		if (!config.rules) {
@@ -456,11 +484,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Component Inspector
 	function updateInspectorUI() {
 		if (inspectorEnabled) {
-			inspectorToggle.classList.add("enabled");
-			inspectorText.textContent = "ON";
+			inspectorBadge.textContent = "ON";
+			inspectorBadge.classList.add("enabled");
 		} else {
-			inspectorToggle.classList.remove("enabled");
-			inspectorText.textContent = "OFF";
+			inspectorBadge.textContent = "OFF";
+			inspectorBadge.classList.remove("enabled");
 		}
 	}
 
@@ -479,19 +507,27 @@ document.addEventListener("DOMContentLoaded", async function () {
 		}
 	}
 
-	inspectorToggle.addEventListener("click", async function () {
+	// Click on inspector card enables inspector and prompts to open DevTools
+	inspectorCard.addEventListener("click", async function () {
 		try {
 			const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
 			if (tab?.id) {
+				// Enable the inspector on the page
 				const response = await browser.tabs.sendMessage(tab.id, { action: "toggleInspector" });
 				if (response) {
 					inspectorEnabled = response.enabled;
 					updateInspectorUI();
-					showStatus(inspectorEnabled ? "Inspector enabled" : "Inspector disabled");
 				}
+
+				// Log a message to the console suggesting to open DevTools
+				browser.tabs.executeScript(tab.id, {
+					code: `console.log('%c[GxP Inspector] Inspector enabled! Press F12 or Ctrl+Shift+J to open DevTools and see the GxP Inspector panel.', 'color: #667eea; font-weight: bold; font-size: 14px;');`
+				}).catch(err => console.log('[GxP DevTools] Could not inject script:', err));
+
+				showStatus(inspectorEnabled ? "Inspector enabled - check DevTools" : "Inspector disabled");
 			}
 		} catch (error) {
-			showStatus("Could not toggle inspector. Make sure you're on a web page.", false);
+			showStatus("Could not open inspector. Make sure you're on a web page.", false);
 		}
 	});
 

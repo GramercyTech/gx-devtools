@@ -836,6 +836,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				});
 			return true; // Keep message channel open for async response
 
+		case "openDevTools":
+			// Open DevTools for the specified tab
+			// Note: Chrome doesn't have a direct API to open DevTools to a specific panel
+			// We inject a script that triggers the inspector and prompt user to open DevTools
+			if (request.tabId) {
+				chrome.scripting.executeScript({
+					target: { tabId: request.tabId },
+					func: () => {
+						// Log a message suggesting to open DevTools
+						console.log('%c[GxP Inspector] Inspector enabled! Press F12 or Ctrl+Shift+J to open DevTools and see the GxP Inspector panel.', 'color: #667eea; font-weight: bold; font-size: 14px;');
+					}
+				}).catch(err => console.log('[GxP DevTools] Could not inject script:', err));
+			}
+			sendResponse({ success: true });
+			return false;
+
 		default:
 			console.warn("[JavaScript Proxy] Unknown action:", request.action);
 			sendResponse({ success: false, error: "Unknown action" });

@@ -255,18 +255,64 @@
     }
 
     /* Inspector section */
-    .inspector-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 0;
-      border-top: 1px solid #e9ecef;
-      margin-top: 8px;
+    .inspector-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 8px;
+      padding: 14px;
+      margin-top: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     }
 
-    .inspector-toggle {
-      padding: 4px 10px;
+    .inspector-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .inspector-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .inspector-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .inspector-badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .inspector-badge.enabled {
+      background: rgba(40, 167, 69, 0.8);
+    }
+
+    .inspector-card-desc {
       font-size: 11px;
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 8px;
+    }
+
+    .inspector-card-hint {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .inspector-card-hint kbd {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 9px;
     }
 
     kbd {
@@ -407,6 +453,16 @@
           <div class="help-text">RegEx pattern to match JavaScript file URLs</div>
         </div>
       </div>
+
+      <!-- Component Inspector Card -->
+      <div id="inspectorCard" class="inspector-card">
+        <div class="inspector-card-header">
+          <span class="inspector-card-title">Component Inspector</span>
+          <span id="inspectorBadge" class="inspector-badge">OFF</span>
+        </div>
+        <div class="inspector-card-desc">Click to open DevTools and inspect Vue components</div>
+        <div class="inspector-card-hint">Or press <kbd>Ctrl+Shift+I</kbd> on the page</div>
+      </div>
     </div>
 
     <!-- CSS Tab -->
@@ -471,18 +527,6 @@
           <input type="checkbox" id="maskingMode">
           <label for="maskingMode">URL Masking Mode</label>
         </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-title">Component Inspector</div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <button id="inspectorToggle" class="toggle-button inspector-toggle">
-            <div class="status-dot"></div>
-            <span id="inspectorText">OFF</span>
-          </button>
-          <span style="font-size: 11px; color: #6c757d;">or press <kbd>Ctrl+Shift+I</kbd></span>
-        </div>
-        <div class="help-text" style="margin-top: 8px;">Inspect Vue components and extract hardcoded strings</div>
       </div>
     </div>
   </div>

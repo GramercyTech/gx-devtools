@@ -73,7 +73,10 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
   // Track previous suggestion count to avoid unnecessary parent updates
   const prevSuggestionCount = useRef(0);
 
-  // Filter commands based on typed value
+  // Maximum visible suggestions in the dropdown
+  const MAX_VISIBLE = 8;
+
+  // Filter commands based on typed value (no limit - we'll handle display separately)
   const suggestions = useMemo(() => {
     if (!value.startsWith('/')) return [];
 
@@ -82,8 +85,30 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
       const fullCmd = c.args ? `${c.cmd} ${c.args}` : c.cmd;
       return fullCmd.toLowerCase().includes(search) ||
              c.cmd.toLowerCase().startsWith(search);
-    }).slice(0, 8); // Limit to 8 suggestions for cleaner UI
+    });
   }, [value]);
+
+  // Calculate visible window of suggestions (scrolls to keep selection visible)
+  const { visibleSuggestions, startIndex } = useMemo(() => {
+    if (suggestions.length <= MAX_VISIBLE) {
+      return { visibleSuggestions: suggestions, startIndex: 0 };
+    }
+
+    // Calculate window to keep selected item visible
+    let start = 0;
+    if (selectedSuggestion >= MAX_VISIBLE) {
+      // Selected item is beyond initial window, scroll down
+      start = selectedSuggestion - MAX_VISIBLE + 1;
+    }
+    // Ensure we don't go past the end
+    start = Math.min(start, suggestions.length - MAX_VISIBLE);
+    start = Math.max(0, start);
+
+    return {
+      visibleSuggestions: suggestions.slice(start, start + MAX_VISIBLE),
+      startIndex: start,
+    };
+  }, [suggestions, selectedSuggestion]);
 
   const showSuggestions = value.startsWith('/') && value.length >= 1 && suggestions.length > 0;
 
@@ -98,9 +123,10 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
     return suggestion.cmd;
   }, []);
 
-  // Notify parent when suggestions change (debounced to reduce flicker)
+  // Notify parent when suggestions change (use visible count, not total)
   useEffect(() => {
-    const count = showSuggestions ? suggestions.length + 2 : 0;
+    const visibleCount = Math.min(suggestions.length, MAX_VISIBLE);
+    const count = showSuggestions ? visibleCount + 2 : 0; // +2 for border and hint line
     if (count !== prevSuggestionCount.current) {
       prevSuggestionCount.current = count;
       onSuggestionsChange?.(count);
@@ -228,32 +254,48 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
           borderColor="gray"
           marginBottom={0}
         >
-          {suggestions.map((suggestion, index) => (
-            <Box key={`${suggestion.cmd}-${suggestion.args}-${index}`} paddingX={1}>
-              <Text
-                backgroundColor={index === selectedSuggestion ? 'blue' : undefined}
-                color={index === selectedSuggestion ? 'white' : 'cyan'}
-                bold={index === selectedSuggestion}
-              >
-                {suggestion.cmd}
-              </Text>
-              {suggestion.args && (
-                <Text
-                  color={index === selectedSuggestion ? 'white' : 'gray'}
-                  backgroundColor={index === selectedSuggestion ? 'blue' : undefined}
-                >
-                  {' '}{suggestion.args}
-                </Text>
-              )}
-              <Text color="gray"> - </Text>
-              <Text
-                color={index === selectedSuggestion ? 'white' : 'gray'}
-                dimColor={index !== selectedSuggestion}
-              >
-                {suggestion.desc}
-              </Text>
+          {/* Scroll up indicator */}
+          {startIndex > 0 && (
+            <Box paddingX={1}>
+              <Text color="gray">↑ {startIndex} more above</Text>
             </Box>
-          ))}
+          )}
+          {visibleSuggestions.map((suggestion, visibleIndex) => {
+            const actualIndex = startIndex + visibleIndex;
+            const isSelected = actualIndex === selectedSuggestion;
+            return (
+              <Box key={`${suggestion.cmd}-${suggestion.args}-${actualIndex}`} paddingX={1}>
+                <Text
+                  backgroundColor={isSelected ? 'blue' : undefined}
+                  color={isSelected ? 'white' : 'cyan'}
+                  bold={isSelected}
+                >
+                  {suggestion.cmd}
+                </Text>
+                {suggestion.args && (
+                  <Text
+                    color={isSelected ? 'white' : 'gray'}
+                    backgroundColor={isSelected ? 'blue' : undefined}
+                  >
+                    {' '}{suggestion.args}
+                  </Text>
+                )}
+                <Text color="gray"> - </Text>
+                <Text
+                  color={isSelected ? 'white' : 'gray'}
+                  dimColor={!isSelected}
+                >
+                  {suggestion.desc}
+                </Text>
+              </Box>
+            );
+          })}
+          {/* Scroll down indicator */}
+          {startIndex + MAX_VISIBLE < suggestions.length && (
+            <Box paddingX={1}>
+              <Text color="gray">↓ {suggestions.length - startIndex - MAX_VISIBLE} more below</Text>
+            </Box>
+          )}
           <Box paddingX={1}>
             <Text dimColor>Tab complete · ↑↓ select · Esc cancel</Text>
           </Box>
