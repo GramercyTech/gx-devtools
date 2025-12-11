@@ -262,6 +262,7 @@ async function generateWithClaude(userPrompt, projectName, description) {
 
 	return new Promise((resolve) => {
 		console.log("\n🤖 Generating plugin scaffold with Claude...\n");
+		console.log("─".repeat(50));
 
 		let output = "";
 		let errorOutput = "";
@@ -277,30 +278,47 @@ async function generateWithClaude(userPrompt, projectName, description) {
 		);
 
 		claude.stdout.on("data", (data) => {
-			output += data.toString();
+			const chunk = data.toString();
+			output += chunk;
+			// Stream output to user in real-time
+			process.stdout.write(chunk);
 		});
 
 		claude.stderr.on("data", (data) => {
-			errorOutput += data.toString();
+			const chunk = data.toString();
+			errorOutput += chunk;
+			// Show stderr as well (may contain progress info)
+			process.stderr.write(chunk);
 		});
 
 		claude.on("close", (code) => {
+			console.log("\n" + "─".repeat(50));
+
 			if (code !== 0) {
-				console.error(`❌ Claude CLI error: ${errorOutput}`);
+				console.error(`\n❌ Claude CLI error (exit code ${code})`);
+				if (errorOutput) {
+					console.error(errorOutput);
+				}
+				resolve(null);
+				return;
+			}
+
+			if (!output.trim()) {
+				console.error("❌ No response received from Claude");
 				resolve(null);
 				return;
 			}
 
 			const scaffoldData = parseAIResponse(output);
 			if (!scaffoldData) {
-				console.error("❌ Could not parse Claude response");
-				console.log("Raw response:", output.slice(0, 500));
+				console.error("\n❌ Could not parse Claude response as JSON");
+				console.log("The AI response was shown above but couldn't be parsed into scaffold data.");
 				resolve(null);
 				return;
 			}
 
 			if (scaffoldData.explanation) {
-				console.log("📝 AI Explanation:");
+				console.log("\n📝 AI Explanation:");
 				console.log(`   ${scaffoldData.explanation}`);
 				console.log("");
 			}
@@ -327,6 +345,7 @@ async function generateWithCodex(userPrompt, projectName, description) {
 
 	return new Promise((resolve) => {
 		console.log("\n🤖 Generating plugin scaffold with Codex...\n");
+		console.log("─".repeat(50));
 
 		let output = "";
 		let errorOutput = "";
@@ -342,30 +361,47 @@ async function generateWithCodex(userPrompt, projectName, description) {
 		);
 
 		codex.stdout.on("data", (data) => {
-			output += data.toString();
+			const chunk = data.toString();
+			output += chunk;
+			// Stream output to user in real-time
+			process.stdout.write(chunk);
 		});
 
 		codex.stderr.on("data", (data) => {
-			errorOutput += data.toString();
+			const chunk = data.toString();
+			errorOutput += chunk;
+			// Show stderr as well
+			process.stderr.write(chunk);
 		});
 
 		codex.on("close", (code) => {
+			console.log("\n" + "─".repeat(50));
+
 			if (code !== 0) {
-				console.error(`❌ Codex CLI error: ${errorOutput}`);
+				console.error(`\n❌ Codex CLI error (exit code ${code})`);
+				if (errorOutput) {
+					console.error(errorOutput);
+				}
+				resolve(null);
+				return;
+			}
+
+			if (!output.trim()) {
+				console.error("❌ No response received from Codex");
 				resolve(null);
 				return;
 			}
 
 			const scaffoldData = parseAIResponse(output);
 			if (!scaffoldData) {
-				console.error("❌ Could not parse Codex response");
-				console.log("Raw response:", output.slice(0, 500));
+				console.error("\n❌ Could not parse Codex response as JSON");
+				console.log("The AI response was shown above but couldn't be parsed into scaffold data.");
 				resolve(null);
 				return;
 			}
 
 			if (scaffoldData.explanation) {
-				console.log("📝 AI Explanation:");
+				console.log("\n📝 AI Explanation:");
 				console.log(`   ${scaffoldData.explanation}`);
 				console.log("");
 			}
@@ -415,6 +451,7 @@ async function generateWithGemini(
 async function generateWithGeminiCli(fullPrompt) {
 	return new Promise((resolve) => {
 		console.log("\n🤖 Generating plugin scaffold with Gemini CLI...\n");
+		console.log("─".repeat(50));
 
 		let output = "";
 		let errorOutput = "";
@@ -430,30 +467,47 @@ async function generateWithGeminiCli(fullPrompt) {
 		);
 
 		gemini.stdout.on("data", (data) => {
-			output += data.toString();
+			const chunk = data.toString();
+			output += chunk;
+			// Stream output to user in real-time
+			process.stdout.write(chunk);
 		});
 
 		gemini.stderr.on("data", (data) => {
-			errorOutput += data.toString();
+			const chunk = data.toString();
+			errorOutput += chunk;
+			// Show stderr as well
+			process.stderr.write(chunk);
 		});
 
 		gemini.on("close", (code) => {
+			console.log("\n" + "─".repeat(50));
+
 			if (code !== 0) {
-				console.error(`❌ Gemini CLI error: ${errorOutput}`);
+				console.error(`\n❌ Gemini CLI error (exit code ${code})`);
+				if (errorOutput) {
+					console.error(errorOutput);
+				}
+				resolve(null);
+				return;
+			}
+
+			if (!output.trim()) {
+				console.error("❌ No response received from Gemini CLI");
 				resolve(null);
 				return;
 			}
 
 			const scaffoldData = parseAIResponse(output);
 			if (!scaffoldData) {
-				console.error("❌ Could not parse Gemini response");
-				console.log("Raw response:", output.slice(0, 500));
+				console.error("\n❌ Could not parse Gemini response as JSON");
+				console.log("The AI response was shown above but couldn't be parsed into scaffold data.");
 				resolve(null);
 				return;
 			}
 
 			if (scaffoldData.explanation) {
-				console.log("📝 AI Explanation:");
+				console.log("\n📝 AI Explanation:");
 				console.log(`   ${scaffoldData.explanation}`);
 				console.log("");
 			}
@@ -474,6 +528,8 @@ async function generateWithGeminiCli(fullPrompt) {
 async function generateWithGeminiApiKey(fullPrompt, apiKey) {
 	try {
 		console.log("\n🤖 Generating plugin scaffold with Gemini API...\n");
+		console.log("─".repeat(50));
+		console.log("Sending request to Gemini API...");
 
 		const response = await fetch(
 			`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
@@ -499,8 +555,9 @@ async function generateWithGeminiApiKey(fullPrompt, apiKey) {
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			console.error(`❌ Gemini API error: ${response.status}`);
+			console.error(`\n❌ Gemini API error: ${response.status}`);
 			console.error(errorText);
+			console.log("─".repeat(50));
 			return null;
 		}
 
@@ -509,19 +566,25 @@ async function generateWithGeminiApiKey(fullPrompt, apiKey) {
 
 		if (!responseText) {
 			console.error("❌ No response from Gemini API");
+			console.log("─".repeat(50));
 			return null;
 		}
+
+		// Show the response to user
+		console.log("\nGemini Response:\n");
+		console.log(responseText);
+		console.log("\n" + "─".repeat(50));
 
 		const scaffoldData = parseAIResponse(responseText);
 
 		if (!scaffoldData) {
-			console.error("❌ Could not parse AI response");
-			console.log("Raw response:", responseText.slice(0, 500));
+			console.error("\n❌ Could not parse Gemini response as JSON");
+			console.log("The AI response was shown above but couldn't be parsed into scaffold data.");
 			return null;
 		}
 
 		if (scaffoldData.explanation) {
-			console.log("📝 AI Explanation:");
+			console.log("\n📝 AI Explanation:");
 			console.log(`   ${scaffoldData.explanation}`);
 			console.log("");
 		}
@@ -538,13 +601,13 @@ async function generateWithGeminiApiKey(fullPrompt, apiKey) {
  */
 async function generateWithGeminiGcloud(fullPrompt) {
 	return new Promise((resolve) => {
-		console.log(
-			"\n🤖 Generating plugin scaffold with Gemini (via gcloud)...\n"
-		);
+		console.log("\n🤖 Generating plugin scaffold with Gemini (via gcloud)...\n");
+		console.log("─".repeat(50));
 
 		// Get access token from gcloud
 		let accessToken;
 		try {
+			console.log("Getting gcloud access token...");
 			accessToken = execSync("gcloud auth print-access-token", {
 				stdio: "pipe",
 			})
@@ -552,6 +615,7 @@ async function generateWithGeminiGcloud(fullPrompt) {
 				.trim();
 		} catch (error) {
 			console.error("❌ Failed to get gcloud access token");
+			console.log("─".repeat(50));
 			resolve(null);
 			return;
 		}
@@ -564,11 +628,15 @@ async function generateWithGeminiGcloud(fullPrompt) {
 			})
 				.toString()
 				.trim();
+			console.log(`Using project: ${projectId}`);
 		} catch (error) {
 			console.error("❌ Failed to get gcloud project ID");
+			console.log("─".repeat(50));
 			resolve(null);
 			return;
 		}
+
+		console.log("Sending request to Gemini...\n");
 
 		const requestBody = JSON.stringify({
 			contents: [
@@ -615,6 +683,7 @@ async function generateWithGeminiGcloud(fullPrompt) {
 		curl.on("close", (code) => {
 			if (code !== 0) {
 				console.error(`❌ Gemini gcloud error: ${errorOutput}`);
+				console.log("─".repeat(50));
 				resolve(null);
 				return;
 			}
@@ -626,21 +695,27 @@ async function generateWithGeminiGcloud(fullPrompt) {
 
 				if (!responseText) {
 					console.error("❌ No response from Gemini");
+					console.log("─".repeat(50));
 					resolve(null);
 					return;
 				}
 
+				// Show the response to user
+				console.log("Gemini Response:\n");
+				console.log(responseText);
+				console.log("\n" + "─".repeat(50));
+
 				const scaffoldData = parseAIResponse(responseText);
 
 				if (!scaffoldData) {
-					console.error("❌ Could not parse AI response");
-					console.log("Raw response:", responseText.slice(0, 500));
+					console.error("\n❌ Could not parse Gemini response as JSON");
+					console.log("The AI response was shown above but couldn't be parsed into scaffold data.");
 					resolve(null);
 					return;
 				}
 
 				if (scaffoldData.explanation) {
-					console.log("📝 AI Explanation:");
+					console.log("\n📝 AI Explanation:");
 					console.log(`   ${scaffoldData.explanation}`);
 					console.log("");
 				}
@@ -650,6 +725,7 @@ async function generateWithGeminiGcloud(fullPrompt) {
 				console.error(
 					`❌ Failed to parse Gemini response: ${parseError.message}`
 				);
+				console.log("─".repeat(50));
 				resolve(null);
 			}
 		});

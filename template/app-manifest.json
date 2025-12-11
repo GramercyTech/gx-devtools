@@ -8,27 +8,13 @@
 	"appInstructionsFile": "app-instructions.md",
 	"defaultStylingFile": "default-styling.css",
 	"settings": {
-		"primary_color": "#FFD600",
-		"background_color": "#ffffff",
-		"text_color": "#333333",
-		"start_background_color": "#000596",
-		"start_text_color": "#FFFFFF",
-		"final_background_color": "#4CAF50",
-		"final_text_color": "#ffffff"
+		"primary_color": "#FFD600"
 	},
 	"strings": {
 		"default": {
-			"welcome_text": "Hello World",
-			"loading_text": "Loading...",
-			"error_title": "Oops!",
-			"error_message": "Something went wrong. Please try again.",
-			"continue_button": "Continue",
-			"back_button": "Back"
 		}
 	},
 	"assets": {
-		"main_logo": "/dev-assets/images/logo-placeholder.png",
-		"background_image": "/dev-assets/images/background-placeholder.jpg"
 	},
 	"dependencies": [],
 	"permissions": []
