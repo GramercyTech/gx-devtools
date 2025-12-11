@@ -1,6 +1,6 @@
 # GxP Plugin Project
 
-This project was created with `@gramercytech/gx-devtools` and includes the `@gramercytech/gx-componentkit` component library for rapid kiosk development.
+This project was created with `@gxp-dev/tools` and includes the `@gramercytech/gx-componentkit` component library for rapid kiosk development.
 
 ## Quick Start
 

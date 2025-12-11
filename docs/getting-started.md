@@ -23,7 +23,7 @@ Before you begin, ensure you have:
 Install the toolkit globally to use the `gxdev` command anywhere:
 
 ```bash
-npm install -g @gramercytech/gx-devtools
+npm install -g @gxp-dev/tools
 ```
 
 ### Option 2: Project-Level Installation
@@ -31,7 +31,7 @@ npm install -g @gramercytech/gx-devtools
 Or install as a dev dependency in an existing project:
 
 ```bash
-npm install --save-dev @gramercytech/gx-devtools
+npm install --save-dev @gxp-dev/tools
 ```
 
 ## Create a New Plugin

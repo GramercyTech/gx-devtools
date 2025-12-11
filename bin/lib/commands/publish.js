@@ -147,11 +147,11 @@ async function publishCommand(argv) {
 				let content = fs.readFileSync(storeIndexPath, "utf-8");
 				// Match both old (config) and new (runtime) import paths
 				const oldImportPatterns = [
-					"import { useGxpStore } from '@gramercytech/gx-devtools/config/stores/gxpPortalConfigStore.js';",
-					"import { useGxpStore } from '@gramercytech/gx-devtools/config/stores/gxpPortalConfigStore';",
-					"import { useGxpStore } from '@gramercytech/gx-devtools/runtime/stores/gxpPortalConfigStore.js';",
-					"import { useGxpStore } from '@gramercytech/gx-devtools/runtime/stores/gxpPortalConfigStore';",
-					'import { useGxpStore } from "@gramercytech/gx-devtools/runtime/stores/gxpPortalConfigStore";',
+					"import { useGxpStore } from '@gxp-dev/tools/config/stores/gxpPortalConfigStore.js';",
+					"import { useGxpStore } from '@gxp-dev/tools/config/stores/gxpPortalConfigStore';",
+					"import { useGxpStore } from '@gxp-dev/tools/runtime/stores/gxpPortalConfigStore.js';",
+					"import { useGxpStore } from '@gxp-dev/tools/runtime/stores/gxpPortalConfigStore';",
+					'import { useGxpStore } from "@gxp-dev/tools/runtime/stores/gxpPortalConfigStore";',
 				];
 				const newImport =
 					"import { useGxpStore } from './gxpPortalConfigStore.js';";

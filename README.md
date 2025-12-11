@@ -5,13 +5,13 @@ A development devtools for creating plugins for the GxP kiosk platform. This pac
 ## Installation
 
 ```bash
-npm install -g @gramercytech/gx-devtools
+npm install -g @gxp-dev/tools
 ```
 
 Or use it as a dev dependency in your project:
 
 ```bash
-npm install --save-dev @gramercytech/gx-devtools
+npm install --save-dev @gxp-dev/tools
 ```
 
 ## Quick Start
@@ -162,9 +162,9 @@ The platform emulator that wraps user plugins during development. It:
    cd test-app
 
    # Link to local devtools instead of npm version
-   rm -rf node_modules/@gramercytech/gx-devtools
+   rm -rf node_modules/@gxp-dev/tools
    mkdir -p node_modules/@gramercytech
-   ln -s /path/to/gx-devtools node_modules/@gramercytech/gx-devtools
+   ln -s /path/to/gx-devtools node_modules/@gxp-dev/tools
 
    npm run dev-http
    ```

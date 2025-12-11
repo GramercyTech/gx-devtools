@@ -216,7 +216,7 @@ module.exports = {
         id: 'gx-devtools',
         path: path.resolve(
           __dirname,
-          'node_modules/@gramercytech/gx-devtools/docs'
+          'node_modules/@gxp-dev/tools/docs'
         ),
         routeBasePath: 'gx-devtools',
         sidebarPath: require.resolve('./sidebars-gx-devtools.js'),

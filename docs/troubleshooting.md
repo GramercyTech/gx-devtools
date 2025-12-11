@@ -41,7 +41,7 @@ zsh: command not found: gxdev
 
 1. **Global install:**
 ```bash
-npm install -g @gramercytech/gx-devtools
+npm install -g @gxp-dev/tools
 ```
 
 2. **Or use npx:**

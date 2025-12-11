@@ -58,7 +58,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@layouts': path.resolve(__dirname, './theme-layouts'),
-      '@gx-runtime': path.resolve(__dirname, './node_modules/@gramercytech/gx-devtools/runtime'),
+      '@gx-runtime': path.resolve(__dirname, './node_modules/@gxp-dev/tools/runtime'),
     },
   },
   build: {
@@ -273,7 +273,7 @@ Check that all imports use the correct aliases:
 import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
 
 // Wrong - path won't resolve in production
-import { useGxpStore } from '../../node_modules/@gramercytech/gx-devtools/runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from '../../node_modules/@gxp-dev/tools/runtime/stores/gxpPortalConfigStore';
 ```
 
 ### CSS Not Loading

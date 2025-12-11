@@ -12,7 +12,7 @@ This guide explains the architecture of the GxP Toolkit and how plugins are stru
 
 The GxP Toolkit has two main parts:
 
-1. **Toolkit Package** (`@gramercytech/gx-devtools`) - Installed in `node_modules/`
+1. **Toolkit Package** (`@gxp-dev/tools`) - Installed in `node_modules/`
 2. **Your Plugin Project** - Your custom code and configuration
 
 ```
@@ -20,7 +20,7 @@ Your Project
 ├── Your Code (src/, theme-layouts/)
 ├── Configuration (app-manifest.json, .env)
 └── node_modules/
-    └── @gramercytech/gx-devtools/
+    └── @gxp-dev/tools/
         ├── Runtime files (loaded at runtime)
         ├── CLI tool (gxdev commands)
         └── Browser extensions
@@ -29,7 +29,7 @@ Your Project
 ## Toolkit Directory Structure
 
 ```
-@gramercytech/gx-devtools/
+@gxp-dev/tools/
 ├── bin/                        # CLI Tool
 │   ├── gx-devtools.js          # Main entry point
 │   └── lib/

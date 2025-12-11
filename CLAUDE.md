@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-GxP Dev Devtools (`@gramercytech/gx-devtools`) is an npm package for creating platform plugins for the GxP kiosk platform. It provides:
+GxP Dev Devtools (`@gxp-dev/tools`) is an npm package for creating platform plugins for the GxP kiosk platform. It provides:
 
 ## Quick Start (New Developer)
 

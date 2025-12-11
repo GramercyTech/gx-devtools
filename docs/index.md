@@ -7,7 +7,7 @@ slug: /gx-devtools
 
 # GxP Dev Toolkit
 
-The GxP Dev Toolkit (`@gramercytech/gx-devtools`) is an npm package for creating platform plugins for the GxP kiosk platform.
+The GxP Dev Toolkit (`@gxp-dev/tools`) is an npm package for creating platform plugins for the GxP kiosk platform.
 
 ## What You Can Build
 
@@ -35,7 +35,7 @@ With the GxP Toolkit, you can create custom plugins that run on GxP kiosks, incl
 
 ```bash
 # Install globally
-npm install -g @gramercytech/gx-devtools
+npm install -g @gxp-dev/tools
 
 # Create a new project
 mkdir my-plugin && cd my-plugin
@@ -85,7 +85,7 @@ Your plugin is now running at `http://localhost:3060`. Open the Dev Tools with `
 ### Global Installation (Recommended)
 
 ```bash
-npm install -g @gramercytech/gx-devtools
+npm install -g @gxp-dev/tools
 ```
 
 This makes the `gxdev` command available globally.
@@ -93,7 +93,7 @@ This makes the `gxdev` command available globally.
 ### Project-Level Installation
 
 ```bash
-npm install --save-dev @gramercytech/gx-devtools
+npm install --save-dev @gxp-dev/tools
 ```
 
 Use `npx gxdev` to run commands.

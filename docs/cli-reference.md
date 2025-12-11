@@ -12,10 +12,10 @@ Complete reference for the `gxdev` command-line interface.
 
 ```bash
 # Global installation (recommended)
-npm install -g @gramercytech/gx-devtools
+npm install -g @gxp-dev/tools
 
 # Project-level installation
-npm install --save-dev @gramercytech/gx-devtools
+npm install --save-dev @gxp-dev/tools
 ```
 
 ## Quick Reference
