@@ -64,29 +64,29 @@ interface CommandInputProps {
 
 export default function CommandInput({ onSubmit, activeService, onSuggestionsChange }: CommandInputProps) {
   const [value, setValue] = useState('');
+  const [filterValue, setFilterValue] = useState(''); // What we filter suggestions by (doesn't change when arrowing)
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
+  const [isNavigating, setIsNavigating] = useState(false); // True when user is arrowing through suggestions
 
-  // Track previous suggestion count to avoid unnecessary parent updates
-  const prevSuggestionCount = useRef(0);
   // Track if suggestions are currently shown to avoid flicker
   const prevShowSuggestions = useRef(false);
 
   // Maximum visible suggestions in the dropdown
   const MAX_VISIBLE = 8;
 
-  // Filter commands based on typed value (no limit - we'll handle display separately)
+  // Filter commands based on filterValue (stays stable while navigating with arrows)
   const suggestions = useMemo(() => {
-    if (!value.startsWith('/')) return [];
+    if (!filterValue.startsWith('/')) return [];
 
-    const search = value.toLowerCase();
+    const search = filterValue.toLowerCase();
     return COMMANDS.filter(c => {
       const fullCmd = c.args ? `${c.cmd} ${c.args}` : c.cmd;
       return fullCmd.toLowerCase().includes(search) ||
              c.cmd.toLowerCase().startsWith(search);
     });
-  }, [value]);
+  }, [filterValue]);
 
   // Calculate visible window of suggestions (scrolls to keep selection visible)
   const { visibleSuggestions, startIndex } = useMemo(() => {
@@ -110,7 +110,7 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
     };
   }, [suggestions, selectedSuggestion]);
 
-  const showSuggestions = value.startsWith('/') && value.length >= 1 && suggestions.length > 0;
+  const showSuggestions = filterValue.startsWith('/') && filterValue.length >= 1 && suggestions.length > 0;
 
   // Helper to build full command string from suggestion
   const buildFullCommand = useCallback((suggestion: typeof COMMANDS[0]): string => {
@@ -142,30 +142,42 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
   }, [suggestions.length, selectedSuggestion]);
 
   useInput((input, key) => {
-    // Tab to autocomplete selected suggestion
+    // Tab to autocomplete selected suggestion and commit it
     if (key.tab && showSuggestions && suggestions[selectedSuggestion]) {
       const suggestion = suggestions[selectedSuggestion];
       const fullCmd = buildFullCommand(suggestion);
-      setValue(fullCmd + ' '); // Add space to move cursor to end and allow continuing to type
+      setValue(fullCmd);
+      setFilterValue(fullCmd); // Commit the selection to filter
       setSelectedSuggestion(0);
+      setIsNavigating(false);
       return;
     }
 
     // Up/Down to navigate suggestions when showing (circular navigation)
     if (showSuggestions) {
       if (key.upArrow) {
+        setIsNavigating(true);
         setSelectedSuggestion(prev => {
-          // Wrap to bottom when at top
-          if (prev <= 0) return suggestions.length - 1;
-          return prev - 1;
+          const newIndex = prev <= 0 ? suggestions.length - 1 : prev - 1;
+          // Update display value to show selected command
+          const suggestion = suggestions[newIndex];
+          if (suggestion) {
+            setValue(buildFullCommand(suggestion));
+          }
+          return newIndex;
         });
         return;
       }
       if (key.downArrow) {
+        setIsNavigating(true);
         setSelectedSuggestion(prev => {
-          // Wrap to top when at bottom
-          if (prev >= suggestions.length - 1) return 0;
-          return prev + 1;
+          const newIndex = prev >= suggestions.length - 1 ? 0 : prev + 1;
+          // Update display value to show selected command
+          const suggestion = suggestions[newIndex];
+          if (suggestion) {
+            setValue(buildFullCommand(suggestion));
+          }
+          return newIndex;
         });
         return;
       }
@@ -174,7 +186,9 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
       if (key.upArrow && history.length > 0) {
         const newIndex = Math.min(historyIndex + 1, history.length - 1);
         setHistoryIndex(newIndex);
-        setValue(history[history.length - 1 - newIndex] || '');
+        const historyValue = history[history.length - 1 - newIndex] || '';
+        setValue(historyValue);
+        setFilterValue(historyValue);
         return;
       }
 
@@ -183,8 +197,11 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
         setHistoryIndex(newIndex);
         if (newIndex < 0) {
           setValue('');
+          setFilterValue('');
         } else {
-          setValue(history[history.length - 1 - newIndex] || '');
+          const historyValue = history[history.length - 1 - newIndex] || '';
+          setValue(historyValue);
+          setFilterValue(historyValue);
         }
         return;
       }
@@ -193,8 +210,10 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
     // Escape to clear input or close suggestions
     if (key.escape) {
       setValue('');
+      setFilterValue('');
       setSelectedSuggestion(0);
       setHistoryIndex(-1);
+      setIsNavigating(false);
       return;
     }
   });
@@ -207,17 +226,21 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
 
     // Reset state
     setValue('');
+    setFilterValue('');
     setHistoryIndex(-1);
     setSelectedSuggestion(0);
+    setIsNavigating(false);
 
     // Call handler
     onSubmit(input);
   }, [onSubmit]);
 
-  // Handle text input changes
+  // Handle text input changes - updates both value and filter
   const handleChange = useCallback((v: string) => {
     setValue(v);
+    setFilterValue(v); // When user types, update filter to match
     setSelectedSuggestion(0);
+    setIsNavigating(false);
   }, []);
 
   // Get context-specific hints for current tab
