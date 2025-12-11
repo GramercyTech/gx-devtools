@@ -1,29 +1,52 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 
-// Command definitions with descriptions
+// Command definitions with descriptions - comprehensive list
 const COMMANDS = [
-  { cmd: '/dev', args: '', desc: 'Start Vite (+ Socket if SOCKET_IO_ENABLED)' },
+  // Dev server commands
+  { cmd: '/dev', args: '', desc: 'Start Vite dev server' },
   { cmd: '/dev', args: '--with-socket', desc: 'Start Vite + Socket.IO' },
-  { cmd: '/dev', args: '--with-mock', desc: 'Start Vite + Socket.IO + Mock API server' },
-  { cmd: '/dev', args: '--firefox', desc: 'Start Vite + Firefox extension' },
-  { cmd: '/dev', args: '--chrome', desc: 'Start Vite + Chrome extension' },
-  { cmd: '/dev', args: '--no-socket', desc: 'Start Vite without Socket.IO' },
+  { cmd: '/dev', args: '--with-mock', desc: 'Start Vite + Socket.IO + Mock API' },
   { cmd: '/dev', args: '--no-https', desc: 'Start Vite without SSL' },
+  { cmd: '/dev', args: '--no-socket', desc: 'Start Vite without Socket.IO' },
+  { cmd: '/dev', args: '--chrome', desc: 'Start Vite + Chrome extension' },
+  { cmd: '/dev', args: '--firefox', desc: 'Start Vite + Firefox extension' },
+
+  // Socket commands
   { cmd: '/socket', args: '', desc: 'Start Socket.IO server' },
-  { cmd: '/socket', args: 'send <event>', desc: 'Send socket event' },
-  { cmd: '/socket', args: 'list', desc: 'List available events' },
-  { cmd: '/ext', args: 'chrome', desc: 'Launch Chrome extension' },
-  { cmd: '/ext', args: 'firefox', desc: 'Launch Firefox extension' },
-  { cmd: '/stop', args: '[service]', desc: 'Stop current/specified service' },
-  { cmd: '/restart', args: '[service]', desc: 'Restart current/specified service' },
+  { cmd: '/socket', args: '--with-mock', desc: 'Start Socket.IO + Mock API' },
+  { cmd: '/socket', args: 'send <event>', desc: 'Send a socket event' },
+  { cmd: '/socket', args: 'list', desc: 'List available socket events' },
+  { cmd: '/mock', args: '', desc: 'Start Socket.IO + Mock API (shorthand)' },
+
+  // Browser extension commands
+  { cmd: '/ext', args: 'chrome', desc: 'Launch Chrome with extension' },
+  { cmd: '/ext', args: 'firefox', desc: 'Launch Firefox with extension' },
+
+  // Service management
+  { cmd: '/stop', args: '[service]', desc: 'Stop current or specified service' },
+  { cmd: '/restart', args: '[service]', desc: 'Restart current or specified service' },
   { cmd: '/clear', args: '', desc: 'Clear current log panel' },
-  { cmd: '/gemini', args: '', desc: 'Open Gemini AI chat' },
-  { cmd: '/gemini', args: 'enable', desc: 'Set up Google auth' },
+
+  // Config extraction
+  { cmd: '/extract-config', args: '', desc: 'Extract GxP config from source' },
+  { cmd: '/extract-config', args: '--dry-run', desc: 'Preview config extraction' },
+  { cmd: '/extract-config', args: '--overwrite', desc: 'Overwrite existing config values' },
+
+  // AI commands
+  { cmd: '/gemini', args: '', desc: 'Open Gemini AI chat panel' },
+  { cmd: '/gemini', args: 'enable', desc: 'Set up Google authentication' },
   { cmd: '/gemini', args: 'ask <query>', desc: 'Quick AI question' },
+  { cmd: '/gemini', args: 'status', desc: 'Check AI auth status' },
+  { cmd: '/gemini', args: 'logout', desc: 'Log out from Gemini' },
+  { cmd: '/gemini', args: 'clear', desc: 'Clear conversation history' },
+  { cmd: '/ai', args: '', desc: 'Open Gemini AI chat (alias)' },
+
+  // General
   { cmd: '/help', args: '', desc: 'Show all commands' },
   { cmd: '/quit', args: '', desc: 'Exit application' },
+  { cmd: '/exit', args: '', desc: 'Exit application (alias)' },
 ];
 
 interface ActiveService {
@@ -39,16 +62,17 @@ interface CommandInputProps {
 }
 
 export default function CommandInput({ onSubmit, activeService, onSuggestionsChange }: CommandInputProps) {
-  const [value, setValue] = useState('');  // The actual typed value (for filtering)
-  const [displayValue, setDisplayValue] = useState('');  // What's shown in input (may differ when navigating)
-  const [isNavigating, setIsNavigating] = useState(false);  // Track if user is arrowing through suggestions
+  const [value, setValue] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
-  // Key to force TextInput remount when value is set programmatically (resets cursor)
-  const [inputKey, setInputKey] = useState(0);
 
-  // Filter commands based on the TYPED value (not display value)
+  // Use ref to track if we should skip the next onChange (after programmatic update)
+  const skipNextChange = useRef(false);
+  // Track previous suggestion count to avoid unnecessary parent updates
+  const prevSuggestionCount = useRef(0);
+
+  // Filter commands based on typed value
   const suggestions = useMemo(() => {
     if (!value.startsWith('/')) return [];
 
@@ -57,13 +81,13 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
       const fullCmd = c.args ? `${c.cmd} ${c.args}` : c.cmd;
       return fullCmd.toLowerCase().includes(search) ||
              c.cmd.toLowerCase().startsWith(search);
-    });
+    }).slice(0, 8); // Limit to 8 suggestions for cleaner UI
   }, [value]);
 
   const showSuggestions = value.startsWith('/') && value.length >= 1 && suggestions.length > 0;
 
   // Helper to build full command string from suggestion
-  const buildFullCommand = (suggestion: typeof COMMANDS[0]): string => {
+  const buildFullCommand = useCallback((suggestion: typeof COMMANDS[0]): string => {
     if (suggestion.args) {
       const hasPlaceholder = suggestion.args.includes('<') || suggestion.args.includes('[');
       if (!hasPlaceholder) {
@@ -71,55 +95,43 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
       }
     }
     return suggestion.cmd;
-  };
+  }, []);
 
-  // Notify parent when suggestions change (for layout adjustment)
+  // Notify parent when suggestions change (debounced to reduce flicker)
   useEffect(() => {
-    if (onSuggestionsChange) {
-      // +2 for border and help text row
-      onSuggestionsChange(showSuggestions ? suggestions.length + 2 : 0);
+    const count = showSuggestions ? suggestions.length + 2 : 0;
+    if (count !== prevSuggestionCount.current) {
+      prevSuggestionCount.current = count;
+      onSuggestionsChange?.(count);
     }
   }, [showSuggestions, suggestions.length, onSuggestionsChange]);
 
+  // Reset selected suggestion when suggestions change
+  useEffect(() => {
+    if (selectedSuggestion >= suggestions.length) {
+      setSelectedSuggestion(Math.max(0, suggestions.length - 1));
+    }
+  }, [suggestions.length, selectedSuggestion]);
+
   useInput((input, key) => {
-    // Tab to autocomplete selected suggestion (commits the selection)
+    // Tab to autocomplete selected suggestion
     if (key.tab && showSuggestions && suggestions[selectedSuggestion]) {
       const suggestion = suggestions[selectedSuggestion];
       const fullCmd = buildFullCommand(suggestion);
-      // Commit to both value and displayValue
+      skipNextChange.current = true;
       setValue(fullCmd);
-      setDisplayValue(fullCmd);
       setSelectedSuggestion(0);
-      setIsNavigating(false);
-      // Increment key to force TextInput remount (resets cursor to end)
-      setInputKey(k => k + 1);
       return;
     }
 
     // Up/Down to navigate suggestions when showing
     if (showSuggestions) {
       if (key.upArrow) {
-        const newIndex = Math.max(0, selectedSuggestion - 1);
-        setSelectedSuggestion(newIndex);
-        setIsNavigating(true);
-        // Update display value to show highlighted command
-        const suggestion = suggestions[newIndex];
-        if (suggestion) {
-          setDisplayValue(buildFullCommand(suggestion));
-          setInputKey(k => k + 1);
-        }
+        setSelectedSuggestion(prev => Math.max(0, prev - 1));
         return;
       }
       if (key.downArrow) {
-        const newIndex = Math.min(suggestions.length - 1, selectedSuggestion + 1);
-        setSelectedSuggestion(newIndex);
-        setIsNavigating(true);
-        // Update display value to show highlighted command
-        const suggestion = suggestions[newIndex];
-        if (suggestion) {
-          setDisplayValue(buildFullCommand(suggestion));
-          setInputKey(k => k + 1);
-        }
+        setSelectedSuggestion(prev => Math.min(suggestions.length - 1, prev + 1));
         return;
       }
     } else {
@@ -127,81 +139,75 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
       if (key.upArrow && history.length > 0) {
         const newIndex = Math.min(historyIndex + 1, history.length - 1);
         setHistoryIndex(newIndex);
-        const histVal = history[history.length - 1 - newIndex] || '';
-        setValue(histVal);
-        setDisplayValue(histVal);
-        setInputKey(k => k + 1);
+        skipNextChange.current = true;
+        setValue(history[history.length - 1 - newIndex] || '');
         return;
       }
 
       if (key.downArrow) {
         const newIndex = Math.max(historyIndex - 1, -1);
         setHistoryIndex(newIndex);
+        skipNextChange.current = true;
         if (newIndex < 0) {
           setValue('');
-          setDisplayValue('');
         } else {
-          const histVal = history[history.length - 1 - newIndex] || '';
-          setValue(histVal);
-          setDisplayValue(histVal);
+          setValue(history[history.length - 1 - newIndex] || '');
         }
-        setInputKey(k => k + 1);
         return;
       }
     }
+
+    // Escape to clear input or close suggestions
+    if (key.escape) {
+      setValue('');
+      setSelectedSuggestion(0);
+      setHistoryIndex(-1);
+      return;
+    }
   });
 
-  const handleSubmit = (input: string) => {
+  const handleSubmit = useCallback((input: string) => {
     if (!input.trim()) return;
 
-    // Add to history
-    if (input.trim()) {
-      setHistory(prev => [...prev.filter(h => h !== input.trim()), input.trim()]);
-    }
+    // Add to history (avoid duplicates)
+    setHistory(prev => [...prev.filter(h => h !== input.trim()), input.trim()]);
 
     // Reset state
     setValue('');
-    setDisplayValue('');
     setHistoryIndex(-1);
     setSelectedSuggestion(0);
-    setIsNavigating(false);
 
     // Call handler
     onSubmit(input);
-  };
+  }, [onSubmit]);
 
   // Handle text input changes
-  const handleChange = (v: string) => {
-    // User typed something, reset navigation state
+  const handleChange = useCallback((v: string) => {
+    if (skipNextChange.current) {
+      skipNextChange.current = false;
+      return;
+    }
     setValue(v);
-    setDisplayValue(v);
     setSelectedSuggestion(0);
-    setIsNavigating(false);
-  };
+  }, []);
 
   // Get context-specific hints for current tab
-  const getHints = (): string[] => {
-    const hints: string[] = [];
+  const hints = useMemo((): string[] => {
+    const h: string[] = [];
 
     if (activeService) {
       const isRunning = activeService.status === 'running' || activeService.status === 'starting';
-      if (isRunning) {
-        hints.push(`Ctrl+K stop ${activeService.name}`);
-        hints.push(`/restart to restart`);
-      }
-      if (activeService.id === 'vite') {
-        hints.push('r to refresh browser');
+      if (isRunning && activeService.id !== 'system') {
+        h.push(`Ctrl+K stop`);
       }
     }
 
-    hints.push('Ctrl+L clear logs');
-    hints.push('Tab/Arrow switch tabs');
-    hints.push('Ctrl+C quit');
+    h.push('Ctrl+L clear');
+    h.push('←/→ tabs');
+    h.push('Esc cancel');
 
-    return hints;
-  };
-
-  const hints = getHints();
+    return h;
+  }, [activeService]);
 
   return (
     <Box flexDirection="column">
@@ -239,8 +245,8 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
               </Text>
             </Box>
           ))}
-          <Box paddingX={1} borderStyle={undefined}>
-            <Text dimColor>Tab to complete · Up/Down to select</Text>
+          <Box paddingX={1}>
+            <Text dimColor>Tab complete · ↑↓ select · Esc cancel</Text>
           </Box>
         </Box>
       )}
@@ -254,10 +260,9 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
         <Text color="cyan" bold>&gt;</Text>
         <Text> </Text>
         <TextInput
-          key={inputKey}
-          value={displayValue}
+          value={value}
           onChange={handleChange}
-          onSubmit={() => handleSubmit(displayValue.startsWith('/') ? displayValue : '/' + displayValue)}
+          onSubmit={() => handleSubmit(value.startsWith('/') ? value : '/' + value)}
           placeholder="Type / to run a command..."
         />
       </Box>
@@ -265,7 +270,7 @@ export default function CommandInput({ onSubmit, activeService, onSuggestionsCha
       {/* Hints bar (below input) */}
       <Box paddingX={1} justifyContent="space-between">
         <Box>
-          {hints.slice(0, 4).map((hint, index) => (
+          {hints.map((hint, index) => (
             <React.Fragment key={hint}>
               {index > 0 && <Text color="gray"> · </Text>}
               <Text dimColor>{hint}</Text>

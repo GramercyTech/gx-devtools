@@ -107,7 +107,7 @@ If you select a provider, describe your plugin:
 |----------|----------------|
 | **Claude** | Claude CLI logged in (`claude login`) |
 | **Codex** | Codex CLI logged in (`codex auth`) |
-| **Gemini** | API key (`GEMINI_API_KEY`) or gcloud CLI (`gcloud auth login`) |
+| **Gemini** | Gemini CLI, API key (`GEMINI_API_KEY`), or gcloud CLI |
 
 **Setting up providers:**
 
@@ -119,6 +119,10 @@ claude login
 # Codex (uses your OpenAI account)
 npm install -g @openai/codex
 codex auth
+
+# Gemini CLI (recommended - uses your Google account)
+npm install -g @google/gemini-cli
+gemini  # First run will prompt for login
 
 # Gemini (API key)
 export GEMINI_API_KEY=your_google_ai_api_key

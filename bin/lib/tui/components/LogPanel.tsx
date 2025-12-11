@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 
 interface LogPanelProps {
@@ -7,15 +7,25 @@ interface LogPanelProps {
   maxHeight?: number; // Maximum height in rows (from parent container)
 }
 
-export default function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
+// Memoized log line component to prevent unnecessary re-renders
+const LogLine = memo(({ log, index }: { log: string; index: number }) => (
+  <Text key={index} wrap="wrap">
+    {formatLog(log)}
+  </Text>
+));
+LogLine.displayName = 'LogLine';
+
+function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
   const { stdout } = useStdout();
   const [scrollOffset, setScrollOffset] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true);
 
   // Calculate visible lines based on provided maxHeight or terminal height
   // Subtract 2 for padding, 2 for border
-  const defaultMaxLines = stdout ? Math.max(5, stdout.rows - 10) : 15;
-  const maxLines = maxHeight ? Math.max(3, maxHeight - 4) : defaultMaxLines;
+  const maxLines = useMemo(() => {
+    const defaultMaxLines = stdout ? Math.max(5, stdout.rows - 10) : 15;
+    return maxHeight ? Math.max(3, maxHeight - 4) : defaultMaxLines;
+  }, [stdout?.rows, maxHeight]);
 
   // Reset scroll when logs are cleared
   useEffect(() => {
@@ -23,7 +33,7 @@ export default function LogPanel({ logs, isActive = true, maxHeight }: LogPanelP
       setScrollOffset(0);
       setAutoScroll(true);
     }
-  }, [logs.length === 0]);
+  }, [logs.length]);
 
   // Auto-scroll to bottom when new logs arrive (if autoScroll is enabled)
   useEffect(() => {
@@ -70,15 +80,18 @@ export default function LogPanel({ logs, isActive = true, maxHeight }: LogPanelP
     }
   });
 
-  // Calculate visible logs with scroll offset
-  const totalLogs = logs.length;
-  const startIndex = Math.max(0, totalLogs - maxLines - scrollOffset);
-  const endIndex = Math.max(0, totalLogs - scrollOffset);
-  const visibleLogs = logs.slice(startIndex, endIndex);
-
-  // Show scroll indicator
-  const canScrollUp = startIndex > 0;
-  const canScrollDown = scrollOffset > 0;
+  // Calculate visible logs with scroll offset - memoized
+  const { visibleLogs, startIndex, canScrollUp, canScrollDown } = useMemo(() => {
+    const totalLogs = logs.length;
+    const start = Math.max(0, totalLogs - maxLines - scrollOffset);
+    const end = Math.max(0, totalLogs - scrollOffset);
+    return {
+      visibleLogs: logs.slice(start, end),
+      startIndex: start,
+      canScrollUp: start > 0,
+      canScrollDown: scrollOffset > 0,
+    };
+  }, [logs, maxLines, scrollOffset]);
 
   return (
     <Box flexDirection="column" padding={1} flexGrow={1} overflow="hidden">
@@ -89,9 +102,7 @@ export default function LogPanel({ logs, isActive = true, maxHeight }: LogPanelP
         <Text color="gray" dimColor>No logs yet...</Text>
       ) : (
         visibleLogs.map((log, index) => (
-          <Text key={startIndex + index} wrap="wrap">
-            {formatLog(log)}
-          </Text>
+          <LogLine key={startIndex + index} log={log} index={startIndex + index} />
         ))
       )}
       {canScrollDown && (
@@ -120,3 +131,5 @@ function formatLog(log: string): React.ReactNode {
   }
   return <Text>{log}</Text>;
 }
+
+export default memo(LogPanel);

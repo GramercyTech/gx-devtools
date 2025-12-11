@@ -340,7 +340,8 @@ async function runInteractiveConfig(projectPath, initialName) {
 		console.log("   To enable AI scaffolding, set up one of:");
 		console.log("   • Claude CLI: npm install -g @anthropic-ai/claude-code && claude login");
 		console.log("   • Codex CLI: npm install -g @openai/codex && codex auth");
-		console.log("   • Gemini: export GEMINI_API_KEY=your_key or gcloud auth login");
+		console.log("   • Gemini CLI: npm install -g @google/gemini-cli && gemini");
+		console.log("   • Gemini API: export GEMINI_API_KEY=your_key");
 		console.log("");
 		aiChoice = "skip";
 	} else {
@@ -352,7 +353,19 @@ async function runInteractiveConfig(projectPath, initialName) {
 		for (const provider of availableProviders) {
 			let authInfo = "";
 			if (provider.id === "gemini") {
-				authInfo = provider.method === "api_key" ? "via API key" : "via gcloud";
+				switch (provider.method) {
+					case "cli":
+						authInfo = "logged in";
+						break;
+					case "api_key":
+						authInfo = "via API key";
+						break;
+					case "gcloud":
+						authInfo = "via gcloud";
+						break;
+					default:
+						authInfo = "";
+				}
 			} else {
 				authInfo = "logged in";
 			}

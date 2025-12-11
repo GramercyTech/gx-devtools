@@ -186,11 +186,20 @@ async function checkCodexAvailable() {
 }
 
 /**
- * Check if Gemini is available (API key or gcloud)
+ * Check if Gemini is available (CLI, API key, or gcloud)
  * @returns {Promise<{available: boolean, reason?: string, method?: string}>}
  */
 async function checkGeminiAvailable() {
-	// Check for API key first
+	// Check for Gemini CLI first (preferred - uses logged-in account)
+	try {
+		execSync("which gemini", { stdio: "pipe" });
+		// Gemini CLI is installed - it handles its own auth
+		return { available: true, method: "cli" };
+	} catch (error) {
+		// Gemini CLI not installed
+	}
+
+	// Check for API key
 	const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 	if (apiKey) {
 		return { available: true, method: "api_key" };
@@ -212,7 +221,8 @@ async function checkGeminiAvailable() {
 	return {
 		available: false,
 		reason:
-			"Gemini requires either:\n" +
+			"Gemini requires one of:\n" +
+			"  • Gemini CLI logged in (npm i -g @google/gemini-cli && gemini), or\n" +
 			"  • GEMINI_API_KEY environment variable, or\n" +
 			"  • gcloud CLI logged in (gcloud auth login)",
 	};
@@ -371,11 +381,11 @@ async function generateWithCodex(userPrompt, projectName, description) {
 }
 
 /**
- * Generate scaffold using Gemini (API key or gcloud)
+ * Generate scaffold using Gemini (CLI, API key, or gcloud)
  * @param {string} userPrompt - User's description
  * @param {string} projectName - Project name
  * @param {string} description - Project description
- * @param {string} method - 'api_key' or 'gcloud'
+ * @param {string} method - 'cli', 'api_key', or 'gcloud'
  * @returns {Promise<object|null>}
  */
 async function generateWithGemini(
@@ -386,15 +396,76 @@ async function generateWithGemini(
 ) {
 	const fullPrompt = buildFullPrompt(userPrompt, projectName, description);
 
-	// Determine authentication method
-	const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-	const useApiKey = method === "api_key" || apiKey;
-
-	if (useApiKey && apiKey) {
-		return generateWithGeminiApiKey(fullPrompt, apiKey);
-	} else {
-		return generateWithGeminiGcloud(fullPrompt);
+	// Use the appropriate method
+	if (method === "cli") {
+		return generateWithGeminiCli(fullPrompt);
 	}
+
+	const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+	if (method === "api_key" && apiKey) {
+		return generateWithGeminiApiKey(fullPrompt, apiKey);
+	}
+
+	return generateWithGeminiGcloud(fullPrompt);
+}
+
+/**
+ * Generate using Gemini CLI
+ */
+async function generateWithGeminiCli(fullPrompt) {
+	return new Promise((resolve) => {
+		console.log("\n🤖 Generating plugin scaffold with Gemini CLI...\n");
+
+		let output = "";
+		let errorOutput = "";
+
+		// Use gemini CLI with -p for prompt mode
+		const gemini = spawn(
+			"gemini",
+			["-p", `${SCAFFOLD_SYSTEM_PROMPT}\n\n${fullPrompt}`],
+			{
+				stdio: ["pipe", "pipe", "pipe"],
+				shell: true,
+			}
+		);
+
+		gemini.stdout.on("data", (data) => {
+			output += data.toString();
+		});
+
+		gemini.stderr.on("data", (data) => {
+			errorOutput += data.toString();
+		});
+
+		gemini.on("close", (code) => {
+			if (code !== 0) {
+				console.error(`❌ Gemini CLI error: ${errorOutput}`);
+				resolve(null);
+				return;
+			}
+
+			const scaffoldData = parseAIResponse(output);
+			if (!scaffoldData) {
+				console.error("❌ Could not parse Gemini response");
+				console.log("Raw response:", output.slice(0, 500));
+				resolve(null);
+				return;
+			}
+
+			if (scaffoldData.explanation) {
+				console.log("📝 AI Explanation:");
+				console.log(`   ${scaffoldData.explanation}`);
+				console.log("");
+			}
+
+			resolve(scaffoldData);
+		});
+
+		gemini.on("error", (err) => {
+			console.error(`❌ Failed to run Gemini CLI: ${err.message}`);
+			resolve(null);
+		});
+	});
 }
 
 /**

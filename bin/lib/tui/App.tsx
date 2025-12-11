@@ -137,16 +137,7 @@ export default function App({ autoStart, args }: AppProps) {
       return;
     }
 
-    // Tab to cycle through tabs (when not in input)
-    if (key.tab && services.length > 0) {
-      const nextTab = key.shift
-        ? (activeTab - 1 + services.length) % services.length
-        : (activeTab + 1) % services.length;
-      setActiveTab(nextTab);
-      return;
-    }
-
-    // Left/Right arrow to switch tabs
+    // Left/Right arrow to switch tabs (Tab is reserved for command autocomplete)
     if (key.leftArrow && services.length > 0) {
       setActiveTab((activeTab - 1 + services.length) % services.length);
       return;
@@ -156,7 +147,7 @@ export default function App({ autoStart, args }: AppProps) {
       return;
     }
 
-    // Ctrl+1-9 or Cmd+1-9 to switch tabs (for compatibility)
+    // Ctrl+1-9 or Cmd+1-9 to switch tabs directly
     if ((key.ctrl || key.meta) && /^[1-9]$/.test(input)) {
       const tabIndex = parseInt(input) - 1;
       if (tabIndex < services.length) {
@@ -530,10 +521,13 @@ export default function App({ autoStart, args }: AppProps) {
     addSystemLog('Scanning source files for GxP configuration...');
 
     try {
-      // Use require for CommonJS modules
-      const path = require('path');
-      const fs = require('fs');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // Use dynamic imports for ES modules
+      const path = await import('path');
+      const fs = await import('fs');
+      const { createRequire } = await import('module');
+
+      // Create a require function to load CommonJS modules
+      const require = createRequire(import.meta.url);
       const extractConfigUtils = require('../utils/extract-config.js') as {
         extractConfigFromSource: (srcDir: string) => ExtractedConfig;
         mergeConfig: (existing: Record<string, unknown>, extracted: ExtractedConfig, options: { overwrite: boolean }) => Record<string, unknown>;
@@ -616,43 +610,59 @@ export default function App({ autoStart, args }: AppProps) {
 
   const getHelpText = () => `
 Available commands:
-  /dev                  Start Vite (+ Socket if SOCKET_IO_ENABLED=true)
-  /dev --with-socket    Start Vite + Socket.IO together
-  /dev --with-mock      Start Vite + Socket.IO + Mock API server
-  /dev --no-socket      Start Vite only (skip Socket.IO)
-  /dev --no-https       Start Vite without SSL
-  /dev --firefox        Start Vite + Firefox extension
-  /dev --chrome         Start Vite + Chrome extension
-  /socket               Start Socket.IO server
-  /socket --with-mock   Start Socket.IO with Mock API enabled
-  /socket send <event>  Send socket event
-  /socket list          List available events
-  /mock                 Start Socket.IO + Mock API (shorthand)
-  /ext chrome           Launch Chrome extension
-  /ext firefox          Launch Firefox extension
-  /extract-config       Extract GxP config from source to manifest
-  /extract-config -d    Dry run (show what would be extracted)
-  /extract-config -o    Overwrite existing values in manifest
-  /stop [service]       Stop a running service
-  /restart [service]    Restart a service
-  /clear                Clear current log panel
-  /gemini               Open Gemini AI chat panel
-  /gemini enable        Set up Google authentication
-  /gemini ask <query>   Quick question to Gemini
-  /gemini status        Check authentication status
-  /gemini logout        Log out from Gemini
-  /help                 Show this help message
-  /quit                 Exit the application
+
+  Development Server:
+    /dev                  Start Vite dev server
+    /dev --with-socket    Start Vite + Socket.IO
+    /dev --with-mock      Start Vite + Socket.IO + Mock API
+    /dev --no-https       Start without SSL
+    /dev --no-socket      Start without Socket.IO
+    /dev --chrome         Start + launch Chrome extension
+    /dev --firefox        Start + launch Firefox extension
+
+  Socket.IO:
+    /socket               Start Socket.IO server
+    /socket --with-mock   Start with Mock API enabled
+    /socket send <event>  Send a socket event
+    /socket list          List available events
+    /mock                 Shorthand for /socket --with-mock
+
+  Browser Extensions:
+    /ext chrome           Launch Chrome with GxP extension
+    /ext firefox          Launch Firefox with GxP extension
+
+  Config Extraction:
+    /extract-config       Extract GxP config from source
+    /extract-config -d    Dry run (preview changes)
+    /extract-config -o    Overwrite existing values
+
+  AI Assistant:
+    /gemini               Open Gemini AI chat panel
+    /gemini enable        Set up Google authentication
+    /gemini ask <query>   Quick question to AI
+    /gemini status        Check auth status
+    /gemini logout        Log out from Gemini
+    /gemini clear         Clear conversation history
+    /ai                   Alias for /gemini
+
+  Service Management:
+    /stop [service]       Stop current or specified service
+    /restart [service]    Restart a service
+    /clear                Clear current log panel
+    /help                 Show this help
+    /quit                 Exit application
 
 Keyboard shortcuts:
-  Tab / Shift+Tab  Cycle through tabs
-  Left/Right       Switch tabs
-  Cmd+1/2/3...     Jump to tab (Mac)
-  Shift+Up/Down    Scroll logs
-  Cmd+Up/Down      Jump to top/bottom of logs
+  ←/→              Switch tabs
+  Ctrl+1/2/3...    Jump to tab directly
+  Shift+↑/↓        Scroll logs
+  Ctrl+↑/↓         Jump to top/bottom of logs
   Ctrl+L           Clear current log
+  Ctrl+K           Stop current service
   Ctrl+C           Exit application
-  Up/Down          Command history (in input)
+  Tab              Autocomplete command
+  ↑/↓              Navigate suggestions or command history
+  Esc              Clear input
 `;
 
   // Show Gemini panel

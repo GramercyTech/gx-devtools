@@ -156,6 +156,7 @@ When you provide a build description, the AI will generate:
 |----------|----------------|-------|
 | **Claude** | CLI login | `npm i -g @anthropic-ai/claude-code && claude login` |
 | **Codex** | CLI login | `npm i -g @openai/codex && codex auth` |
+| **Gemini** | CLI login | `npm i -g @google/gemini-cli && gemini` |
 | **Gemini** | API key | `export GEMINI_API_KEY=your_key` |
 | **Gemini** | gcloud | `gcloud auth login` |
 

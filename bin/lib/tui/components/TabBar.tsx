@@ -49,7 +49,7 @@ export default function TabBar({ services, activeTab, onTabChange }: TabBarProps
         })}
       </Box>
       <Box>
-        <Text color="gray">Tab/←→ switch tabs</Text>
+        <Text color="gray">←/→ switch tabs</Text>
       </Box>
     </Box>
   );
