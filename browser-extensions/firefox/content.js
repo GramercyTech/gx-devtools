@@ -3,6 +3,7 @@
 	const originalFetch = window.fetch;
 	let isProxyEnabled = false;
 	let proxyConfig = {};
+	let inspectorEnabled = false;
 
 	// Get initial state from background script
 	browser.runtime
@@ -22,11 +23,37 @@
 			console.error("[Traffic Proxy Content] Failed to get proxy config:", err)
 		);
 
-	// Listen for config changes
+	// Listen for config changes and inspector messages
 	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		if (message.action === "configUpdate") {
 			isProxyEnabled = message.enabled;
 			proxyConfig = message.config;
+		}
+
+		// Inspector toggle request from popup
+		if (message.action === "toggleInspector") {
+			// Relay to page context via postMessage
+			window.postMessage({ type: 'GXP_INSPECTOR_ACTION', action: 'toggleInspector' }, '*');
+			// Toggle local state
+			inspectorEnabled = !inspectorEnabled;
+			sendResponse({ enabled: inspectorEnabled });
+			return true;
+		}
+
+		// Get inspector state request from popup
+		if (message.action === "getInspectorState") {
+			sendResponse({ enabled: inspectorEnabled });
+			return true;
+		}
+	});
+
+	// Listen for messages from page context (inspector.js)
+	window.addEventListener('message', (event) => {
+		if (event.source !== window) return;
+
+		// Inspector state updates from page context
+		if (event.data?.type === 'GXP_INSPECTOR_STATE') {
+			inspectorEnabled = event.data.enabled;
 		}
 	});
 
