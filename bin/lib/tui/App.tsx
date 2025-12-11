@@ -5,7 +5,7 @@ import Header from './components/Header.js';
 import TabBar from './components/TabBar.js';
 import LogPanel from './components/LogPanel.js';
 import CommandInput from './components/CommandInput.js';
-import GeminiPanel from './components/GeminiPanel.js';
+import AIPanel from './components/AIPanel.js';
 import {
   serviceManager,
   startVite,
@@ -18,9 +18,10 @@ import {
   sendSocketEvent,
   ServiceStatus,
   BrowserType,
-  geminiService,
-  isAuthenticated,
-  clearAuthTokens,
+  aiService,
+  getAvailableProviders,
+  getProviderStatus,
+  AIProvider,
 } from './services/index.js';
 
 export interface Service {
@@ -46,7 +47,7 @@ export interface AppProps {
 export default function App({ autoStart, args }: AppProps) {
   const { exit } = useApp();
   const { stdout } = useStdout();
-  const [showGemini, setShowGemini] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [suggestionRows, setSuggestionRows] = useState(0);
@@ -226,9 +227,8 @@ export default function App({ autoStart, args }: AppProps) {
         exit();
         break;
 
-      case 'gemini':
       case 'ai':
-        handleGeminiCommand(cmdArgs);
+        handleAICommand(cmdArgs);
         break;
 
       case 'extract-config':
@@ -385,68 +385,89 @@ export default function App({ autoStart, args }: AppProps) {
     syncServices();
   };
 
-  const handleGeminiCommand = async (cmdArgs: string[]) => {
+  const handleAICommand = async (cmdArgs: string[]) => {
     const subCommand = cmdArgs[0];
 
     switch (subCommand) {
-      case 'enable':
-        addSystemLog('Starting Google OAuth flow...');
-        addSystemLog('A browser window will open for authentication.');
-        const result = await geminiService.startOAuthFlow();
-        if (result.success) {
-          addSystemLog(`✅ ${result.message}`);
+      case 'model':
+        // Set or show current AI provider
+        const providerArg = cmdArgs[1] as AIProvider | undefined;
+        if (providerArg) {
+          const result = aiService.setProvider(providerArg);
+          if (result.success) {
+            addSystemLog(`✅ ${result.message}`);
+          } else {
+            addSystemLog(`❌ ${result.message}`);
+          }
         } else {
-          addSystemLog(`❌ ${result.message}`);
+          // Show current provider and available providers
+          const current = aiService.getProviderInfo();
+          const providers = getAvailableProviders();
+          let message = `Current AI provider: ${current ? getProviderStatus(current) : 'None'}\n\nAvailable providers:`;
+          for (const p of providers) {
+            const status = p.available ? getProviderStatus(p) : `${p.name} (not available)`;
+            const marker = p.id === current?.id ? ' ← current' : '';
+            message += `\n  ${p.id}: ${status}${marker}`;
+            if (!p.available && p.reason) {
+              message += `\n       ${p.reason}`;
+            }
+          }
+          message += '\n\nUsage: /ai model <claude|codex|gemini>';
+          addSystemLog(message);
         }
-        break;
-
-      case 'logout':
-      case 'disable':
-        clearAuthTokens();
-        addSystemLog('Logged out from Gemini AI.');
         break;
 
       case 'status':
-        if (isAuthenticated()) {
-          addSystemLog('✅ Gemini AI is authenticated and ready.');
-        } else {
-          addSystemLog('❌ Not authenticated. Run /gemini enable to set up.');
+        // Show detailed status of all providers
+        const providers = getAvailableProviders();
+        const currentProvider = aiService.getProvider();
+        let statusMsg = 'AI Provider Status:\n';
+        for (const p of providers) {
+          const icon = p.available ? '✅' : '❌';
+          const current = p.id === currentProvider ? ' (current)' : '';
+          statusMsg += `\n  ${icon} ${getProviderStatus(p)}${current}`;
+          if (!p.available && p.reason) {
+            statusMsg += `\n     ${p.reason}`;
+          }
         }
+        addSystemLog(statusMsg);
         break;
 
       case 'ask':
         // Quick question without opening panel
         const question = cmdArgs.slice(1).join(' ');
         if (!question) {
-          addSystemLog('Usage: /gemini ask <your question>');
+          addSystemLog('Usage: /ai ask <your question>');
           return;
         }
-        if (!isAuthenticated()) {
-          addSystemLog('Not authenticated. Run /gemini enable first.');
+        if (!aiService.isAvailable()) {
+          addSystemLog(`Current provider (${aiService.getProvider()}) is not available. Run /ai model to select a different provider.`);
           return;
         }
-        addSystemLog(`Asking Gemini: ${question}`);
+        const providerName = aiService.getProviderInfo()?.name || 'AI';
+        addSystemLog(`Asking ${providerName}: ${question}`);
         try {
-          geminiService.loadProjectContext(process.cwd());
-          const response = await geminiService.sendMessage(question);
-          addSystemLog(`Gemini: ${response}`);
+          aiService.loadProjectContext(process.cwd());
+          const response = await aiService.sendMessage(question);
+          addSystemLog(`${providerName}: ${response}`);
         } catch (err) {
           addSystemLog(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
         break;
 
       case 'clear':
-        geminiService.clearConversation();
+        aiService.clearConversation();
         addSystemLog('Conversation history cleared.');
         break;
 
+      case 'chat':
       default:
-        // No subcommand = open chat panel
-        if (!isAuthenticated()) {
-          addSystemLog('Not authenticated. Run /gemini enable to set up Google authentication.');
+        // Open AI chat panel
+        if (!aiService.isAvailable()) {
+          addSystemLog(`Current provider (${aiService.getProvider()}) is not available. Run /ai model to select a different provider.`);
           return;
         }
-        setShowGemini(true);
+        setShowAIPanel(true);
     }
   };
 
@@ -650,13 +671,12 @@ Available commands:
     /extract-config -o    Overwrite existing values
 
   AI Assistant:
-    /gemini               Open Gemini AI chat panel
-    /gemini enable        Set up Google authentication
-    /gemini ask <query>   Quick question to AI
-    /gemini status        Check auth status
-    /gemini logout        Log out from Gemini
-    /gemini clear         Clear conversation history
-    /ai                   Alias for /gemini
+    /ai                   Open AI chat with current provider
+    /ai model             Show available AI providers
+    /ai model <name>      Switch to claude, codex, or gemini
+    /ai ask <query>       Quick question to AI
+    /ai status            Check provider availability
+    /ai clear             Clear conversation history
 
   Service Management:
     /stop [service]       Stop current or specified service
@@ -678,11 +698,11 @@ Keyboard shortcuts:
   Esc              Clear input
 `;
 
-  // Show Gemini panel
-  if (showGemini) {
+  // Show AI panel
+  if (showAIPanel) {
     return (
-      <GeminiPanel
-        onClose={() => setShowGemini(false)}
+      <AIPanel
+        onClose={() => setShowAIPanel(false)}
         onLog={addSystemLog}
       />
     );

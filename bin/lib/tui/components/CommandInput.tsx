@@ -35,13 +35,14 @@ const COMMANDS = [
   { cmd: '/extract-config', args: '--overwrite', desc: 'Overwrite existing config values' },
 
   // AI commands
-  { cmd: '/gemini', args: '', desc: 'Open Gemini AI chat panel' },
-  { cmd: '/gemini', args: 'enable', desc: 'Set up Google authentication' },
-  { cmd: '/gemini', args: 'ask <query>', desc: 'Quick AI question' },
-  { cmd: '/gemini', args: 'status', desc: 'Check AI auth status' },
-  { cmd: '/gemini', args: 'logout', desc: 'Log out from Gemini' },
-  { cmd: '/gemini', args: 'clear', desc: 'Clear conversation history' },
-  { cmd: '/ai', args: '', desc: 'Open Gemini AI chat (alias)' },
+  { cmd: '/ai', args: '', desc: 'Open AI chat with current provider' },
+  { cmd: '/ai', args: 'model', desc: 'Show available AI providers' },
+  { cmd: '/ai', args: 'model claude', desc: 'Switch to Claude AI' },
+  { cmd: '/ai', args: 'model codex', desc: 'Switch to Codex AI' },
+  { cmd: '/ai', args: 'model gemini', desc: 'Switch to Gemini AI' },
+  { cmd: '/ai', args: 'ask <query>', desc: 'Quick AI question' },
+  { cmd: '/ai', args: 'status', desc: 'Check provider availability' },
+  { cmd: '/ai', args: 'clear', desc: 'Clear conversation history' },
 
   // General
   { cmd: '/help', args: '', desc: 'Show all commands' },

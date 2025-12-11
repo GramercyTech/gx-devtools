@@ -11,3 +11,14 @@ export {
   saveGeminiConfig,
   clearAuthTokens
 } from './GeminiService.js';
+export {
+  aiService,
+  AIService,
+  AIProvider,
+  AIProviderInfo,
+  AIConfig,
+  loadAIConfig,
+  saveAIConfig,
+  getAvailableProviders,
+  getProviderStatus
+} from './AIService.js';
