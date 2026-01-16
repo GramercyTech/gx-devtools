@@ -19,214 +19,331 @@
  */
 
 /**
+ * Parse HTML tags using a state machine approach
+ * This correctly handles > characters inside quoted attribute values
+ */
+function parseTagsFromHtml(html) {
+	const tags = [];
+	let i = 0;
+
+	const VOID_ELEMENTS = new Set([
+		"br", "hr", "img", "input", "meta", "link",
+		"area", "base", "col", "embed", "param",
+		"source", "track", "wbr"
+	]);
+
+	while (i < html.length) {
+		// Look for tag start
+		if (html[i] === "<") {
+			const tagStart = i;
+			i++;
+
+			// Check for closing tag
+			const isClosing = html[i] === "/";
+			if (isClosing) i++;
+
+			// Skip if not a valid tag start (could be < in text or comment)
+			if (!/[a-zA-Z]/.test(html[i])) {
+				continue;
+			}
+
+			// Parse tag name
+			let tagName = "";
+			while (i < html.length && /[a-zA-Z0-9-]/.test(html[i])) {
+				tagName += html[i];
+				i++;
+			}
+
+			// Parse attributes (skip whitespace and attributes until we hit > or />)
+			let attrs = "";
+			let inDoubleQuote = false;
+			let inSingleQuote = false;
+			let foundEnd = false;
+			let isSelfClosing = false;
+
+			while (i < html.length && !foundEnd) {
+				const char = html[i];
+
+				if (inDoubleQuote) {
+					attrs += char;
+					if (char === '"') {
+						inDoubleQuote = false;
+					}
+					i++;
+				} else if (inSingleQuote) {
+					attrs += char;
+					if (char === "'") {
+						inSingleQuote = false;
+					}
+					i++;
+				} else if (char === '"') {
+					attrs += char;
+					inDoubleQuote = true;
+					i++;
+				} else if (char === "'") {
+					attrs += char;
+					inSingleQuote = true;
+					i++;
+				} else if (char === "/" && html[i + 1] === ">") {
+					isSelfClosing = true;
+					i += 2;
+					foundEnd = true;
+				} else if (char === ">") {
+					i++;
+					foundEnd = true;
+				} else {
+					attrs += char;
+					i++;
+				}
+			}
+
+			if (!foundEnd) {
+				// Malformed tag, skip
+				continue;
+			}
+
+			const fullMatch = html.substring(tagStart, i);
+
+			// Check for void elements
+			if (!isSelfClosing && VOID_ELEMENTS.has(tagName.toLowerCase())) {
+				isSelfClosing = true;
+			}
+
+			tags.push({
+				tagName,
+				attrs: attrs.trim(),
+				start: tagStart,
+				fullMatch,
+				isClosing,
+				isSelfClosing,
+			});
+		} else {
+			i++;
+		}
+	}
+
+	return tags;
+}
+
+/**
  * Create the source tracker plugin
  */
 export function gxpSourceTrackerPlugin(options = {}) {
-  const {
-    enabled = true,
-    attrName = 'data-gxp-expr'
-  } = options;
+	const { enabled = true, attrName = "data-gxp-expr" } = options;
 
-  return {
-    name: 'gxp-source-tracker',
-    enforce: 'pre',
+	return {
+		name: "gxp-source-tracker",
+		enforce: "pre",
 
-    apply(config, { command }) {
-      return enabled && command === 'serve';
-    },
+		apply(config, { command }) {
+			return enabled && command === "serve";
+		},
 
-    transform(code, id) {
-      if (!id.endsWith('.vue')) {
-        return null;
-      }
+		transform(code, id) {
+			if (!id.endsWith(".vue")) {
+				return null;
+			}
 
-      const templateMatch = code.match(/<template>([\s\S]*?)<\/template>/);
-      if (!templateMatch) {
-        return null;
-      }
+			const templateMatch = code.match(/<template>([\s\S]*?)<\/template>/);
+			if (!templateMatch) {
+				return null;
+			}
 
-      // Debug: log which file we're processing
-      const fileName = id.split('/').pop();
-      console.log(`[GxP Source Tracker] Processing: ${fileName}`);
+			// Debug: log which file we're processing
+			const fileName = id.split("/").pop();
+			console.log(`[GxP Source Tracker] Processing: ${fileName}`);
 
-      let template = templateMatch[1];
-      let modified = false;
+			let template = templateMatch[1];
+			let modified = false;
 
-      // Track which elements we've already processed to avoid duplicates
-      const processed = new Set();
+			// Process each element that has {{ expression }} as its content
+			// Strategy: Find each {{ expression }} and trace back to find its parent element
 
-      // Process each element that has {{ expression }} as its content
-      // We need to find the element that DIRECTLY contains the expression
-      // Strategy: Find all {{ expr }} and trace back to their parent element
+			const exprPattern = /\{\{([\s\S]*?)\}\}/g;
+			let match;
 
-      // Strategy: Find each {{ expression }} and trace back to find its parent element
-      // This handles cases where expressions are nested or mixed with other content
+			// Map to track which elements we've already added attributes to
+			// Key: element start position, Value: array of expressions
+			const elementExpressions = new Map();
 
-      const exprPattern = /\{\{([\s\S]*?)\}\}/g;
-      let match;
+			while ((match = exprPattern.exec(template)) !== null) {
+				const exprStart = match.index;
+				const expression = match[1].trim();
 
-      // Map to track which elements we've already added attributes to
-      // Key: element start position, Value: array of expressions
-      const elementExpressions = new Map();
+				// Find the opening tag that contains this expression
+				// Look backwards from the expression to find the nearest unclosed tag
+				const beforeExpr = template.substring(0, exprStart);
 
-      while ((match = exprPattern.exec(template)) !== null) {
-        const exprStart = match.index;
-        const expression = match[1].trim();
+				// Use state-machine parser for reliable tag parsing
+				const tags = parseTagsFromHtml(beforeExpr);
 
-        // Find the opening tag that contains this expression
-        // Look backwards from the expression to find the nearest unclosed tag
-        const beforeExpr = template.substring(0, exprStart);
+				// Walk through tags to find the immediate parent (last unclosed tag)
+				const stack = [];
+				for (const tag of tags) {
+					if (tag.isSelfClosing) continue;
 
-        // Find the last opening tag before this expression
-        // We need to find a tag that hasn't been closed yet
-        let depth = 0;
-        let tagMatch;
-        let parentTagInfo = null;
+					if (tag.isClosing) {
+						// Pop from stack
+						if (
+							stack.length > 0 &&
+							stack[stack.length - 1].tagName.toLowerCase() ===
+								tag.tagName.toLowerCase()
+						) {
+							stack.pop();
+						}
+					} else {
+						stack.push(tag);
+					}
+				}
 
-        // Find all tags before this expression
-        const tagPattern = /<\/?([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>/g;
-        const tags = [];
+				// The last item in the stack is our parent element
+				if (stack.length > 0) {
+					const parentTagInfo = stack[stack.length - 1];
 
-        while ((tagMatch = tagPattern.exec(beforeExpr)) !== null) {
-          const isClosing = tagMatch[0].startsWith('</');
-          const isSelfClosing = tagMatch[0].endsWith('/>') ||
-            ['br', 'hr', 'img', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'param', 'source', 'track', 'wbr'].includes(tagMatch[1].toLowerCase());
+					// Skip script/style tags
+					if (
+						["script", "style"].includes(parentTagInfo.tagName.toLowerCase())
+					) {
+						continue;
+					}
 
-          tags.push({
-            tagName: tagMatch[1],
-            attrs: tagMatch[2],
-            start: tagMatch.index,
-            fullMatch: tagMatch[0],
-            isClosing,
-            isSelfClosing
-          });
-        }
+					// Skip if already has data-gxp-expr in the original attrs
+					if (parentTagInfo.attrs.includes(attrName)) {
+						continue;
+					}
 
-        // Walk through tags to find the immediate parent (last unclosed tag)
-        const stack = [];
-        for (const tag of tags) {
-          if (tag.isSelfClosing) continue;
+					// Add this expression to the parent element's list
+					const key = parentTagInfo.start;
+					if (!elementExpressions.has(key)) {
+						elementExpressions.set(key, {
+							tagInfo: parentTagInfo,
+							expressions: [],
+						});
+					}
+					elementExpressions.get(key).expressions.push(expression);
+				}
+			}
 
-          if (tag.isClosing) {
-            // Pop from stack
-            if (stack.length > 0 && stack[stack.length - 1].tagName.toLowerCase() === tag.tagName.toLowerCase()) {
-              stack.pop();
-            }
-          } else {
-            stack.push(tag);
-          }
-        }
+			// Now build replacements for each element that has expressions
+			const replacements = [];
 
-        // The last item in the stack is our parent element
-        if (stack.length > 0) {
-          parentTagInfo = stack[stack.length - 1];
+			for (const [start, data] of elementExpressions) {
+				const { tagInfo, expressions } = data;
 
-          // Skip script/style tags
-          if (['script', 'style'].includes(parentTagInfo.tagName.toLowerCase())) {
-            continue;
-          }
+				// Only add expressions that are direct children (not from nested elements)
+				// For now, take all unique expressions
+				const uniqueExprs = [...new Set(expressions)];
+				const exprValue = uniqueExprs.join("; ");
 
-          // Skip if already has data-gxp-expr in the original attrs
-          if (parentTagInfo.attrs.includes(attrName)) {
-            continue;
-          }
+				const oldOpenTag = tagInfo.fullMatch;
+				// Insert the attribute before the closing > or />
+				let newOpenTag;
+				if (oldOpenTag.endsWith("/>")) {
+					newOpenTag = oldOpenTag.slice(0, -2) + ` ${attrName}="${escapeAttr(exprValue)}"/>`;
+				} else {
+					newOpenTag = oldOpenTag.slice(0, -1) + ` ${attrName}="${escapeAttr(exprValue)}">`;
+				}
 
-          // Add this expression to the parent element's list
-          const key = parentTagInfo.start;
-          if (!elementExpressions.has(key)) {
-            elementExpressions.set(key, {
-              tagInfo: parentTagInfo,
-              expressions: []
-            });
-          }
-          elementExpressions.get(key).expressions.push(expression);
-        }
-      }
+				replacements.push({
+					start: tagInfo.start,
+					oldText: oldOpenTag,
+					newText: newOpenTag,
+				});
 
-      // Now build replacements for each element that has expressions
-      const replacements = [];
+				modified = true;
+			}
 
-      for (const [start, data] of elementExpressions) {
-        const { tagInfo, expressions } = data;
+			// Apply replacements in reverse order to preserve indices
+			replacements.sort((a, b) => b.start - a.start);
+			for (const r of replacements) {
+				template =
+					template.substring(0, r.start) +
+					r.newText +
+					template.substring(r.start + r.oldText.length);
+			}
 
-        // Only add expressions that are direct children (not from nested elements)
-        // For now, take all unique expressions
-        const uniqueExprs = [...new Set(expressions)];
-        const exprValue = uniqueExprs.join('; ');
+			// Also handle v-html, v-text directives using state-machine approach
+			template = addAttrToDirective(template, "v-html", attrName);
+			template = addAttrToDirective(template, "v-text", attrName);
+			template = addAttrToDirective(template, ":textContent", attrName);
 
-        const oldOpenTag = tagInfo.fullMatch;
-        // Insert the attribute before the closing >
-        const newOpenTag = oldOpenTag.replace(/>$/, ` ${attrName}="${escapeAttr(exprValue)}">`);
+			if (!modified && !template.includes(attrName)) {
+				console.log(
+					`[GxP Source Tracker] No expressions found in: ${fileName}`
+				);
+				return null;
+			}
 
-        replacements.push({
-          start: tagInfo.start,
-          oldText: oldOpenTag,
-          newText: newOpenTag
-        });
+			console.log(
+				`[GxP Source Tracker] Added data-gxp-expr to ${elementExpressions.size} elements in: ${fileName}`
+			);
+			const newCode = code.replace(
+				/<template>[\s\S]*?<\/template>/,
+				`<template>${template}</template>`
+			);
 
-        modified = true;
-      }
+			return {
+				code: newCode,
+				map: null,
+			};
+		},
+	};
+}
 
-      // Apply replacements in reverse order to preserve indices
-      replacements.sort((a, b) => b.start - a.start);
-      for (const r of replacements) {
-        template = template.substring(0, r.start) +
-                   r.newText +
-                   template.substring(r.start + r.oldText.length);
-      }
+/**
+ * Add data-gxp-expr attribute to elements with a specific directive
+ */
+function addAttrToDirective(template, directive, attrName) {
+	const tags = parseTagsFromHtml(template);
+	const replacements = [];
 
-      // Also handle v-html, v-text directives
-      // Add data-gxp-expr to elements that have these
-      template = template.replace(
-        /<([a-zA-Z][a-zA-Z0-9-]*)([^>]*)(v-html)="([^"]+)"([^>]*)>/g,
-        (match, tag, before, directive, expr, after) => {
-          if (match.includes(attrName)) return match;
-          return `<${tag}${before}${directive}="${expr}"${after} ${attrName}="${escapeAttr('v-html:' + expr)}">`;
-        }
-      );
+	for (const tag of tags) {
+		if (tag.isClosing) continue;
+		if (tag.fullMatch.includes(attrName)) continue;
 
-      template = template.replace(
-        /<([a-zA-Z][a-zA-Z0-9-]*)([^>]*)(v-text)="([^"]+)"([^>]*)>/g,
-        (match, tag, before, directive, expr, after) => {
-          if (match.includes(attrName)) return match;
-          modified = true;
-          return `<${tag}${before}${directive}="${expr}"${after} ${attrName}="${escapeAttr('v-text:' + expr)}">`;
-        }
-      );
+		// Check if this tag has the directive
+		const directivePattern = new RegExp(`${escapeRegex(directive)}="([^"]*)"`, "g");
+		const match = directivePattern.exec(tag.attrs);
+		if (match) {
+			const exprValue = `${directive}:${match[1]}`;
+			let newOpenTag;
+			if (tag.fullMatch.endsWith("/>")) {
+				newOpenTag = tag.fullMatch.slice(0, -2) + ` ${attrName}="${escapeAttr(exprValue)}"/>`;
+			} else {
+				newOpenTag = tag.fullMatch.slice(0, -1) + ` ${attrName}="${escapeAttr(exprValue)}">`;
+			}
 
-      // Handle :textContent binding
-      template = template.replace(
-        /<([a-zA-Z][a-zA-Z0-9-]*)([^>]*):textContent="([^"]+)"([^>]*)>/g,
-        (match, tag, before, expr, after) => {
-          if (match.includes(attrName)) return match;
-          modified = true;
-          return `<${tag}${before}:textContent="${expr}"${after} ${attrName}="${escapeAttr(':textContent:' + expr)}">`;
-        }
-      );
+			replacements.push({
+				start: tag.start,
+				oldText: tag.fullMatch,
+				newText: newOpenTag,
+			});
+		}
+	}
 
-      if (!modified) {
-        console.log(`[GxP Source Tracker] No expressions found in: ${fileName}`);
-        return null;
-      }
+	// Apply replacements in reverse order
+	replacements.sort((a, b) => b.start - a.start);
+	for (const r of replacements) {
+		template =
+			template.substring(0, r.start) +
+			r.newText +
+			template.substring(r.start + r.oldText.length);
+	}
 
-      console.log(`[GxP Source Tracker] Added data-gxp-expr to ${elementExpressions.size} elements in: ${fileName}`);
-      const newCode = code.replace(/<template>[\s\S]*?<\/template>/, `<template>${template}</template>`);
+	return template;
+}
 
-      return {
-        code: newCode,
-        map: null
-      };
-    }
-  };
+function escapeRegex(str) {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function escapeAttr(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+	return str
+		.replace(/&/g, "&amp;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
 }
 
 export default gxpSourceTrackerPlugin;
