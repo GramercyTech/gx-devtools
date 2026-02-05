@@ -1,0 +1,93 @@
+/* Theme CSS Variables */
+:root {
+  --primary: #000000;
+  --page_background_color: #000466;
+  --page_text_color: #FFFFFF;
+  --input_field_background_color: #03054a;
+  --input_field_text_color: #FFFFFF;
+  --input_field_border_color: #888C92;
+  --primary_button_background_color: #FFFFFF;
+  --primary_button_text_color: #000596;
+  --primary_button_border_color: #FFFFFF;
+  --secondary_button_background_color: #000466;
+  --secondary_button_text_color: #FFFFFF;
+  --secondary_button_border_color: #FFFFFF;
+  --tertiary_button_background_color: #FFFFFF00;
+  --tertiary_button_text_color: #FFFFFF;
+  --tertiary_button_border_color: #FFFFFF00;
+  --spinner_background_color: #03054A;
+  --spinner_color: #FFFFFF;
+  --modal_background_color: #FFFFFF;
+  --modal_text_color: #222222;
+  --modal_primary_button_background_color: #000596;
+  --modal_primary_button_text_color: #FFFFFF;
+  --modal_primary_button_border_color: #000596;
+  --modal_secondary_button_background_color: #FFFFFF;
+  --modal_secondary_button_text_color: #000596;
+  --modal_secondary_button_border_color: #000596;
+}
+
+/* Primary Color */
+.primary {
+  color: var(--primary, #000000);
+}
+
+/* Page Styles */
+.page {
+  background-color: var(--page_background_color, #000466);
+  color: var(--page_text_color, #FFFFFF);
+}
+
+/* Input Field Styles */
+.input-field {
+  background-color: var(--input_field_background_color, #03054a);
+  color: var(--input_field_text_color, #FFFFFF);
+  border-color: var(--input_field_border_color, #888C92);
+}
+
+/* Primary Button Styles */
+.primary-button {
+  background-color: var(--primary_button_background_color, #FFFFFF);
+  color: var(--primary_button_text_color, #000596);
+  border-color: var(--primary_button_border_color, #FFFFFF);
+}
+
+/* Secondary Button Styles */
+.secondary-button {
+  background-color: var(--secondary_button_background_color, #000466);
+  color: var(--secondary_button_text_color, #FFFFFF);
+  border-color: var(--secondary_button_border_color, #FFFFFF);
+}
+
+/* Tertiary Button Styles */
+.tertiary-button {
+  background-color: var(--tertiary_button_background_color, #FFFFFF00);
+  color: var(--tertiary_button_text_color, #FFFFFF);
+  border-color: var(--tertiary_button_border_color, #FFFFFF00);
+}
+
+/* Spinner Styles */
+.spinner {
+  background-color: var(--spinner_background_color, #03054A);
+  color: var(--spinner_color, #FFFFFF);
+}
+
+/* Modal Styles */
+.modal {
+  background-color: var(--modal_background_color, #FFFFFF);
+  color: var(--modal_text_color, #222222);
+}
+
+/* Modal Primary Button Styles */
+.modal-primary-button {
+  background-color: var(--modal_primary_button_background_color, #000596);
+  color: var(--modal_primary_button_text_color, #FFFFFF);
+  border-color: var(--modal_primary_button_border_color, #000596);
+}
+
+/* Modal Secondary Button Styles */
+.modal-secondary-button {
+  background-color: var(--modal_secondary_button_background_color, #FFFFFF);
+  color: var(--modal_secondary_button_text_color, #000596);
+  border-color: var(--modal_secondary_button_border_color, #000596);
+}
