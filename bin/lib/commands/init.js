@@ -41,8 +41,9 @@ const {
  * Copy template files to project
  * @param {string} projectPath - Target project path
  * @param {object} paths - Resolved GxP paths
+ * @param {boolean} overwrite - If true, overwrite existing files
  */
-function copyTemplateFiles(projectPath, paths) {
+function copyTemplateFiles(projectPath, paths, overwrite = false) {
 	const filesToCopy = [
 		{
 			src: "theme-layouts/SystemLayout.vue",
@@ -133,7 +134,7 @@ function copyTemplateFiles(projectPath, paths) {
 	filesToCopy.forEach((file) => {
 		const srcPath = path.join(paths.templateDir, file.src);
 		const destPath = path.join(projectPath, file.dest);
-		safeCopyFile(srcPath, destPath, file.desc);
+		safeCopyFile(srcPath, destPath, file.desc, overwrite);
 	});
 }
 
@@ -141,8 +142,9 @@ function copyTemplateFiles(projectPath, paths) {
  * Copy extension scripts to project
  * @param {string} projectPath - Target project path
  * @param {object} paths - Resolved GxP paths
+ * @param {boolean} overwrite - If true, overwrite existing files
  */
-function copyExtensionScripts(projectPath, paths) {
+function copyExtensionScripts(projectPath, paths, overwrite = false) {
 	const scriptsDir = path.join(projectPath, "scripts");
 	if (!fs.existsSync(scriptsDir)) {
 		fs.mkdirSync(scriptsDir, { recursive: true });
@@ -155,7 +157,7 @@ function copyExtensionScripts(projectPath, paths) {
 	);
 	const launchChromeDest = path.join(scriptsDir, "launch-chrome.js");
 	if (fs.existsSync(launchChromeSource)) {
-		safeCopyFile(launchChromeSource, launchChromeDest, "Chrome launcher script");
+		safeCopyFile(launchChromeSource, launchChromeDest, "Chrome launcher script", overwrite);
 	}
 
 	// Copy pack-chrome.js script
@@ -165,7 +167,7 @@ function copyExtensionScripts(projectPath, paths) {
 	);
 	const packChromeDest = path.join(scriptsDir, "pack-chrome.js");
 	if (fs.existsSync(packChromeSource)) {
-		safeCopyFile(packChromeSource, packChromeDest, "Chrome packaging script");
+		safeCopyFile(packChromeSource, packChromeDest, "Chrome packaging script", overwrite);
 	}
 
 	// Copy socket events directory
@@ -182,7 +184,7 @@ function copyExtensionScripts(projectPath, paths) {
 		eventFiles.forEach((file) => {
 			const srcPath = path.join(socketEventsSource, file);
 			const destPath = path.join(socketEventsDest, file);
-			safeCopyFile(srcPath, destPath, `Socket event: ${file}`);
+			safeCopyFile(srcPath, destPath, `Socket event: ${file}`, overwrite);
 		});
 	}
 }
@@ -291,8 +293,9 @@ function launchBrowserExtension(projectPath, browser) {
  * Run interactive configuration after project creation
  * @param {string} projectPath - Path to project directory
  * @param {string} initialName - Initial project name from CLI
+ * @param {boolean} isLocal - Whether initialized in current directory
  */
-async function runInteractiveConfig(projectPath, initialName) {
+async function runInteractiveConfig(projectPath, initialName, isLocal = false) {
 	console.log("");
 	console.log("─".repeat(50));
 	console.log("📝 Configure Your Plugin");
@@ -466,7 +469,7 @@ async function runInteractiveConfig(projectPath, initialName) {
 		devProcess = launchDevServer(projectPath, { withMock: true, noHttps: !sslSetup });
 	} else {
 		// Print final instructions
-		printFinalInstructions(projectPath, appName, sslSetup);
+		printFinalInstructions(projectPath, appName, sslSetup, isLocal);
 	}
 
 	return devProcess;
@@ -477,8 +480,9 @@ async function runInteractiveConfig(projectPath, initialName) {
  * @param {string} projectPath - Project path
  * @param {string} projectName - Project name
  * @param {boolean} sslSetup - Whether SSL was set up
+ * @param {boolean} isLocal - Whether initialized in current directory
  */
-function printFinalInstructions(projectPath, projectName, sslSetup) {
+function printFinalInstructions(projectPath, projectName, sslSetup, isLocal = false) {
 	console.log("");
 	console.log("─".repeat(50));
 	console.log("✅ Project setup complete!");
@@ -496,7 +500,9 @@ function printFinalInstructions(projectPath, projectName, sslSetup) {
 	console.log("   • app-manifest.json - Plugin configuration");
 	console.log("");
 	console.log("🚀 To start development:");
-	console.log(`   cd ${projectName}`);
+	if (!isLocal) {
+		console.log(`   cd ${projectName}`);
+	}
 	if (sslSetup) {
 		console.log("   npm run dev          # HTTPS with TUI");
 		console.log("   npm run dev-http     # HTTP only");
@@ -517,56 +523,75 @@ async function initCommand(argv) {
 	const hasPackageJson = fs.existsSync(path.join(currentDir, "package.json"));
 	let projectPath = currentDir;
 	let projectName;
+	const overwrite = argv.local && argv.yes;
 
-	// Handle existing project update
-	if (hasPackageJson && !argv.name) {
-		console.log("Updating existing project...");
-		updateExistingProject(projectPath);
-		console.log("✅ Project updated!");
-		return;
-	}
+	// Handle --local flag: initialize in current directory
+	if (argv.local) {
+		projectPath = currentDir;
+		projectName = argv.name || path.basename(currentDir);
 
-	// New project - require a name
-	if (!argv.name) {
-		// In non-interactive mode, name is required
-		if (argv.yes) {
-			console.error("❌ Project name is required when using --yes flag!");
-			console.error("   Usage: gxdev init <project-name> --yes");
-			process.exit(1);
-		}
 		console.log("");
-		console.log("🚀 GxP Plugin Creator");
+		console.log(`📁 Initializing project in current directory: ${projectName}`);
+		if (overwrite) {
+			console.log("⚠️  Overwrite mode enabled - existing files will be replaced");
+		}
 		console.log("─".repeat(40));
-		console.log("");
-		projectName = await promptUser("📝 Project name: ");
-		if (!projectName) {
-			console.error("❌ Project name is required!");
+	} else {
+		// Handle existing project update
+		if (hasPackageJson && !argv.name) {
+			console.log("Updating existing project...");
+			updateExistingProject(projectPath);
+			console.log("✅ Project updated!");
+			return;
+		}
+
+		// New project - require a name
+		if (!argv.name) {
+			// In non-interactive mode, name is required
+			if (argv.yes) {
+				console.error("❌ Project name is required when using --yes flag!");
+				console.error("   Usage: gxdev init <project-name> --yes");
+				process.exit(1);
+			}
+			console.log("");
+			console.log("🚀 GxP Plugin Creator");
+			console.log("─".repeat(40));
+			console.log("");
+			projectName = await promptUser("📝 Project name: ");
+			if (!projectName) {
+				console.error("❌ Project name is required!");
+				process.exit(1);
+			}
+		} else {
+			projectName = argv.name;
+		}
+
+		// Create project directory
+		projectPath = path.join(currentDir, projectName);
+		if (fs.existsSync(projectPath)) {
+			console.error(`\n❌ Directory ${projectName} already exists!`);
 			process.exit(1);
 		}
-	} else {
-		projectName = argv.name;
+
+		console.log("");
+		console.log(`📁 Creating project: ${projectName}`);
+		console.log("─".repeat(40));
+		fs.mkdirSync(projectPath, { recursive: true });
 	}
 
-	// Create project directory
-	projectPath = path.join(currentDir, projectName);
-	if (fs.existsSync(projectPath)) {
-		console.error(`\n❌ Directory ${projectName} already exists!`);
-		process.exit(1);
-	}
-
-	console.log("");
-	console.log(`📁 Creating project: ${projectName}`);
-	console.log("─".repeat(40));
-	fs.mkdirSync(projectPath, { recursive: true });
-
-	// Create package.json
+	// Create package.json (only if it doesn't exist or overwrite is enabled)
 	const initialDescription = argv.description || "A GxP kiosk plugin";
-	createPackageJson(projectPath, projectName, initialDescription);
+	const packageJsonPath = path.join(projectPath, "package.json");
+	if (!fs.existsSync(packageJsonPath) || overwrite) {
+		createPackageJson(projectPath, projectName, initialDescription);
+	} else {
+		console.log("⏭️  Skipping package.json (already exists)");
+	}
 
 	// Copy template files
 	const paths = resolveGxPaths();
-	copyTemplateFiles(projectPath, paths);
-	copyExtensionScripts(projectPath, paths);
+	copyTemplateFiles(projectPath, paths, overwrite);
+	copyExtensionScripts(projectPath, paths, overwrite);
 	createSupportingFiles(projectPath);
 
 	// Install dependencies
@@ -581,19 +606,19 @@ async function initCommand(argv) {
 		updateAppManifest(projectPath, projectName, initialDescription);
 		const provider = argv.provider || "gemini"; // Default to gemini for backward compatibility
 		await runAIScaffolding(projectPath, projectName, initialDescription, argv.build, provider);
-		printFinalInstructions(projectPath, projectName, false);
+		printFinalInstructions(projectPath, projectName, false, argv.local);
 		return;
 	}
 
 	// If --yes flag provided, skip interactive configuration
 	if (argv.yes) {
 		updateAppManifest(projectPath, projectName, initialDescription);
-		printFinalInstructions(projectPath, projectName, false);
+		printFinalInstructions(projectPath, projectName, false, argv.local);
 		return;
 	}
 
 	// Run interactive configuration
-	await runInteractiveConfig(projectPath, projectName);
+	await runInteractiveConfig(projectPath, projectName, argv.local);
 }
 
 module.exports = {

@@ -16,10 +16,15 @@ const { loadGlobalConfig } = require("./paths");
 
 /**
  * Copies a file from source to destination, creating directories if needed
+ * @param {string} src - Source file path
+ * @param {string} dest - Destination file path
+ * @param {string} description - Description for logging
+ * @param {boolean} overwrite - If true, overwrite existing files
  */
-function safeCopyFile(src, dest, description) {
-	if (!fs.existsSync(dest)) {
-		console.log(`Creating ${description}`);
+function safeCopyFile(src, dest, description, overwrite = false) {
+	const exists = fs.existsSync(dest);
+	if (!exists || overwrite) {
+		console.log(`${exists ? 'Overwriting' : 'Creating'} ${description}`);
 		const destDir = path.dirname(dest);
 		if (!fs.existsSync(destDir)) {
 			fs.mkdirSync(destDir, { recursive: true });

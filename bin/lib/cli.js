@@ -63,6 +63,12 @@ yargs
 				alias: "y",
 				default: false,
 			},
+			local: {
+				describe: "Initialize in current directory instead of creating a new one",
+				type: "boolean",
+				alias: "l",
+				default: false,
+			},
 		},
 		initCommand
 	)
