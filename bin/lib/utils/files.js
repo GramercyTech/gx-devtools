@@ -124,31 +124,49 @@ function updateExistingProject(projectPath) {
 	}
 
 	try {
+		// Backup existing vite.config.js if present
+		const viteConfigPath = path.join(projectPath, "vite.config.js");
+		if (fs.existsSync(viteConfigPath)) {
+			const backupPath = path.join(projectPath, "vite.config.js.backup");
+			fs.renameSync(viteConfigPath, backupPath);
+			console.log("  → Renamed vite.config.js to vite.config.js.backup");
+		}
+
 		const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
 		let updated = false;
 
-		// Check and add missing dependencies
+		// Check and add/update dependencies
 		if (!packageJson.dependencies) {
 			packageJson.dependencies = {};
 		}
 
 		for (const [dep, version] of Object.entries(REQUIRED_DEPENDENCIES)) {
-			if (!packageJson.dependencies[dep]) {
+			const existingVersion = packageJson.dependencies[dep];
+			if (!existingVersion) {
 				packageJson.dependencies[dep] = version;
 				console.log(`  + Adding dependency: ${dep}@${version}`);
+				updated = true;
+			} else if (existingVersion !== version) {
+				packageJson.dependencies[dep] = version;
+				console.log(`  ↑ Updating dependency: ${dep} (${existingVersion} → ${version})`);
 				updated = true;
 			}
 		}
 
-		// Check and add missing dev dependencies
+		// Check and add/update dev dependencies
 		if (!packageJson.devDependencies) {
 			packageJson.devDependencies = {};
 		}
 
 		for (const [dep, version] of Object.entries(REQUIRED_DEV_DEPENDENCIES)) {
-			if (!packageJson.devDependencies[dep]) {
+			const existingVersion = packageJson.devDependencies[dep];
+			if (!existingVersion) {
 				packageJson.devDependencies[dep] = version;
 				console.log(`  + Adding devDependency: ${dep}@${version}`);
+				updated = true;
+			} else if (existingVersion !== version) {
+				packageJson.devDependencies[dep] = version;
+				console.log(`  ↑ Updating devDependency: ${dep} (${existingVersion} → ${version})`);
 				updated = true;
 			}
 		}

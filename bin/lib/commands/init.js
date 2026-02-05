@@ -528,6 +528,12 @@ async function initCommand(argv) {
 
 	// New project - require a name
 	if (!argv.name) {
+		// In non-interactive mode, name is required
+		if (argv.yes) {
+			console.error("❌ Project name is required when using --yes flag!");
+			console.error("   Usage: gxdev init <project-name> --yes");
+			process.exit(1);
+		}
 		console.log("");
 		console.log("🚀 GxP Plugin Creator");
 		console.log("─".repeat(40));
@@ -575,6 +581,13 @@ async function initCommand(argv) {
 		updateAppManifest(projectPath, projectName, initialDescription);
 		const provider = argv.provider || "gemini"; // Default to gemini for backward compatibility
 		await runAIScaffolding(projectPath, projectName, initialDescription, argv.build, provider);
+		printFinalInstructions(projectPath, projectName, false);
+		return;
+	}
+
+	// If --yes flag provided, skip interactive configuration
+	if (argv.yes) {
+		updateAppManifest(projectPath, projectName, initialDescription);
 		printFinalInstructions(projectPath, projectName, false);
 		return;
 	}

@@ -57,6 +57,12 @@ yargs
 				alias: "p",
 				choices: ["claude", "codex", "gemini"],
 			},
+			yes: {
+				describe: "Skip interactive prompts and use defaults",
+				type: "boolean",
+				alias: "y",
+				default: false,
+			},
 		},
 		initCommand
 	)

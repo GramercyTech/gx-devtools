@@ -1,12 +1,21 @@
 {
   "manifest_version": 2,
   "name": "GxP Developer Toolkit",
-  "version": "1.2",
+  "version": "1.2.0",
   "description": "JavaScript proxy and component inspector for GxP plugin development",
+  "homepage_url": "https://github.com/gramercytech/gx-devtools",
+  "developer": {
+    "name": "Gramercy Tech",
+    "url": "https://gramercytech.com"
+  },
 
   "browser_specific_settings": {
     "gecko": {
-      "id": "gxp-toolkit@gx-devtools.dev"
+      "id": "gxp-toolkit@gx-devtools.dev",
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   },
 
@@ -46,7 +55,7 @@
     "default_icon": {
       "16": "icons/gx_off_16.png",
       "32": "icons/gx_off_32.png",
-      "48": "icons/gx_off_48.png",
+      "64": "icons/gx_off_64.png",
       "128": "icons/gx_off_128.png"
     }
   },
@@ -54,7 +63,7 @@
   "icons": {
     "16": "icons/gx_off_16.png",
     "32": "icons/gx_off_32.png",
-    "48": "icons/gx_off_48.png",
+    "48": "icons/gx_off_64.png",
     "128": "icons/gx_off_128.png"
   },
 
