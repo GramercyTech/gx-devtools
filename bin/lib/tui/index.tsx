@@ -32,8 +32,8 @@ export function startTUI(options: TUIOptions = {}) {
     console.error('Try running the command directly from your terminal, not from a script or pipe.');
     console.error('');
     console.error('Alternatively, use the non-TUI commands:');
-    console.error('  npm run dev        # Start Vite dev server');
-    console.error('  npm run dev-http   # Start HTTP dev server');
+    console.error('  pnpm run dev        # Start Vite dev server');
+    console.error('  pnpm run dev-http   # Start HTTP dev server');
     console.error('  gxdev socket list   # List socket events');
     process.exit(1);
     return;

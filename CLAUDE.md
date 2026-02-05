@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-GxP Dev Devtools (`@gxp-dev/tools`) is an npm package for creating platform plugins for the GxP kiosk platform. It provides:
+GxP Dev Devtools (`@gxp-dev/tools`) is a package for creating platform plugins for the GxP kiosk platform. It provides:
 
 ## Quick Start (New Developer)
 
@@ -12,20 +12,20 @@ GxP Dev Devtools (`@gxp-dev/tools`) is an npm package for creating platform plug
 # 1. Clone and install dependencies
 git clone <repo>
 cd gx-devtools
-npm install
+pnpm install
 
 # 2. Build the TUI (required for CLI to work)
-npm run build:tui
+pnpm run build:tui
 
 # 3. Link the package globally for local development
-npm link
+pnpm link
 
 # 4. Create a new test project
 mkdir ~/test-plugin && cd ~/test-plugin
 gxdev init my-plugin
 
 # 5. Start development
-gxdev dev --no-https  # or just: npm run dev-http
+gxdev dev --no-https  # or just: pnpm run dev-http
 ```
 
 ## Features
@@ -43,13 +43,13 @@ GxP Dev Devtools provides:
 
 ```bash
 # Development
-npm run dev              # Start HTTPS dev server with Socket.IO
-npm run dev-app          # Start HTTPS dev server only
-npm run dev-http         # Start HTTP dev server (no SSL)
-npm run build            # Build plugin for production
+pnpm run dev              # Start HTTPS dev server with Socket.IO
+pnpm run dev-app          # Start HTTPS dev server only
+pnpm run dev-http         # Start HTTP dev server (no SSL)
+pnpm run build            # Build plugin for production
 
 # SSL Setup
-npm run setup-ssl        # Generate SSL certificates via mkcert
+pnpm run setup-ssl        # Generate SSL certificates via mkcert
 
 # CLI Commands (gxdev)
 gxdev                     # Launch interactive TUI
@@ -349,16 +349,16 @@ Key environment variables (set in `.env`):
 
 ```bash
 # Build the TUI (TypeScript → JavaScript)
-npm run build:tui
+pnpm run build:tui
 
 # Watch mode for TUI development
-npm run dev:tui
+pnpm run dev:tui
 
 # Build browser extensions for distribution
-npm run ext:build
+pnpm run ext:build
 
 # Full build
-npm run build
+pnpm run build
 ```
 
 ## Customizing Runtime Files
@@ -372,7 +372,7 @@ The CLI will automatically update imports when publishing.
 
 ## Testing Plugins
 
-1. Run `npm run dev` or `gxdev dev` to start the development server
+1. Run `pnpm run dev` or `gxdev dev` to start the development server
 2. Use browser extensions (`gxdev dev --chrome` or `gxdev dev --firefox`) to inject and test plugins
 3. Use `gxdev socket send --event <name>` to simulate real-time events
 4. Edit `app-manifest.json` to test different configurations (hot-reloaded)
@@ -391,7 +391,7 @@ The CLI will automatically update imports when publishing.
 - The page must be the dev server URL for the inspector to work
 
 ### SSL certificate errors
-- Run `npm run setup-ssl` to generate certificates with mkcert
+- Run `pnpm run setup-ssl` to generate certificates with mkcert
 - Accept the certificate in your browser when prompted
 
 ### Hot reload not working

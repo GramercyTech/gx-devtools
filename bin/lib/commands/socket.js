@@ -140,7 +140,7 @@ async function sendSocketEvent(eventName, identifier) {
 			if (error.code === "ECONNREFUSED") {
 				console.error("❌ Cannot connect to Socket.IO server");
 				console.log("💡 Make sure the server is running:");
-				console.log("   npm run dev");
+				console.log("   pnpm run dev");
 				console.log("   or");
 				console.log("   nodemon server.js");
 			} else {

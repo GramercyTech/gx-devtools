@@ -109,9 +109,9 @@ function installDependencies(projectPath) {
 
 	try {
 		process.chdir(projectPath);
-		const result = shell.exec("npm install", { silent: false });
+		const result = shell.exec("pnpm install", { silent: false });
 		if (result.code !== 0) {
-			console.warn("⚠ npm install completed with warnings");
+			console.warn("⚠ pnpm install completed with warnings");
 		}
 	} finally {
 		process.chdir(currentDir);

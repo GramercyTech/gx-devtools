@@ -45,7 +45,7 @@ function extensionFirefoxCommand() {
 
 	console.log("🦊 Launching Firefox with extension...");
 	console.log("📁 Extension path:", extensionPath);
-	shell.exec(`npx web-ext run --source-dir "${extensionPath}"`);
+	shell.exec(`pnpm exec web-ext run --source-dir "${extensionPath}"`);
 }
 
 /**
@@ -245,7 +245,7 @@ function extensionBuildCommand() {
 			? "dist/firefox"
 			: path.join(projectPath, "dist/firefox");
 		shell.exec(
-			`npx web-ext build --source-dir "${firefoxPath}" --artifacts-dir "${outputDir}"`
+			`pnpm exec web-ext build --source-dir "${firefoxPath}" --artifacts-dir "${outputDir}"`
 		);
 	} else {
 		console.log("⚠️ No Firefox extension found to build");

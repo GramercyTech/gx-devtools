@@ -10,7 +10,7 @@ This guide covers common issues and frequently asked questions when developing w
 
 ## Installation Issues
 
-### npm install fails with permission errors
+### pnpm install fails with permission errors
 
 **Error:**
 ```
@@ -23,11 +23,9 @@ EACCES: permission denied
 nvm install 18
 nvm use 18
 
-# Option 2: Fix npm permissions
-mkdir ~/.npm-global
-npm config set prefix '~/.npm-global'
-# Add to ~/.bashrc or ~/.zshrc:
-export PATH=~/.npm-global/bin:$PATH
+# Option 2: Fix pnpm permissions
+pnpm setup
+# Follow the instructions to add pnpm global bin to your PATH
 ```
 
 ### gxdev command not found
@@ -41,31 +39,31 @@ zsh: command not found: gxdev
 
 1. **Global install:**
 ```bash
-npm install -g @gxp-dev/tools
+pnpm install -g @gxp-dev/tools
 ```
 
-2. **Or use npx:**
+2. **Or use pnpm dlx:**
 ```bash
-npx gxdev init my-plugin
+pnpm dlx gxdev init my-plugin
 ```
 
 3. **Or link locally (for toolkit development):**
 ```bash
 cd gx-devtools
-npm link
+pnpm link
 ```
 
 ### TUI not available
 
 **Error:**
 ```
-TUI not available. Run "npm run build:tui" in gx-devtools first.
+TUI not available. Run "pnpm run build:tui" in gx-devtools first.
 ```
 
 **Solution:**
 ```bash
 # In the gx-devtools repository
-npm run build:tui
+pnpm run build:tui
 ```
 
 ---
@@ -83,7 +81,7 @@ NET::ERR_CERT_AUTHORITY_INVALID
 
 1. **Generate certificates:**
 ```bash
-npm run setup-ssl
+pnpm run setup-ssl
 # or
 gxdev setup-ssl
 ```
@@ -95,7 +93,7 @@ gxdev setup-ssl
 3. **Use HTTP instead:**
 ```bash
 gxdev dev --no-https
-npm run dev-http
+pnpm run dev-http
 ```
 
 ### Port already in use
@@ -145,7 +143,7 @@ NODE_PORT=3061
 3. **Clear Vite cache:**
 ```bash
 rm -rf node_modules/.vite
-npm run dev
+pnpm run dev
 ```
 
 4. **Check network** - HMR needs WebSocket connection
@@ -206,7 +204,7 @@ import './MyComponent.css';
 
 1. **Analyze bundle:**
 ```bash
-npx vite build --mode analyze
+pnpm exec vite build --mode analyze
 ```
 
 2. **Check for unused dependencies**
@@ -423,7 +421,7 @@ Event file not found: MyEvent.json
 mkdir my-plugin
 cd my-plugin
 gxdev init my-plugin
-npm run dev-http  # or npm run dev for HTTPS
+pnpm run dev-http  # or pnpm run dev for HTTPS
 ```
 
 ### Where is the final build output?
@@ -538,7 +536,7 @@ When something isn't working, check these in order:
 6. ✅ **Port conflicts** - Single instance per port
 7. ✅ **File paths** - Correct aliases (@, @layouts, @gx-runtime)
 8. ✅ **Cache** - Clear and restart
-9. ✅ **Dependencies** - npm install complete
+9. ✅ **Dependencies** - pnpm install complete
 10. ✅ **Node version** - 18+ required
 
 ## Getting Help

@@ -5,13 +5,13 @@ A development devtools for creating plugins for the GxP kiosk platform. This pac
 ## Installation
 
 ```bash
-npm install -g @gxp-dev/tools
+pnpm install -g @gxp-dev/tools
 ```
 
 Or use it as a dev dependency in your project:
 
 ```bash
-npm install --save-dev @gxp-dev/tools
+pnpm install --save-dev @gxp-dev/tools
 ```
 
 ## Quick Start
@@ -22,7 +22,7 @@ Create a new GxP plugin project:
 gxdev init my-plugin
 cd my-plugin
 git init
-npm run dev
+pnpm run dev
 ```
 
 ## CLI Commands
@@ -144,12 +144,12 @@ The platform emulator that wraps user plugins during development. It:
 
 2. **Install dependencies**:
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. **Link for local testing**:
    ```bash
-   npm link
+   pnpm link
    ```
 
 4. **Create a test project**:
@@ -159,12 +159,12 @@ The platform emulator that wraps user plugins during development. It:
    gxdev init test-app
    cd test-app
 
-   # Link to local devtools instead of npm version
+   # Link to local devtools instead of published version
    rm -rf node_modules/@gxp-dev/tools
    mkdir -p node_modules/@gramercytech
    ln -s /path/to/gx-devtools node_modules/@gxp-dev/tools
 
-   npm run dev-http
+   pnpm run dev-http
    ```
 
 ## Making Changes
@@ -209,25 +209,25 @@ node /path/to/gx-devtools/bin/gx-devtools.js init test-project
 
 # Test dev server (after linking)
 cd test-project
-npm run dev-http
+pnpm run dev-http
 
 # Test build
-npm run build
+pnpm run build
 ```
 
 ### Verifying Changes
 
 1. Create a fresh test project
 2. Link the local devtools
-3. Run `npm run dev-http` and verify the app loads
-4. Run `npm run build` and check `dist/` output
+3. Run `pnpm run dev-http` and verify the app loads
+4. Run `pnpm run build` and check `dist/` output
 5. Test dev tools with Ctrl+Shift+D
 
 ## Publishing
 
 1. Update version in `package.json`
 2. Ensure all new directories are included (runtime/, template/, socket-events/)
-3. Run `npm publish`
+3. Run `pnpm publish`
 
 ## Dependencies
 

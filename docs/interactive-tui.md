@@ -340,10 +340,10 @@ The TUI is built with TypeScript and Ink (React for terminal):
 
 ```bash
 # Build TUI (in gx-devtools repo)
-npm run build:tui
+pnpm run build:tui
 
 # Watch mode for development
-npm run dev:tui
+pnpm run dev:tui
 ```
 
 ### Architecture

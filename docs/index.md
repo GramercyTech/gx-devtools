@@ -7,7 +7,7 @@ slug: /gx-devtools
 
 # GxP Dev Toolkit
 
-The GxP Dev Toolkit (`@gxp-dev/tools`) is an npm package for creating platform plugins for the GxP kiosk platform.
+The GxP Dev Toolkit (`@gxp-dev/tools`) is a package for creating platform plugins for the GxP kiosk platform.
 
 ## What You Can Build
 
@@ -35,14 +35,14 @@ With the GxP Toolkit, you can create custom plugins that run on GxP kiosks, incl
 
 ```bash
 # Install globally
-npm install -g @gxp-dev/tools
+pnpm install -g @gxp-dev/tools
 
 # Create a new project
 mkdir my-plugin && cd my-plugin
 gxdev init my-plugin
 
 # Start development
-npm run dev-http
+pnpm run dev-http
 ```
 
 Your plugin is now running at `http://localhost:3060`. Open the Dev Tools with `Ctrl+Shift+D`.
@@ -77,7 +77,7 @@ Your plugin is now running at `http://localhost:3060`. Open the Dev Tools with `
 ## Requirements
 
 - Node.js 18 or higher
-- npm 8 or higher
+- pnpm 8 or higher
 - Modern browser (Chrome, Firefox, Safari, Edge)
 
 ## Installation
@@ -85,7 +85,7 @@ Your plugin is now running at `http://localhost:3060`. Open the Dev Tools with `
 ### Global Installation (Recommended)
 
 ```bash
-npm install -g @gxp-dev/tools
+pnpm install -g @gxp-dev/tools
 ```
 
 This makes the `gxdev` command available globally.
@@ -93,10 +93,10 @@ This makes the `gxdev` command available globally.
 ### Project-Level Installation
 
 ```bash
-npm install --save-dev @gxp-dev/tools
+pnpm install --save-dev @gxp-dev/tools
 ```
 
-Use `npx gxdev` to run commands.
+Use `pnpm exec gxdev` to run commands.
 
 ## Common Workflows
 
@@ -105,7 +105,7 @@ Use `npx gxdev` to run commands.
 ```bash
 mkdir my-plugin && cd my-plugin
 gxdev init my-plugin
-npm run dev-http
+pnpm run dev-http
 ```
 
 ### Start Development with Full Services

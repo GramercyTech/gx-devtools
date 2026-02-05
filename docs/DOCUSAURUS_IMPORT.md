@@ -9,7 +9,7 @@ Use `docusaurus-plugin-remote-content` to fetch docs at build time.
 ### Installation
 
 ```bash
-npm install docusaurus-plugin-remote-content
+pnpm install docusaurus-plugin-remote-content
 ```
 
 ### Configuration
@@ -382,10 +382,10 @@ jobs:
 
 ```bash
 # Clear cached remote content
-npx docusaurus clear-remote-gx-devtools-docs
+pnpm exec docusaurus clear-remote-gx-devtools-docs
 
 # Rebuild
-npm run build
+pnpm run build
 ```
 
 ## Versioning

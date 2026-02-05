@@ -226,19 +226,19 @@ describe('init command', () => {
     it('should show HTTPS commands when SSL is set up', () => {
       const sslSetup = true;
       const commands = sslSetup
-        ? ['npm run dev', 'npm run dev-http']
-        : ['npm run dev-http', 'npm run setup-ssl'];
+        ? ['pnpm run dev', 'ppnpm run dev-http']
+        : ['ppnpm run dev-http', 'pnpm run setup-ssl'];
 
-      expect(commands).toContain('npm run dev');
+      expect(commands).toContain('pnpm run dev');
     });
 
     it('should show setup-ssl command when SSL not set up', () => {
       const sslSetup = false;
       const commands = sslSetup
-        ? ['npm run dev', 'npm run dev-http']
-        : ['npm run dev-http', 'npm run setup-ssl'];
+        ? ['pnpm run dev', 'ppnpm run dev-http']
+        : ['ppnpm run dev-http', 'pnpm run setup-ssl'];
 
-      expect(commands).toContain('npm run setup-ssl');
+      expect(commands).toContain('pnpm run setup-ssl');
     });
   });
 });

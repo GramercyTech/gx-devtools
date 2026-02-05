@@ -12,10 +12,10 @@ Complete reference for the `gxdev` command-line interface.
 
 ```bash
 # Global installation (recommended)
-npm install -g @gxp-dev/tools
+pnpm install -g @gxp-dev/tools
 
 # Project-level installation
-npm install --save-dev @gxp-dev/tools
+pnpm install --save-dev @gxp-dev/tools
 ```
 
 ## Quick Reference
@@ -122,7 +122,7 @@ The wizard auto-detects available AI providers. If you select one:
 
 ? Set up SSL certificates for HTTPS development?
 ❯ Yes, set up SSL - Recommended for full feature access
-  Skip SSL setup - Can be set up later with npm run setup-ssl
+  Skip SSL setup - Can be set up later with pnpm run setup-ssl
 ```
 
 #### Step 5: Start Development
@@ -156,9 +156,9 @@ When you provide a build description, the AI will generate:
 
 | Provider | Authentication | Setup |
 |----------|----------------|-------|
-| **Claude** | CLI login | `npm i -g @anthropic-ai/claude-code && claude login` |
-| **Codex** | CLI login | `npm i -g @openai/codex && codex auth` |
-| **Gemini** | CLI login | `npm i -g @google/gemini-cli && gemini` |
+| **Claude** | CLI login | `pnpm i -g @anthropic-ai/claude-code && claude login` |
+| **Codex** | CLI login | `pnpm i -g @openai/codex && codex auth` |
+| **Gemini** | CLI login | `pnpm i -g @google/gemini-cli && gemini` |
 | **Gemini** | API key | `export GEMINI_API_KEY=your_key` |
 | **Gemini** | gcloud | `gcloud auth login` |
 
@@ -182,7 +182,7 @@ gxdev init my-plugin -b "Build description" -p gemini
 2. Creates project directory
 3. Generates `package.json` with required dependencies
 4. Copies template files (Plugin.vue, layouts, manifest, etc.)
-5. Runs `npm install`
+5. Runs `pnpm install`
 6. Enters interactive configuration wizard:
    - App name (prepopulated from package.json)
    - Description (prepopulated from package.json)
@@ -194,7 +194,7 @@ gxdev init my-plugin -b "Build description" -p gemini
 **Existing Project (has package.json):**
 1. Updates dependencies to latest versions
 2. Copies any missing template files (won't overwrite existing)
-3. Updates npm scripts
+3. Updates package scripts
 
 **Non-Interactive Mode (with --build flag):**
 Skips the interactive wizard and directly runs AI scaffolding
@@ -301,14 +301,14 @@ gxdev dev --firefox
 gxdev dev --no-https --with-socket --chrome
 ```
 
-### npm Scripts
+### Package Scripts
 
 After `gxdev init`, these scripts are available:
 
 ```bash
-npm run dev          # gxdev dev --with-socket
-npm run dev-app      # gxdev dev
-npm run dev-http     # gxdev dev --no-https
+pnpm run dev          # gxdev dev --with-socket
+pnpm run dev-app      # gxdev dev
+pnpm run dev-http     # gxdev dev --no-https
 ```
 
 ---

@@ -50,7 +50,7 @@ function getBrowserExtensionConfig(browser, projectPath, paths, options = {}) {
 		return {
 			name: "FIREFOX",
 			color: "yellow",
-			command: `npx web-ext run --source-dir "${extensionPath}" --start-url "${startUrl}"`,
+			command: `pnpm exec web-ext run --source-dir "${extensionPath}" --start-url "${startUrl}"`,
 			extensionPath,
 			startUrl,
 		};
@@ -127,7 +127,7 @@ function devCommand(argv) {
 
 		if (!existingCerts) {
 			console.log(
-				"⚠ SSL certificates not found. Run 'npm run setup-ssl' to enable HTTPS"
+				"⚠ SSL certificates not found. Run 'pnpm run setup-ssl' to enable HTTPS"
 			);
 			console.log("🌐 Starting HTTP development server...");
 			useHttps = false;
@@ -280,7 +280,7 @@ function devCommand(argv) {
 	// Vite is always included
 	const viteCommand = [
 		...envVars,
-		`npx vite dev --config "${viteConfigPath}"`,
+		`pnpm exec vite dev --config "${viteConfigPath}"`,
 	].join(" && ");
 	processes.push(`"${viteCommand}"`);
 	names.push("VITE");
@@ -288,7 +288,7 @@ function devCommand(argv) {
 
 	// Socket server (optional)
 	if (withSocket && serverJsPath) {
-		processes.push(`"npx nodemon \\"${serverJsPath}\\""`);
+		processes.push(`"pnpm exec nodemon \\"${serverJsPath}\\""`);
 		names.push("SOCKET");
 		colors.push("green");
 	}
@@ -310,12 +310,12 @@ function devCommand(argv) {
 	// Build the final command
 	if (processes.length > 1) {
 		// Use concurrently to run multiple processes
-		command = `npx concurrently --names "${names.join(
+		command = `pnpm exec concurrently --names "${names.join(
 			","
 		)}" --prefix-colors "${colors.join(",")}" ${processes.join(" ")}`;
 	} else {
 		// Just run Vite dev server alone
-		command = [...envVars, `npx vite dev --config "${viteConfigPath}"`].join(
+		command = [...envVars, `pnpm exec vite dev --config "${viteConfigPath}"`].join(
 			" && "
 		);
 	}

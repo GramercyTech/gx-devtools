@@ -403,7 +403,7 @@ async function initDatastoreInExistingProject() {
 
 		// Install new dependencies
 		console.log("📦 Installing dependencies...");
-		const result = shell.exec("npm install", {
+		const result = shell.exec("pnpm install", {
 			cwd: projectPath,
 			silent: false,
 		});
@@ -411,16 +411,16 @@ async function initDatastoreInExistingProject() {
 		if (result.code === 0) {
 			console.log("✅ GxP Datastore added successfully!");
 			console.log("");
-			console.log("📊 Manage test data with: npm run datastore:add");
-			console.log("🔍 Scan components for strings: npm run datastore:scan");
-			console.log("📋 List all store variables: npm run datastore:list");
+			console.log("📊 Manage test data with: pnpm run datastore:add");
+			console.log("🔍 Scan components for strings: pnpm run datastore:scan");
+			console.log("📋 List all store variables: pnpm run datastore:list");
 			console.log("");
 			console.log("💡 Update your components to use the store:");
 			console.log('   import { useGxpStore } from "/src/stores/index.js"');
 			console.log("   const gxpStore = useGxpStore()");
 		} else {
 			console.error(
-				'❌ Failed to install dependencies. Please run "npm install" manually.'
+				'❌ Failed to install dependencies. Please run "pnpm install" manually.'
 			);
 		}
 	} catch (error) {

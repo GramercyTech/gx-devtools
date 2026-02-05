@@ -162,9 +162,9 @@ KEY_PATH=.certs/localhost-key.pem
       expect(generateCmd).toContain('::1');
     });
 
-    it('should construct npx mkcert command when global not available', () => {
-      const npxCmd = 'npx mkcert localhost 127.0.0.1 ::1';
-      expect(npxCmd).toContain('npx mkcert');
+    it('should construct pnpm exec mkcert command when global not available', () => {
+      const pnpmCmd = 'pnpm exec mkcert localhost 127.0.0.1 ::1';
+      expect(pnpmCmd).toContain('pnpm exec mkcert');
     });
   });
 

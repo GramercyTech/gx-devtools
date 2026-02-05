@@ -102,8 +102,8 @@ export function startExtension(options: ExtensionOptions): void {
     const config: ServiceConfig = {
       id: serviceId,
       name: 'Firefox Extension',
-      command: 'npx',
-      args: ['web-ext', 'run', '--source-dir', extensionPath, '--start-url', startUrl],
+      command: 'pnpm',
+      args: ['exec', 'web-ext', 'run', '--source-dir', extensionPath, '--start-url', startUrl],
       cwd,
       env: {
         FORCE_COLOR: '1',

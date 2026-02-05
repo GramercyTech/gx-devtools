@@ -316,8 +316,8 @@ This is the main configuration file. Changes hot-reload during development:
 
 ```bash
 # Start development server
-npm run dev          # HTTPS with Socket.IO
-npm run dev-http     # HTTP only
+pnpm run dev          # HTTPS with Socket.IO
+pnpm run dev-http     # HTTP only
 
 # Test socket events
 gxdev socket list              # List available events
