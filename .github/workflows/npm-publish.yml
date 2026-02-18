@@ -26,25 +26,23 @@ jobs:
           git fetch --all
           git reset --hard origin/${{ github.ref_name }}
           git pull
-      - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22.x"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
       - name: Build the TUI
-        run: pnpm run build:tui
+        run: npm run build:tui
 
       - name: Patch version
         run: |
-          pnpm version patch
+          npm version patch
           git push
           git push --tags
 
       - name: Publish to NPM Packages
-        run: pnpm publish --no-git-checks
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_DEPLOY_TOKEN }}

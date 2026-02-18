@@ -12,20 +12,20 @@ GxP Dev Devtools (`@gxp-dev/tools`) is a package for creating platform plugins f
 # 1. Clone and install dependencies
 git clone <repo>
 cd gx-devtools
-pnpm install
+npm install
 
 # 2. Build the TUI (required for CLI to work)
-pnpm run build:tui
+npm run build:tui
 
 # 3. Link the package globally for local development
-pnpm link
+npm link
 
 # 4. Create a new test project
 mkdir ~/test-plugin && cd ~/test-plugin
 gxdev init my-plugin
 
 # 5. Start development
-gxdev dev --no-https  # or just: pnpm run dev-http
+gxdev dev --no-https  # or just: npm run dev-http
 ```
 
 ## Features
@@ -43,13 +43,13 @@ GxP Dev Devtools provides:
 
 ```bash
 # Development
-pnpm run dev              # Start HTTPS dev server with Socket.IO
-pnpm run dev-app          # Start HTTPS dev server only
-pnpm run dev-http         # Start HTTP dev server (no SSL)
-pnpm run build            # Build plugin for production
+npm run dev              # Start HTTPS dev server with Socket.IO
+npm run dev-app          # Start HTTPS dev server only
+npm run dev-http         # Start HTTP dev server (no SSL)
+npm run build            # Build plugin for production
 
 # SSL Setup
-pnpm run setup-ssl        # Generate SSL certificates via mkcert
+npm run setup-ssl        # Generate SSL certificates via mkcert
 
 # CLI Commands (gxdev)
 gxdev                     # Launch interactive TUI
@@ -349,16 +349,16 @@ Key environment variables (set in `.env`):
 
 ```bash
 # Build the TUI (TypeScript → JavaScript)
-pnpm run build:tui
+npm run build:tui
 
 # Watch mode for TUI development
-pnpm run dev:tui
+npm run dev:tui
 
 # Build browser extensions for distribution
-pnpm run ext:build
+npm run ext:build
 
 # Full build
-pnpm run build
+npm run build
 ```
 
 ## Customizing Runtime Files
@@ -372,7 +372,7 @@ The CLI will automatically update imports when publishing.
 
 ## Testing Plugins
 
-1. Run `pnpm run dev` or `gxdev dev` to start the development server
+1. Run `npm run dev` or `gxdev dev` to start the development server
 2. Use browser extensions (`gxdev dev --chrome` or `gxdev dev --firefox`) to inject and test plugins
 3. Use `gxdev socket send --event <name>` to simulate real-time events
 4. Edit `app-manifest.json` to test different configurations (hot-reloaded)
@@ -391,7 +391,7 @@ The CLI will automatically update imports when publishing.
 - The page must be the dev server URL for the inspector to work
 
 ### SSL certificate errors
-- Run `pnpm run setup-ssl` to generate certificates with mkcert
+- Run `npm run setup-ssl` to generate certificates with mkcert
 - Accept the certificate in your browser when prompted
 
 ### Hot reload not working

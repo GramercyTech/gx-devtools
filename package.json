@@ -27,8 +27,8 @@
     "ext:firefox-build": "web-ext build --source-dir browser-extensions/firefox --artifacts-dir dist/firefox",
     "ext:chrome": "node scripts/launch-chrome.js",
     "ext:chrome-pack": "node scripts/pack-chrome.js",
-    "ext:install": "pnpm run ext:firefox & pnpm run ext:chrome",
-    "ext:build": "pnpm run ext:firefox-build && pnpm run ext:chrome-pack",
+    "ext:install": "npm run ext:firefox & npm run ext:chrome",
+    "ext:build": "npm run ext:firefox-build && npm run ext:chrome-pack",
     "build:tui": "tsc -p tsconfig.tui.json && echo '{\"type\":\"module\"}' > dist/tui/package.json",
     "dev:tui": "tsx watch bin/lib/tui/index.tsx"
   },
@@ -90,6 +90,5 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^2.1.9"
-  },
-  "packageManager": "pnpm@9.15.0"
+  }
 }

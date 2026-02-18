@@ -162,7 +162,7 @@ async function checkClaudeAvailable() {
 		return {
 			available: false,
 			reason:
-				"Claude CLI not installed. Install with: pnpm install -g @anthropic-ai/claude-code",
+				"Claude CLI not installed. Install with: npm install -g @anthropic-ai/claude-code",
 		};
 	}
 }
@@ -180,7 +180,7 @@ async function checkCodexAvailable() {
 		return {
 			available: false,
 			reason:
-				"Codex CLI not installed. Install with: pnpm install -g @openai/codex",
+				"Codex CLI not installed. Install with: npm install -g @openai/codex",
 		};
 	}
 }
@@ -222,7 +222,7 @@ async function checkGeminiAvailable() {
 		available: false,
 		reason:
 			"Gemini requires one of:\n" +
-			"  • Gemini CLI logged in (pnpm i -g @google/gemini-cli && gemini), or\n" +
+			"  • Gemini CLI logged in (npm i -g @google/gemini-cli && gemini), or\n" +
 			"  • GEMINI_API_KEY environment variable, or\n" +
 			"  • gcloud CLI logged in (gcloud auth login)",
 	};

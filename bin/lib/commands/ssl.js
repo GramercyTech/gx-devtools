@@ -33,11 +33,11 @@ function setupSSLCommand() {
 		console.log("🔒 Your development server will now use HTTPS");
 		console.log("📁 Certificates stored in .certs/ directory");
 		console.log(
-			"🚀 Run 'pnpm run dev' to start HTTPS development with Socket.IO"
+			"🚀 Run 'npm run dev' to start HTTPS development with Socket.IO"
 		);
 	} else {
 		console.log(
-			"❌ SSL setup failed. You can still use HTTP with 'pnpm run dev-http'"
+			"❌ SSL setup failed. You can still use HTTP with 'npm run dev-http'"
 		);
 	}
 }

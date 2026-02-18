@@ -10,7 +10,7 @@ This guide covers common issues and frequently asked questions when developing w
 
 ## Installation Issues
 
-### pnpm install fails with permission errors
+### npm install fails with permission errors
 
 **Error:**
 ```
@@ -23,9 +23,9 @@ EACCES: permission denied
 nvm install 18
 nvm use 18
 
-# Option 2: Fix pnpm permissions
-pnpm setup
-# Follow the instructions to add pnpm global bin to your PATH
+# Option 2: Fix npm permissions
+npm setup
+# Follow the instructions to add npm global bin to your PATH
 ```
 
 ### gxdev command not found
@@ -39,31 +39,31 @@ zsh: command not found: gxdev
 
 1. **Global install:**
 ```bash
-pnpm install -g @gxp-dev/tools
+npm install -g @gxp-dev/tools
 ```
 
-2. **Or use pnpm dlx:**
+2. **Or use npm dlx:**
 ```bash
-pnpm dlx gxdev init my-plugin
+npm dlx gxdev init my-plugin
 ```
 
 3. **Or link locally (for toolkit development):**
 ```bash
 cd gx-devtools
-pnpm link
+npm link
 ```
 
 ### TUI not available
 
 **Error:**
 ```
-TUI not available. Run "pnpm run build:tui" in gx-devtools first.
+TUI not available. Run "npm run build:tui" in gx-devtools first.
 ```
 
 **Solution:**
 ```bash
 # In the gx-devtools repository
-pnpm run build:tui
+npm run build:tui
 ```
 
 ---
@@ -81,7 +81,7 @@ NET::ERR_CERT_AUTHORITY_INVALID
 
 1. **Generate certificates:**
 ```bash
-pnpm run setup-ssl
+npm run setup-ssl
 # or
 gxdev setup-ssl
 ```
@@ -93,7 +93,7 @@ gxdev setup-ssl
 3. **Use HTTP instead:**
 ```bash
 gxdev dev --no-https
-pnpm run dev-http
+npm run dev-http
 ```
 
 ### Port already in use
@@ -143,7 +143,7 @@ NODE_PORT=3061
 3. **Clear Vite cache:**
 ```bash
 rm -rf node_modules/.vite
-pnpm run dev
+npm run dev
 ```
 
 4. **Check network** - HMR needs WebSocket connection
@@ -204,7 +204,7 @@ import './MyComponent.css';
 
 1. **Analyze bundle:**
 ```bash
-pnpm exec vite build --mode analyze
+npx vite build --mode analyze
 ```
 
 2. **Check for unused dependencies**
@@ -421,7 +421,7 @@ Event file not found: MyEvent.json
 mkdir my-plugin
 cd my-plugin
 gxdev init my-plugin
-pnpm run dev-http  # or pnpm run dev for HTTPS
+npm run dev-http  # or npm run dev for HTTPS
 ```
 
 ### Where is the final build output?
@@ -536,7 +536,7 @@ When something isn't working, check these in order:
 6. ✅ **Port conflicts** - Single instance per port
 7. ✅ **File paths** - Correct aliases (@, @layouts, @gx-runtime)
 8. ✅ **Cache** - Clear and restart
-9. ✅ **Dependencies** - pnpm install complete
+9. ✅ **Dependencies** - npm install complete
 10. ✅ **Node version** - 18+ required
 
 ## Getting Help

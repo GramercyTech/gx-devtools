@@ -322,7 +322,7 @@ async function buildCommand(argv) {
 
 	const command = [
 		...envVars,
-		`pnpm exec vite build --config "${viteConfigPath}"`,
+		`npx vite build --config "${viteConfigPath}"`,
 	].join(" && ");
 
 	const result = shell.exec(command);

@@ -286,7 +286,7 @@ The Chrome extension is packaged using the `pack-chrome.js` script, which:
 
 The Firefox extension is built using `web-ext`:
 ```bash
-pnpm exec web-ext build --source-dir browser-extensions/firefox --artifacts-dir dist/firefox
+npx web-ext build --source-dir browser-extensions/firefox --artifacts-dir dist/firefox
 ```
 
 ## Reloading Extensions

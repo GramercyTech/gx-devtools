@@ -93,7 +93,7 @@ export function getAvailableProviders(): AIProviderInfo[] {
       id: 'claude',
       name: 'Claude',
       available: false,
-      reason: 'Install: pnpm i -g @anthropic-ai/claude-code && claude login',
+      reason: 'Install: npm i -g @anthropic-ai/claude-code && claude login',
     });
   }
 
@@ -109,7 +109,7 @@ export function getAvailableProviders(): AIProviderInfo[] {
       id: 'codex',
       name: 'Codex',
       available: false,
-      reason: 'Install: pnpm i -g @openai/codex && codex auth',
+      reason: 'Install: npm i -g @openai/codex && codex auth',
     });
   }
 
@@ -144,7 +144,7 @@ export function getAvailableProviders(): AIProviderInfo[] {
         id: 'gemini',
         name: 'Gemini',
         available: false,
-        reason: 'Install: pnpm i -g @google/gemini-cli && gemini',
+        reason: 'Install: npm i -g @google/gemini-cli && gemini',
       });
     }
   } else {
@@ -152,7 +152,7 @@ export function getAvailableProviders(): AIProviderInfo[] {
       id: 'gemini',
       name: 'Gemini',
       available: false,
-      reason: 'Install: pnpm i -g @google/gemini-cli && gemini',
+      reason: 'Install: npm i -g @google/gemini-cli && gemini',
     });
   }
 

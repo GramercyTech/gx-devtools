@@ -13,7 +13,7 @@ This guide walks you through installing the GxP Toolkit and creating your first 
 Before you begin, ensure you have:
 
 - **Node.js 18+** - [Download Node.js](https://nodejs.org/)
-- **pnpm 8+** - [Install pnpm](https://pnpm.io/installation)
+- **npm 8+** - [Install npm](https://npm.io/installation)
 - **Code editor** - VS Code recommended
 
 ## Installation
@@ -23,7 +23,7 @@ Before you begin, ensure you have:
 Install the toolkit globally to use the `gxdev` command anywhere:
 
 ```bash
-pnpm install -g @gxp-dev/tools
+npm install -g @gxp-dev/tools
 ```
 
 ### Option 2: Project-Level Installation
@@ -31,7 +31,7 @@ pnpm install -g @gxp-dev/tools
 Or install as a dev dependency in an existing project:
 
 ```bash
-pnpm install --save-dev @gxp-dev/tools
+npm install --save-dev @gxp-dev/tools
 ```
 
 ## Create a New Plugin
@@ -113,15 +113,15 @@ If you select a provider, describe your plugin:
 
 ```bash
 # Claude (uses your Anthropic account)
-pnpm install -g @anthropic-ai/claude-code
+npm install -g @anthropic-ai/claude-code
 claude login
 
 # Codex (uses your OpenAI account)
-pnpm install -g @openai/codex
+npm install -g @openai/codex
 codex auth
 
 # Gemini CLI (recommended - uses your Google account)
-pnpm install -g @google/gemini-cli
+npm install -g @google/gemini-cli
 gemini  # First run will prompt for login
 
 # Gemini (API key)
@@ -142,7 +142,7 @@ Choose whether to set up SSL certificates:
 
 ? Set up SSL certificates for HTTPS development?
 ❯ Yes, set up SSL - Recommended for full feature access
-  Skip SSL setup - Can be set up later with pnpm run setup-ssl
+  Skip SSL setup - Can be set up later with npm run setup-ssl
 ```
 
 ### 5. Start Development
@@ -248,7 +248,7 @@ The page automatically refreshes with your changes.
 For HTTPS development (required for some platform features):
 
 ```bash
-pnpm run setup-ssl
+npm run setup-ssl
 ```
 
 This uses [mkcert](https://github.com/FiloSottile/mkcert) to generate trusted local certificates.

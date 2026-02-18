@@ -15,7 +15,7 @@ Run the build command to create a production-ready bundle:
 ```bash
 gxdev build
 # or
-pnpm run build
+npm run build
 ```
 
 This creates a `dist/` folder with optimized assets:

@@ -25,7 +25,7 @@ function ensureMkcertInstalled() {
 	}
 
 	console.log("Installing mkcert globally...");
-	const result = shell.exec("pnpm install -g mkcert", { silent: true });
+	const result = shell.exec("npm install -g mkcert", { silent: true });
 
 	if (result.code === 0) {
 		console.log("✓ mkcert installed successfully");
@@ -135,7 +135,7 @@ function generateSSLCertificates(projectPath) {
 	let mkcertCmd = "mkcert";
 	if (!isMkcertInstalled()) {
 		// Use local mkcert via npx
-		mkcertCmd = "pnpm exec mkcert";
+		mkcertCmd = "npx mkcert";
 	}
 
 	// Change to certs directory and generate certificates

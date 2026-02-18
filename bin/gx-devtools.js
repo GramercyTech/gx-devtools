@@ -78,7 +78,7 @@ if (!isOneShot) {
     })();
   } else {
     // TUI not compiled yet, use traditional CLI
-    console.log('Note: TUI not yet available. Run "pnpm run build:tui" to enable interactive mode.');
+    console.log('Note: TUI not yet available. Run "npm run build:tui" to enable interactive mode.');
     require("./lib/cli");
   }
 } else {

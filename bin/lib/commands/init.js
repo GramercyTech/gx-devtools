@@ -262,7 +262,7 @@ function launchDevServer(projectPath, options = {}) {
 
 	console.log(`\n🚀 Starting development server...`);
 
-	const child = spawn("pnpm", args, {
+	const child = spawn("npm", args, {
 		cwd: projectPath,
 		stdio: "inherit",
 		shell: true,
@@ -341,9 +341,9 @@ async function runInteractiveConfig(projectPath, initialName, isLocal = false) {
 	if (availableProviders.length === 0) {
 		console.log("   ⚠️  No AI providers available.");
 		console.log("   To enable AI scaffolding, set up one of:");
-		console.log("   • Claude CLI: pnpm install -g @anthropic-ai/claude-code && claude login");
-		console.log("   • Codex CLI: pnpm install -g @openai/codex && codex auth");
-		console.log("   • Gemini CLI: pnpm install -g @google/gemini-cli && gemini");
+		console.log("   • Claude CLI: npm install -g @anthropic-ai/claude-code && claude login");
+		console.log("   • Codex CLI: npm install -g @openai/codex && codex auth");
+		console.log("   • Gemini CLI: npm install -g @google/gemini-cli && gemini");
 		console.log("   • Gemini API: export GEMINI_API_KEY=your_key");
 		console.log("");
 		aiChoice = "skip";
@@ -405,7 +405,7 @@ async function runInteractiveConfig(projectPath, initialName, isLocal = false) {
 
 	const sslChoice = await arrowSelectPrompt("Set up SSL certificates for HTTPS development?", [
 		{ label: "Yes, set up SSL", value: "yes", description: "Recommended for full feature access" },
-		{ label: "Skip SSL setup", value: "no", description: "Can be set up later with pnpm run setup-ssl" },
+		{ label: "Skip SSL setup", value: "no", description: "Can be set up later with npm run setup-ssl" },
 	]);
 
 	let sslSetup = false;
@@ -504,11 +504,11 @@ function printFinalInstructions(projectPath, projectName, sslSetup, isLocal = fa
 		console.log(`   cd ${projectName}`);
 	}
 	if (sslSetup) {
-		console.log("   pnpm run dev          # HTTPS with TUI");
-		console.log("   pnpm run dev-http     # HTTP only");
+		console.log("   npm run dev          # HTTPS with TUI");
+		console.log("   npm run dev-http     # HTTP only");
 	} else {
-		console.log("   pnpm run dev-http     # HTTP dev server");
-		console.log("   pnpm run setup-ssl    # Then pnpm run dev for HTTPS");
+		console.log("   npm run dev-http     # HTTP dev server");
+		console.log("   npm run setup-ssl    # Then npm run dev for HTTPS");
 	}
 	console.log("");
 	console.log("📚 Documentation: https://docs.gramercytech.com/gxp-toolkit");

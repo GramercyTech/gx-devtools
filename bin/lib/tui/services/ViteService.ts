@@ -89,8 +89,8 @@ export function startVite(options: ViteOptions = {}): void {
   const config: ServiceConfig = {
     id: 'vite',
     name: 'Vite',
-    command: 'pnpm',
-    args: ['exec', 'vite', 'dev', '--config', viteConfigPath],
+    command: 'npx',
+    args: ['vite', 'dev', '--config', viteConfigPath],
     cwd,
     env,
   };

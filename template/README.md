@@ -6,13 +6,13 @@ This project was created with `@gxp-dev/tools` and includes the `@gramercytech/g
 
 ```bash
 # Start HTTP development server
-pnpm run dev-http
+npm run dev-http
 
 # Start HTTPS development server with Socket.IO
-pnpm run dev
+npm run dev
 
 # Build for production
-pnpm run build
+npm run build
 ```
 
 ## Project Structure
@@ -85,16 +85,16 @@ You can customize these layouts to match your kiosk's design.
 
 | Script | Description |
 |--------|-------------|
-| `pnpm run dev` | Start HTTPS dev server with Socket.IO |
-| `pnpm run dev-app` | Start HTTPS dev server only |
-| `pnpm run dev-http` | Start HTTP dev server (no SSL) |
-| `pnpm run build` | Build for production |
-| `pnpm run setup-ssl` | Generate SSL certificates |
-| `pnpm run socket:list` | List available socket events |
-| `pnpm run socket:send` | Send test socket events |
-| `pnpm run assets:list` | List development assets |
-| `pnpm run assets:init` | Initialize asset directories |
-| `pnpm run assets:generate` | Generate placeholder images |
+| `npm run dev` | Start HTTPS dev server with Socket.IO |
+| `npm run dev-app` | Start HTTPS dev server only |
+| `npm run dev-http` | Start HTTP dev server (no SSL) |
+| `npm run build` | Build for production |
+| `npm run setup-ssl` | Generate SSL certificates |
+| `npm run socket:list` | List available socket events |
+| `npm run socket:send` | Send test socket events |
+| `npm run assets:list` | List development assets |
+| `npm run assets:init` | Initialize asset directories |
+| `npm run assets:generate` | Generate placeholder images |
 
 ### Dev Tools Modal
 
@@ -257,10 +257,10 @@ Test real-time features with socket simulation:
 
 ```bash
 # List available socket events
-pnpm run socket:list
+npm run socket:list
 
 # Send a socket event
-pnpm run socket:send
+npm run socket:send
 
 # Send to specific channel
 gxdev socket send --event SocialStreamPostCreated --identifier "stream_123"
@@ -272,13 +272,13 @@ Socket event templates are in `socket-events/` directory. Add your own JSON file
 
 ```bash
 # List all development assets
-pnpm run assets:list
+npm run assets:list
 
 # Initialize asset directories
-pnpm run assets:init
+npm run assets:init
 
 # Generate placeholder images (requires ImageMagick)
-pnpm run assets:generate
+npm run assets:generate
 gxdev assets generate --size 800x600 --name product-image
 gxdev assets generate --name logo --size 200x200 --color "#FF5722" --text "My Logo"
 ```
@@ -297,7 +297,7 @@ sudo apt-get install imagemagick
 ## Building for Production
 
 ```bash
-pnpm run build
+npm run build
 ```
 
 This creates a `dist/` folder with:
