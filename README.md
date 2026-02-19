@@ -1,244 +1,151 @@
 # GxP Dev Tools
 
-A development devtools for creating plugins for the GxP kiosk platform. This package provides CLI tools, project scaffolding, and a development environment that emulates the GxP platform.
+A development toolkit for creating plugins for the GxP kiosk platform. Provides CLI tools, project scaffolding, an interactive TUI, and a development environment that emulates the GxP platform.
 
 ## Installation
+
+### Global (Recommended)
 
 ```bash
 npm install -g @gxp-dev/tools
 ```
 
-Or use it as a dev dependency in your project:
+### Project-Level
 
 ```bash
 npm install --save-dev @gxp-dev/tools
 ```
 
+### Updating
+
+```bash
+# Global
+npm update -g @gxp-dev/tools
+
+# Project-level
+npm update @gxp-dev/tools
+```
+
+After updating, run `gxdev init` in existing projects to sync dependencies and config files.
+
 ## Quick Start
 
-Create a new GxP plugin project:
+### New Project
 
 ```bash
 gxdev init my-plugin
 cd my-plugin
-git init
-npm run dev
+npm run dev-http
 ```
+
+Your plugin is running at `http://localhost:3060`. Press `Ctrl+Shift+D` to open the in-browser Dev Tools.
+
+### Existing Project
+
+If you already have a Vue/Vite project:
+
+```bash
+cd my-existing-project
+gxdev init
+npm install
+npm run dev-http
+```
+
+When run in a directory with an existing `package.json` (no name argument), `gxdev init` will:
+- Add missing required dependencies and devDependencies
+- Update mismatched dependency versions
+- Add missing npm scripts (`dev`, `build`, `dev-http`, etc.)
+- Back up your existing `vite.config.js` to `vite.config.js.backup`
+- Copy config files (`app-manifest.json`, `.env.example`, store setup, AI agent configs)
+
+It will **not** overwrite your source files (`src/`, `theme-layouts/`, etc.).
 
 ## CLI Commands
 
 | Command | Description |
 |---------|-------------|
+| `gxdev` | Launch interactive TUI |
 | `gxdev init [name]` | Create a new project or update an existing one |
-| `gxdev dev` | Start development server with HTTPS and Socket.IO |
-| `gxdev dev --no-https` | Start development server with HTTP only |
+| `gxdev dev` | Start development server (HTTPS + TUI) |
+| `gxdev dev --no-https` | Start with HTTP only |
+| `gxdev dev --with-socket` | Start with Socket.IO server |
+| `gxdev dev --chrome` | Start and launch Chrome with extension |
+| `gxdev dev --firefox` | Start and launch Firefox with extension |
 | `gxdev build` | Build plugin for production |
 | `gxdev setup-ssl` | Generate SSL certificates for HTTPS development |
 | `gxdev publish <file>` | Copy runtime files to your project for customization |
 | `gxdev datastore <action>` | Manage GxP datastore (list, add, scan-strings, config) |
 | `gxdev socket <action>` | Simulate socket events (list, send) |
 | `gxdev assets <action>` | Manage development assets (list, init, generate) |
-| `gxdev ext:firefox` | Launch Firefox with browser extension |
+| `gxdev add-dependency` | Add API dependency via interactive wizard |
+| `gxdev extract-config` | Extract GxP config from source files |
 | `gxdev ext:chrome` | Launch Chrome with browser extension |
+| `gxdev ext:firefox` | Launch Firefox with browser extension |
 | `gxdev ext:build` | Build browser extensions for distribution |
 
 ## Features
 
-- **Platform Emulator**: PortalContainer.vue mimics the GxP platform environment
-- **Hot Module Replacement**: Instant updates during development
-- **Socket.IO Integration**: Test real-time features with simulated events
-- **SSL Support**: HTTPS development with auto-generated certificates
-- **Browser Extensions**: Test plugins on live GxP pages
-- **Dev Tools Modal**: In-browser tools for inspecting state, switching layouts, and more
-- **Asset Generation**: Create placeholder images for development
+- **Platform Emulator** - PortalContainer.vue mimics the GxP platform environment
+- **Interactive TUI** - Terminal UI for managing dev services, logs, and slash commands
+- **Hot Module Replacement** - Instant updates during development
+- **Socket.IO Integration** - Test real-time features with simulated events
+- **SSL Support** - HTTPS development with auto-generated certificates
+- **Browser Extensions** - Chrome/Firefox DevTools panel for inspecting plugins
+- **Dev Tools Modal** - In-browser tools for inspecting state, switching layouts, and more (Ctrl+Shift+D)
+- **AI Scaffolding** - Generate starter code with Claude, Codex, or Gemini during init
+- **Mock API** - Local mock API server with OpenAPI spec integration
+- **Asset Generation** - Create placeholder images for development
 
----
+## Project Structure
 
-# DevTools Development Guide
-
-This section is for developers contributing to the devtools itself.
-
-## Repository Structure
+After `gxdev init`, your project contains:
 
 ```
-gx-devtools/
-├── bin/                    # CLI tool
-│   ├── gx-devtools.js       # Entry point (delegates to lib/cli.js)
-│   └── lib/                # Modular CLI components
-│       ├── cli.js          # Yargs command definitions
-│       ├── constants.js    # Dependencies, scripts, ports
-│       ├── commands/       # Individual command modules
-│       │   ├── init.js     # gxdev init
-│       │   ├── dev.js      # gxdev dev
-│       │   ├── build.js    # gxdev build
-│       │   ├── publish.js  # gxdev publish
-│       │   ├── ssl.js      # gxdev setup-ssl
-│       │   ├── datastore.js
-│       │   ├── socket.js
-│       │   ├── assets.js
-│       │   └── extensions.js
-│       └── utils/          # Shared utilities
-│           ├── paths.js    # Path resolution
-│           ├── ssl.js      # SSL certificate management
-│           ├── files.js    # File operations
-│           └── prompts.js  # User prompts
-├── runtime/                # Files used from node_modules (NOT copied to projects)
-│   ├── PortalContainer.vue # Platform emulator (immutable for users)
-│   ├── server.js           # Socket.IO development server
-│   ├── dev-tools/          # In-browser development tools
-│   │   ├── DevToolsModal.vue
-│   │   ├── StoreInspector.vue
-│   │   ├── LayoutSwitcher.vue
-│   │   ├── SocketSimulator.vue
-│   │   └── MockDataEditor.vue
+my-plugin/
+├── src/
+│   ├── Plugin.vue          # Main plugin entry point
+│   ├── DemoPage.vue        # Example component
 │   └── stores/
-│       └── gxpPortalConfigStore.js  # Core Pinia store
-├── template/               # Files copied to new projects during init
-│   ├── src/
-│   │   ├── Plugin.vue      # User's app entry point
-│   │   ├── DemoPage.vue    # Example component
-│   │   └── stores/         # Store setup
-│   ├── theme-layouts/      # Layout templates
-│   ├── dev-assets/         # Placeholder images
-│   ├── main.js             # Dev entry point
-│   ├── vite.config.js      # Project build config
-│   └── ...
-├── socket-events/          # Socket event templates for simulation
-├── browser-extensions/     # Chrome and Firefox extensions
-│   ├── chrome/
-│   └── firefox/
-└── scripts/                # Build and launch scripts
+│       └── index.js        # Pinia store setup
+├── theme-layouts/          # Layout components (Public, Private, System)
+├── dev-assets/images/      # Development placeholder images
+├── socket-events/          # Socket event templates
+├── app-manifest.json       # Plugin configuration (strings, settings, assets)
+├── .env                    # Environment variables
+└── package.json
 ```
 
-## Key Concepts
+The dev server automatically serves `index.html` and `main.js` from the toolkit runtime — no local copies needed.
 
-### Runtime vs Template
+## Environment Variables
 
-- **`/runtime/`**: Files that stay in node_modules and are imported at runtime via the `@gx-runtime` Vite alias. Users cannot modify these files directly.
+Key variables (set in `.env`):
 
-- **`/template/`**: Files copied to user projects during `gxdev init`. Users can edit these files.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NODE_PORT` | `3060` | Development server port |
+| `SOCKET_IO_PORT` | `3061` | Socket.IO server port |
+| `COMPONENT_PATH` | `./src/Plugin.vue` | Main component path |
+| `USE_HTTPS` | `true` | Enable HTTPS |
+| `CERT_PATH` | | SSL certificate path |
+| `KEY_PATH` | | SSL private key path |
+| `USE_LOCAL_INDEX` | | Set to `true` to use a local `index.html` instead of the runtime version |
+| `USE_LOCAL_MAIN` | | Set to `true` to use a local `main.js` instead of the runtime version |
+| `SOCKET_IO_ENABLED` | `false` | Auto-start Socket.IO |
+| `API_ENV` | `mock` | API environment (mock, local, development, staging, production) |
 
-### Vite Aliases
+## Runtime vs Template
 
-Projects use these aliases (defined in `template/vite.config.js`):
+- **Runtime files** stay in `node_modules/` and are served automatically (`index.html`, `main.js`, store, dev tools, Vite config). Override `index.html`/`main.js` with `USE_LOCAL_INDEX`/`USE_LOCAL_MAIN` env vars. Use `gxdev publish` to copy other runtime files locally for customization.
+- **Template files** are copied to your project during `gxdev init` and are fully yours to edit.
 
-- `@` → Project's `src/` directory
-- `@layouts` → Project's `theme-layouts/` directory
-- `@gx-runtime` → DevTools's `runtime/` directory (from node_modules)
+## Documentation
 
-### PortalContainer.vue
+Full documentation is available at the [GxP Documentation site](https://docs.gramercytech.com/gx-devtools).
 
-The platform emulator that wraps user plugins during development. It:
-- Provides mock router, theme, and navigation
-- Injects props that the real platform provides
-- Includes the dev tools modal (Ctrl+Shift+D)
-- Lives in `/runtime/` so users can't accidentally modify it
+## Contributing
 
-## Setting Up for Development
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/GramercyTech/gx-devtools.git
-   cd gx-devtools
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Link for local testing**:
-   ```bash
-   npm link
-   ```
-
-4. **Create a test project**:
-   ```bash
-   mkdir /tmp/test-project
-   cd /tmp/test-project
-   gxdev init test-app
-   cd test-app
-
-   # Link to local devtools instead of published version
-   rm -rf node_modules/@gxp-dev/tools
-   mkdir -p node_modules/@gramercytech
-   ln -s /path/to/gx-devtools node_modules/@gxp-dev/tools
-
-   npm run dev-http
-   ```
-
-## Making Changes
-
-### Adding a New CLI Command
-
-1. Create a new file in `bin/lib/commands/`:
-   ```javascript
-   // bin/lib/commands/mycommand.js
-   function myCommand(argv) {
-       console.log("My command running!");
-   }
-   module.exports = { myCommand };
-   ```
-
-2. Export from `bin/lib/commands/index.js`
-
-3. Register in `bin/lib/cli.js`:
-   ```javascript
-   .command('mycommand', 'Description', {}, myCommand)
-   ```
-
-### Modifying the Dev Tools Modal
-
-Dev tools components are in `/runtime/dev-tools/`. Changes here affect all projects using the devtools.
-
-### Adding Template Files
-
-Add files to `/template/` and update `bin/lib/commands/init.js` to copy them during project creation.
-
-## Testing
-
-### Manual Testing
-
-```bash
-# Test CLI help
-node bin/gx-devtools.js --help
-
-# Test init command
-cd /tmp && rm -rf test-project
-node /path/to/gx-devtools/bin/gx-devtools.js init test-project
-
-# Test dev server (after linking)
-cd test-project
-npm run dev-http
-
-# Test build
-npm run build
-```
-
-### Verifying Changes
-
-1. Create a fresh test project
-2. Link the local devtools
-3. Run `npm run dev-http` and verify the app loads
-4. Run `npm run build` and check `dist/` output
-5. Test dev tools with Ctrl+Shift+D
-
-## Publishing
-
-1. Update version in `package.json`
-2. Ensure all new directories are included (runtime/, template/, socket-events/)
-3. Run `npm publish`
-
-## Dependencies
-
-The devtools uses:
-- **Vite** - Build tool and dev server
-- **Vue 3** - UI framework
-- **Pinia** - State management
-- **Socket.IO** - Real-time communication
-- **yargs** - CLI argument parsing
-- **shelljs** - Shell commands
-- **mkcert** - SSL certificate generation
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, architecture details, and how to make changes to the toolkit itself.
 
 ## License
 
