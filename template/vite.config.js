@@ -146,6 +146,42 @@ export default defineConfig(({ mode }) => {
 	// Find the toolkit path for runtime imports
 	const toolkitPath = findToolkitPath();
 
+	// Fallback plugin for missing @layouts files
+	const layoutsDir = path.resolve(process.cwd(), "theme-layouts");
+	const layoutFallbackPlugin = {
+		name: "gxp-layout-fallback",
+		resolveId(source) {
+			if (!source.startsWith("@layouts/")) return null;
+			const fileName = source.replace("@layouts/", "");
+			const localFile = path.resolve(layoutsDir, fileName);
+			if (fs.existsSync(localFile)) return null;
+			return `\0gxp-layout-fallback:${fileName}`;
+		},
+		load(id) {
+			if (!id.startsWith("\0gxp-layout-fallback:")) return null;
+			const fileName = id.replace("\0gxp-layout-fallback:", "");
+			console.log(`⚡ [GxP] Serving fallback for missing layout: ${fileName}`);
+			if (fileName.endsWith(".css")) {
+				return "/* GxP fallback: no local AdditionalStyling.css */";
+			}
+			if (fileName.endsWith(".vue")) {
+				return `
+<template><slot /></template>
+<script setup>
+defineOptions({ inheritAttrs: false });
+defineProps({
+	usrLang: { type: String, default: "" },
+	portalSettings: { type: Object, default: () => ({}) },
+	portalLanguage: { type: Object, default: () => ({}) },
+	portalNavigation: { type: Array, default: () => ([]) },
+	portalAssets: { type: Object, default: () => ({}) },
+});
+</script>`;
+			}
+			return "";
+		},
+	};
+
 	// Determine if HTTPS is enabled
 	const useHttps = getHttpsConfig(env) !== false;
 
@@ -175,6 +211,8 @@ export default defineConfig(({ mode }) => {
 			),
 		},
 		plugins: [
+			// Layout fallback must run before vue() to resolve missing @layouts/ imports
+			layoutFallbackPlugin,
 			// Source tracker must come before vue() to transform templates before compilation
 			...(gxpSourceTrackerPlugin ? [gxpSourceTrackerPlugin()] : []),
 			vue(),

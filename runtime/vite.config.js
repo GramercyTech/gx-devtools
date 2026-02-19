@@ -205,6 +205,56 @@ export default defineConfig(({ mode }) => {
 		},
 	};
 
+	// Fallback plugin for missing @layouts files
+	// When a project doesn't have theme-layouts/, serve minimal fallbacks
+	// so PortalContainer.vue imports don't break
+	const layoutsDir = path.resolve(process.cwd(), "theme-layouts");
+	const layoutFallbackPlugin = {
+		name: "gxp-layout-fallback",
+		resolveId(source) {
+			// Only handle @layouts/ imports
+			if (!source.startsWith("@layouts/")) return null;
+
+			const fileName = source.replace("@layouts/", "");
+			const localFile = path.resolve(layoutsDir, fileName);
+
+			// If the file exists locally, let Vite resolve it normally
+			if (fs.existsSync(localFile)) return null;
+
+			// Return a virtual module ID for the missing file
+			return `\0gxp-layout-fallback:${fileName}`;
+		},
+		load(id) {
+			if (!id.startsWith("\0gxp-layout-fallback:")) return null;
+
+			const fileName = id.replace("\0gxp-layout-fallback:", "");
+			console.log(`⚡ [GxP] Serving fallback for missing layout: ${fileName}`);
+
+			// CSS files get empty content
+			if (fileName.endsWith(".css")) {
+				return "/* GxP fallback: no local AdditionalStyling.css */";
+			}
+
+			// Vue layout components get a passthrough slot wrapper
+			if (fileName.endsWith(".vue")) {
+				return `
+<template><slot /></template>
+<script setup>
+defineOptions({ inheritAttrs: false });
+defineProps({
+	usrLang: { type: String, default: "" },
+	portalSettings: { type: Object, default: () => ({}) },
+	portalLanguage: { type: Object, default: () => ({}) },
+	portalNavigation: { type: Array, default: () => ([]) },
+	portalAssets: { type: Object, default: () => ({}) },
+});
+</script>`;
+			}
+
+			return "";
+		},
+	};
+
 	// Determine if HTTPS is enabled
 	const useHttps = getHttpsConfig(env) !== false;
 
@@ -237,6 +287,8 @@ export default defineConfig(({ mode }) => {
 		},
 		plugins: [
 			runtimeFilesPlugin,
+			// Layout fallback must run before vue() to resolve missing @layouts/ imports
+			layoutFallbackPlugin,
 			// Source tracker must run BEFORE vue() to transform templates before compilation
 			gxpSourceTrackerPlugin(),
 			vue(),
