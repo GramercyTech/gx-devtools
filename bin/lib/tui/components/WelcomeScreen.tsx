@@ -46,9 +46,9 @@ export default function WelcomeScreen() {
         <Box flexDirection="column" marginRight={4}>
           <Text color="cyan" bold>Quick Start</Text>
           <Box marginTop={1} flexDirection="column">
-            <Text>  <Text color="yellow">/dev</Text>               Start Vite dev server</Text>
-            <Text>  <Text color="yellow">/dev --with-socket</Text> Start Vite + Socket.IO</Text>
+            <Text>  <Text color="yellow">/dev</Text>               Start Vite + Socket.IO</Text>
             <Text>  <Text color="yellow">/dev --no-socket</Text>   Start Vite only (no Socket)</Text>
+            <Text>  <Text color="yellow">/dev --with-mock</Text>   Start with Mock API</Text>
             <Text>  <Text color="yellow">/socket</Text>            Start Socket.IO server</Text>
             <Text>  <Text color="yellow">/ext chrome</Text>        Launch Chrome extension</Text>
             <Text>  <Text color="yellow">/help</Text>              Show all commands</Text>

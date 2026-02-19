@@ -253,7 +253,6 @@ export default function App({ autoStart, args }: AppProps) {
   const startDevServer = (cmdArgs: string[]) => {
     const noHttps = cmdArgs.includes('--no-https') || args?.noHttps === true;
     const noSocket = cmdArgs.includes('--no-socket') || args?.noSocket === true;
-    const withSocket = cmdArgs.includes('--with-socket') || args?.withSocket === true;
     const withMock = cmdArgs.includes('--with-mock') || args?.withMock === true;
     const withFirefox = cmdArgs.includes('--firefox') || args?.firefox === true;
     const withChrome = cmdArgs.includes('--chrome') || args?.chrome === true;
@@ -262,10 +261,8 @@ export default function App({ autoStart, args }: AppProps) {
     const port = process.env.NODE_PORT || 3060;
     const useHttps = !noHttps;
 
-    // Check SOCKET_IO_ENABLED env var (default to socket if enabled, unless --no-socket)
-    const socketEnabled = process.env.SOCKET_IO_ENABLED === 'true';
-    // Mock API requires socket server
-    const shouldStartSocket = !noSocket && (withSocket || socketEnabled || withMock);
+    // Socket server starts by default unless --no-socket is passed
+    const shouldStartSocket = !noSocket;
 
     // Check if already running
     if (serviceManager.isRunning('vite')) {
@@ -670,9 +667,8 @@ export default function App({ autoStart, args }: AppProps) {
 Available commands:
 
   Development Server:
-    /dev                  Start Vite dev server
-    /dev --with-socket    Start Vite + Socket.IO
-    /dev --with-mock      Start Vite + Socket.IO + Mock API
+    /dev                  Start Vite + Socket.IO servers
+    /dev --with-mock      Start with Mock API enabled
     /dev --no-https       Start without SSL
     /dev --no-socket      Start without Socket.IO
     /dev --chrome         Start + launch Chrome extension

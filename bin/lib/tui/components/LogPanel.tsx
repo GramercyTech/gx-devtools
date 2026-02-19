@@ -66,43 +66,80 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
   };
 
   // Enable mouse wheel scrolling via terminal mouse reporting
+  // We patch stdin.emit to intercept mouse sequences BEFORE Ink processes them,
+  // preventing the escape codes from appearing in the command input
   useEffect(() => {
     if (!isActive || !process.stdin.isTTY) return;
+
+    const mouseRegex = /\x1b\[<(\d+);\d+;\d+[Mm]/g;
+    const originalEmit = process.stdin.emit;
+
+    // Patch emit to intercept mouse data before Ink sees it
+    const stdin = process.stdin;
+    stdin.emit = function (this: typeof stdin, event: string, ...args: any[]): boolean {
+      if (event === 'data') {
+        const data = args[0];
+        const str = typeof data === 'string' ? data : data.toString();
+
+        // Check for mouse sequences
+        let hasMouseEvent = false;
+        let match;
+        while ((match = mouseRegex.exec(str)) !== null) {
+          hasMouseEvent = true;
+          const button = parseInt(match[1], 10);
+          if (button === 64) {
+            // Scroll up
+            const maxOffset = Math.max(0, logsLengthRef.current - maxLinesRef.current);
+            setScrollOffset(prev => Math.min(prev + 3, maxOffset));
+            setAutoScroll(false);
+          } else if (button === 65) {
+            // Scroll down
+            setScrollOffset(prev => {
+              const newOffset = Math.max(prev - 3, 0);
+              if (newOffset === 0) setAutoScroll(true);
+              return newOffset;
+            });
+          }
+        }
+        mouseRegex.lastIndex = 0;
+
+        if (hasMouseEvent) {
+          // Strip mouse sequences, forward any remaining non-mouse data to Ink
+          const remaining = str.replace(mouseRegex, '');
+          if (remaining.length > 0) {
+            return originalEmit.call(stdin, event, remaining);
+          }
+          return true; // consumed entirely
+        }
+      }
+      return originalEmit.apply(stdin, [event, ...args]);
+    } as typeof stdin.emit;
+
+    // Disable mouse mode helper - used on unmount and process exit
+    const disableMouse = () => {
+      if (mouseEnabledRef.current) {
+        process.stdout.write('\x1b[?1000l\x1b[?1006l');
+        mouseEnabledRef.current = false;
+      }
+    };
+
+    // Ensure mouse mode is disabled on process exit/signals
+    const onExit = () => disableMouse();
+    process.on('exit', onExit);
+    process.on('SIGINT', onExit);
+    process.on('SIGTERM', onExit);
 
     // Enable SGR mouse mode for wheel events
     process.stdout.write('\x1b[?1000h\x1b[?1006h');
     mouseEnabledRef.current = true;
 
-    const handleData = (data: Buffer) => {
-      const str = data.toString();
-      // SGR mouse format: \x1b[<button;col;rowM (press) or \x1b[<button;col;rowm (release)
-      const match = str.match(/\x1b\[<(\d+);\d+;\d+[Mm]/);
-      if (match) {
-        const button = parseInt(match[1], 10);
-        if (button === 64) {
-          // Scroll up - use refs to avoid stale closures
-          const maxOffset = Math.max(0, logsLengthRef.current - maxLinesRef.current);
-          setScrollOffset(prev => Math.min(prev + 3, maxOffset));
-          setAutoScroll(false);
-        } else if (button === 65) {
-          // Scroll down
-          setScrollOffset(prev => {
-            const newOffset = Math.max(prev - 3, 0);
-            if (newOffset === 0) setAutoScroll(true);
-            return newOffset;
-          });
-        }
-      }
-    };
-
-    process.stdin.on('data', handleData);
-
     return () => {
-      process.stdin.off('data', handleData);
-      if (mouseEnabledRef.current) {
-        process.stdout.write('\x1b[?1000l\x1b[?1006l');
-        mouseEnabledRef.current = false;
-      }
+      // Restore original emit and disable mouse mode
+      process.stdin.emit = originalEmit;
+      disableMouse();
+      process.off('exit', onExit);
+      process.off('SIGINT', onExit);
+      process.off('SIGTERM', onExit);
     };
   }, [isActive]);
 

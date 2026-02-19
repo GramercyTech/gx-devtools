@@ -79,9 +79,10 @@ npm run setup-ssl        # Generate SSL certificates via mkcert
 # CLI Commands (gxdev)
 gxdev                     # Launch interactive TUI
 gxdev init [name]         # Create new project or update existing
-gxdev dev                 # Start dev server (launches TUI + auto-starts Vite)
+gxdev dev                 # Start dev server (Vite + Socket.IO)
 gxdev dev --no-https      # Start without SSL
-gxdev dev --with-socket   # Start with Socket.IO server
+gxdev dev --no-socket     # Start Vite only (no Socket.IO)
+gxdev dev --with-mock     # Start with Mock API enabled
 gxdev dev --chrome        # Start dev server and launch Chrome with extension
 gxdev dev --firefox       # Start dev server and launch Firefox with extension
 gxdev build               # Build for production
@@ -129,6 +130,11 @@ gx-devtools/
 │   ├── PortalContainer.vue # Platform emulator
 │   ├── server.js           # Socket.IO server
 │   ├── gxpStringsPlugin.js # Vue plugin for gxp-string/gxp-src directives
+│   ├── fallback-layouts/   # Fallback layouts for projects without theme-layouts/
+│   │   ├── PublicLayout.vue
+│   │   ├── PrivateLayout.vue
+│   │   ├── SystemLayout.vue
+│   │   └── AdditionalStyling.css
 │   ├── dev-tools/          # In-browser development tools
 │   │   ├── DevToolsModal.vue
 │   │   ├── StoreInspector.vue  # Store inspector with element highlighting
@@ -169,7 +175,7 @@ gx-devtools/
 
 **Vite Aliases (in template/vite.config.js):**
 - `@` → Project's `src/` directory
-- `@layouts` → Project's `theme-layouts/` directory
+- `@layouts` → Project's `theme-layouts/` directory (falls back to `runtime/fallback-layouts/` if missing)
 - `@gx-runtime` → Devtools's `runtime/` directory (from node_modules)
 
 ## App Manifest Configuration
@@ -337,8 +343,10 @@ After modifying extension code in `browser-extensions/`:
 The `gxdev` command launches an interactive terminal UI:
 
 ### TUI Slash Commands
-- `/dev` - Start Vite dev server
+- `/dev` - Start Vite + Socket.IO servers
+- `/dev --no-socket` - Start Vite only (no Socket.IO)
 - `/dev --no-https` - Start without SSL
+- `/dev --with-mock` - Start with Mock API enabled
 - `/socket` - Start Socket.IO server
 - `/ext chrome` - Launch Chrome extension
 - `/ext firefox` - Launch Firefox extension
@@ -349,8 +357,11 @@ The `gxdev` command launches an interactive terminal UI:
 ### Keyboard Shortcuts
 - `Ctrl+1/2/3...` - Switch between service tabs
 - `Ctrl+L` - Clear current log
+- `Ctrl+K` - Stop current service
 - `Ctrl+C` - Exit application
-- `Up/Down` - Scroll log panel
+- `Shift+↑/↓` - Scroll log panel
+- `Ctrl+↑/↓` - Jump to top/bottom of logs
+- `Mouse wheel` - Scroll log panel
 - `Tab` - Focus next element
 
 ## Environment Configuration

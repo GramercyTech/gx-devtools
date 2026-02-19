@@ -5,13 +5,12 @@ import TextInput from 'ink-text-input';
 // Command definitions with descriptions - comprehensive list
 const COMMANDS = [
   // Dev server commands
-  { cmd: '/dev', args: '', desc: 'Start Vite dev server' },
-  { cmd: '/dev', args: '--with-socket', desc: 'Start Vite + Socket.IO' },
-  { cmd: '/dev', args: '--with-mock', desc: 'Start Vite + Socket.IO + Mock API' },
-  { cmd: '/dev', args: '--no-https', desc: 'Start Vite without SSL' },
-  { cmd: '/dev', args: '--no-socket', desc: 'Start Vite without Socket.IO' },
-  { cmd: '/dev', args: '--chrome', desc: 'Start Vite + Chrome extension' },
-  { cmd: '/dev', args: '--firefox', desc: 'Start Vite + Firefox extension' },
+  { cmd: '/dev', args: '', desc: 'Start Vite + Socket.IO servers' },
+  { cmd: '/dev', args: '--with-mock', desc: 'Start with Mock API enabled' },
+  { cmd: '/dev', args: '--no-https', desc: 'Start without SSL' },
+  { cmd: '/dev', args: '--no-socket', desc: 'Start without Socket.IO' },
+  { cmd: '/dev', args: '--chrome', desc: 'Start + launch Chrome extension' },
+  { cmd: '/dev', args: '--firefox', desc: 'Start + launch Firefox extension' },
 
   // Socket commands
   { cmd: '/socket', args: '', desc: 'Start Socket.IO server' },

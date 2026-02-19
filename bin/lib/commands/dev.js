@@ -154,26 +154,23 @@ function devCommand(argv) {
 		console.log("🎭 Mock API will be enabled");
 	}
 
-	// Check if socket server should be started
-	const withSocket = argv["with-socket"];
+	// Socket server starts by default unless --no-socket is passed
+	const noSocket = argv["no-socket"];
 	let serverJsPath = "";
-	if (withSocket) {
+	if (!noSocket) {
 		// Check for local server.js first, then runtime directory
 		const serverJs = resolveFilePath("server.js", "", "runtime");
 		if (!fs.existsSync(serverJs.path)) {
-			console.error("❌ server.js not found. Cannot start Socket.IO server.");
+			console.warn("⚠ server.js not found. Skipping Socket.IO server.");
+		} else {
+			serverJsPath = serverJs.path;
 			console.log(
-				"💡 Run 'gxdev publish server.js' to create a local copy, or ensure you're in a GxP project directory"
+				`📡 Starting Socket.IO server with nodemon... (${
+					serverJs.isLocal ? "local" : "package"
+				} version)`
 			);
-			process.exit(1);
+			console.log(`📁 Using: ${serverJsPath}`);
 		}
-		serverJsPath = serverJs.path;
-		console.log(
-			`📡 Starting Socket.IO server with nodemon... (${
-				serverJs.isLocal ? "local" : "package"
-			} version)`
-		);
-		console.log(`📁 Using: ${serverJsPath}`);
 	}
 
 	// Check for local dev files, otherwise use runtime versions
@@ -286,8 +283,8 @@ function devCommand(argv) {
 	names.push("VITE");
 	colors.push("cyan");
 
-	// Socket server (optional)
-	if (withSocket && serverJsPath) {
+	// Socket server (on by default, skip if --no-socket or server.js not found)
+	if (serverJsPath) {
 		processes.push(`"npx nodemon \\"${serverJsPath}\\""`);
 		names.push("SOCKET");
 		colors.push("green");

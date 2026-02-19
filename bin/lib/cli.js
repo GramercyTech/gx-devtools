@@ -101,11 +101,10 @@ yargs
 				type: "boolean",
 				default: false,
 			},
-			"with-socket": {
-				describe: "Also start Socket.IO server with nodemon",
+			"no-socket": {
+				describe: "Disable Socket.IO server",
 				type: "boolean",
 				default: false,
-				alias: "s",
 			},
 			firefox: {
 				describe: "Launch Firefox with browser extension",
@@ -118,7 +117,7 @@ yargs
 				default: false,
 			},
 			"with-mock": {
-				describe: "Enable Mock API server (requires --with-socket)",
+				describe: "Enable Mock API server (included with socket server)",
 				type: "boolean",
 				default: false,
 				alias: "m",
