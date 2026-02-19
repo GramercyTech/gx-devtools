@@ -160,6 +160,8 @@ async function selectWithTypeAhead(question, options) {
 		};
 
 		const maxVisible = 10;
+		// Total lines rendered: question + filter + blank + scroll-up + maxVisible + scroll-down = maxVisible + 5
+		const totalLines = maxVisible + 5;
 
 		const render = () => {
 			stdout.write("\x1B[?25l"); // Hide cursor
@@ -174,12 +176,11 @@ async function selectWithTypeAhead(question, options) {
 			const visibleOptions = filteredOptions.slice(startIdx, endIdx);
 
 			// Clear screen area
-			const linesToClear = maxVisible + 4;
-			stdout.write(`\x1B[${linesToClear}A`);
-			for (let i = 0; i < linesToClear; i++) {
+			stdout.write(`\x1B[${totalLines}A`);
+			for (let i = 0; i < totalLines; i++) {
 				stdout.write("\x1B[2K\n");
 			}
-			stdout.write(`\x1B[${linesToClear}A`);
+			stdout.write(`\x1B[${totalLines}A`);
 
 			// Print question and filter
 			stdout.write(`\x1B[36m?\x1B[0m ${question}\n`);
@@ -227,17 +228,15 @@ async function selectWithTypeAhead(question, options) {
 			stdin.removeAllListeners("data");
 			stdin.pause();
 			// Clear UI
-			const linesToClear = maxVisible + 4;
-			stdout.write(`\x1B[${linesToClear}A`);
-			for (let i = 0; i < linesToClear; i++) {
+			stdout.write(`\x1B[${totalLines}A`);
+			for (let i = 0; i < totalLines; i++) {
 				stdout.write("\x1B[2K\n");
 			}
-			stdout.write(`\x1B[${linesToClear}A`);
+			stdout.write(`\x1B[${totalLines}A`);
 		};
 
-		// Initial render with spacing
-		console.log("");
-		for (let i = 0; i < maxVisible + 3; i++) {
+		// Initial render with spacing (must match totalLines)
+		for (let i = 0; i < totalLines; i++) {
 			console.log("");
 		}
 
@@ -334,6 +333,8 @@ async function multiSelectPrompt(question, options) {
 		let selectedIndex = 0;
 		const selected = new Set();
 		const maxVisible = 10;
+		// Total lines: question + hint + selected-count + scroll-up + maxVisible + scroll-down = maxVisible + 5
+		const totalLines = maxVisible + 5;
 
 		const render = () => {
 			stdout.write("\x1B[?25l");
@@ -347,12 +348,11 @@ async function multiSelectPrompt(question, options) {
 			const endIdx = Math.min(startIdx + maxVisible, options.length);
 			const visibleOptions = options.slice(startIdx, endIdx);
 
-			const linesToClear = maxVisible + 5;
-			stdout.write(`\x1B[${linesToClear}A`);
-			for (let i = 0; i < linesToClear; i++) {
+			stdout.write(`\x1B[${totalLines}A`);
+			for (let i = 0; i < totalLines; i++) {
 				stdout.write("\x1B[2K\n");
 			}
-			stdout.write(`\x1B[${linesToClear}A`);
+			stdout.write(`\x1B[${totalLines}A`);
 
 			stdout.write(`\x1B[36m?\x1B[0m ${question}\n`);
 			stdout.write(`  \x1B[90m(Space to toggle, Enter to confirm, A to toggle all)\x1B[0m\n`);
@@ -397,16 +397,14 @@ async function multiSelectPrompt(question, options) {
 			stdin.setRawMode(false);
 			stdin.removeAllListeners("data");
 			stdin.pause();
-			const linesToClear = maxVisible + 5;
-			stdout.write(`\x1B[${linesToClear}A`);
-			for (let i = 0; i < linesToClear; i++) {
+			stdout.write(`\x1B[${totalLines}A`);
+			for (let i = 0; i < totalLines; i++) {
 				stdout.write("\x1B[2K\n");
 			}
-			stdout.write(`\x1B[${linesToClear}A`);
+			stdout.write(`\x1B[${totalLines}A`);
 		};
 
-		console.log("");
-		for (let i = 0; i < maxVisible + 4; i++) {
+		for (let i = 0; i < totalLines; i++) {
 			console.log("");
 		}
 

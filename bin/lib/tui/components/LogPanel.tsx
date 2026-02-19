@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 
 interface LogPanelProps {
@@ -19,13 +19,21 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
   const { stdout } = useStdout();
   const [scrollOffset, setScrollOffset] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true);
+  const mouseEnabledRef = useRef(false);
+  const logsLengthRef = useRef(logs.length);
+  const maxLinesRef = useRef(0);
+
+  // Keep refs in sync
+  logsLengthRef.current = logs.length;
 
   // Calculate visible lines based on provided maxHeight or terminal height
-  // Subtract 2 for padding, 2 for border
+  // Subtract 2 for padding, 2 for border, 1 for hint bar
   const maxLines = useMemo(() => {
     const defaultMaxLines = stdout ? Math.max(5, stdout.rows - 10) : 15;
-    return maxHeight ? Math.max(3, maxHeight - 4) : defaultMaxLines;
+    return maxHeight ? Math.max(3, maxHeight - 5) : defaultMaxLines;
   }, [stdout?.rows, maxHeight]);
+
+  maxLinesRef.current = maxLines;
 
   // Reset scroll when logs are cleared
   useEffect(() => {
@@ -42,25 +50,75 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
     }
   }, [logs.length, autoScroll]);
 
+  // Scroll helper functions
+  const scrollUp = (lines: number) => {
+    const maxOffset = Math.max(0, logs.length - maxLines);
+    setScrollOffset(prev => Math.min(prev + lines, maxOffset));
+    setAutoScroll(false);
+  };
+
+  const scrollDown = (lines: number) => {
+    setScrollOffset(prev => {
+      const newOffset = Math.max(prev - lines, 0);
+      if (newOffset === 0) setAutoScroll(true);
+      return newOffset;
+    });
+  };
+
+  // Enable mouse wheel scrolling via terminal mouse reporting
+  useEffect(() => {
+    if (!isActive || !process.stdin.isTTY) return;
+
+    // Enable SGR mouse mode for wheel events
+    process.stdout.write('\x1b[?1000h\x1b[?1006h');
+    mouseEnabledRef.current = true;
+
+    const handleData = (data: Buffer) => {
+      const str = data.toString();
+      // SGR mouse format: \x1b[<button;col;rowM (press) or \x1b[<button;col;rowm (release)
+      const match = str.match(/\x1b\[<(\d+);\d+;\d+[Mm]/);
+      if (match) {
+        const button = parseInt(match[1], 10);
+        if (button === 64) {
+          // Scroll up - use refs to avoid stale closures
+          const maxOffset = Math.max(0, logsLengthRef.current - maxLinesRef.current);
+          setScrollOffset(prev => Math.min(prev + 3, maxOffset));
+          setAutoScroll(false);
+        } else if (button === 65) {
+          // Scroll down
+          setScrollOffset(prev => {
+            const newOffset = Math.max(prev - 3, 0);
+            if (newOffset === 0) setAutoScroll(true);
+            return newOffset;
+          });
+        }
+      }
+    };
+
+    process.stdin.on('data', handleData);
+
+    return () => {
+      process.stdin.off('data', handleData);
+      if (mouseEnabledRef.current) {
+        process.stdout.write('\x1b[?1000l\x1b[?1006l');
+        mouseEnabledRef.current = false;
+      }
+    };
+  }, [isActive]);
+
   // Handle keyboard input for scrolling
   useInput((input, key) => {
     if (!isActive) return;
 
     // Page Up - scroll up by half a page
     if (key.pageUp || (key.shift && key.upArrow)) {
-      const maxOffset = Math.max(0, logs.length - maxLines);
-      setScrollOffset(prev => Math.min(prev + Math.floor(maxLines / 2), maxOffset));
-      setAutoScroll(false);
+      scrollUp(Math.floor(maxLines / 2));
       return;
     }
 
     // Page Down - scroll down by half a page
     if (key.pageDown || (key.shift && key.downArrow)) {
-      setScrollOffset(prev => {
-        const newOffset = Math.max(prev - Math.floor(maxLines / 2), 0);
-        if (newOffset === 0) setAutoScroll(true);
-        return newOffset;
-      });
+      scrollDown(Math.floor(maxLines / 2));
       return;
     }
 
@@ -95,8 +153,11 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
 
   return (
     <Box flexDirection="column" padding={1} flexGrow={1} overflow="hidden">
+      <Box justifyContent="flex-end">
+        <Text color="gray" dimColor>Shift+↑↓ scroll  Ctrl+↑↓ jump  mouse wheel</Text>
+      </Box>
       {canScrollUp && (
-        <Text color="gray" dimColor>↑ {startIndex} more lines (Shift+↑ to scroll)</Text>
+        <Text color="gray" dimColor>↑ {startIndex} more lines</Text>
       )}
       {visibleLogs.length === 0 ? (
         <Text color="gray" dimColor>No logs yet...</Text>
@@ -106,7 +167,7 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
         ))
       )}
       {canScrollDown && (
-        <Text color="gray" dimColor>↓ {scrollOffset} more lines (Shift+↓ to scroll)</Text>
+        <Text color="gray" dimColor>↓ {scrollOffset} more lines</Text>
       )}
     </Box>
   );
