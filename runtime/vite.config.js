@@ -205,61 +205,17 @@ export default defineConfig(({ mode }) => {
 		},
 	};
 
-	// Fallback plugin for missing @layouts files
-	// When a project doesn't have theme-layouts/, serve minimal fallbacks
-	// so PortalContainer.vue imports don't break
-	const layoutsDir = path.resolve(process.cwd(), "theme-layouts");
-	const layoutFallbackPlugin = {
-		name: "gxp-layout-fallback",
-		enforce: "pre",
-		resolveId(source) {
-			// Handle @layouts/ alias imports
-			if (source.startsWith("@layouts/")) {
-				const fileName = source.replace("@layouts/", "");
-				const localFile = path.resolve(layoutsDir, fileName);
-				if (fs.existsSync(localFile)) return null;
-				return `\0gxp-layout-fallback:${fileName}`;
-			}
+	// Resolve @layouts: use project's theme-layouts/ if it exists,
+	// otherwise fall back to toolkit's runtime/fallback-layouts/
+	const projectLayoutsDir = path.resolve(process.cwd(), "theme-layouts");
+	const fallbackLayoutsDir = path.resolve(runtimeDir, "fallback-layouts");
+	const layoutsDir = fs.existsSync(projectLayoutsDir) ? projectLayoutsDir : fallbackLayoutsDir;
 
-			// Handle already-resolved absolute paths to theme-layouts/
-			if (source.startsWith(layoutsDir + "/")) {
-				if (fs.existsSync(source)) return null;
-				const fileName = source.replace(layoutsDir + "/", "");
-				return `\0gxp-layout-fallback:${fileName}`;
-			}
-
-			return null;
-		},
-		load(id) {
-			if (!id.startsWith("\0gxp-layout-fallback:")) return null;
-
-			const fileName = id.replace("\0gxp-layout-fallback:", "");
-			console.log(`⚡ [GxP] Serving fallback for missing layout: ${fileName}`);
-
-			// CSS files get empty content
-			if (fileName.endsWith(".css")) {
-				return "/* GxP fallback: no local AdditionalStyling.css */";
-			}
-
-			// Vue layout components get a passthrough slot wrapper
-			if (fileName.endsWith(".vue")) {
-				return `
-<template><slot /></template>
-<script setup>
-defineOptions({ inheritAttrs: false });
-defineProps({
-	usrLang: { type: String, default: "" },
-	portalSettings: { type: Object, default: () => ({}) },
-	portalLanguage: { type: Object, default: () => ({}) },
-	portalNavigation: { type: Array, default: () => ([]) },
-	portalAssets: { type: Object, default: () => ({}) },
-});
-</script>`;
-			}
-
-			return "";
-		},
-	};
+	if (layoutsDir === fallbackLayoutsDir) {
+		console.log("📐 Layouts: using toolkit fallbacks (no theme-layouts/ directory)");
+	} else {
+		console.log("📐 Layouts: using project theme-layouts/");
+	}
 
 	// Determine if HTTPS is enabled
 	const useHttps = getHttpsConfig(env) !== false;
@@ -293,8 +249,6 @@ defineProps({
 		},
 		plugins: [
 			runtimeFilesPlugin,
-			// Layout fallback must run before vue() to resolve missing @layouts/ imports
-			layoutFallbackPlugin,
 			// Source tracker must run BEFORE vue() to transform templates before compilation
 			gxpSourceTrackerPlugin(),
 			vue(),
@@ -440,7 +394,7 @@ defineProps({
 				// Client project's source directory
 				"@": path.resolve(process.cwd(), "src"),
 				// Theme layouts in client project
-				"@layouts": path.resolve(process.cwd(), "theme-layouts"),
+				"@layouts": layoutsDir,
 				// GxP Toolkit runtime (PortalContainer, etc.) - from node_modules
 				"@gx-runtime": runtimeDir,
 				// Ensure single Vue and Pinia instances
