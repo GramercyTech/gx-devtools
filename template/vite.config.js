@@ -150,12 +150,20 @@ export default defineConfig(({ mode }) => {
 	const layoutsDir = path.resolve(process.cwd(), "theme-layouts");
 	const layoutFallbackPlugin = {
 		name: "gxp-layout-fallback",
+		enforce: "pre",
 		resolveId(source) {
-			if (!source.startsWith("@layouts/")) return null;
-			const fileName = source.replace("@layouts/", "");
-			const localFile = path.resolve(layoutsDir, fileName);
-			if (fs.existsSync(localFile)) return null;
-			return `\0gxp-layout-fallback:${fileName}`;
+			if (source.startsWith("@layouts/")) {
+				const fileName = source.replace("@layouts/", "");
+				const localFile = path.resolve(layoutsDir, fileName);
+				if (fs.existsSync(localFile)) return null;
+				return `\0gxp-layout-fallback:${fileName}`;
+			}
+			if (source.startsWith(layoutsDir + "/")) {
+				if (fs.existsSync(source)) return null;
+				const fileName = source.replace(layoutsDir + "/", "");
+				return `\0gxp-layout-fallback:${fileName}`;
+			}
+			return null;
 		},
 		load(id) {
 			if (!id.startsWith("\0gxp-layout-fallback:")) return null;
