@@ -66,11 +66,6 @@ function copyTemplateFiles(projectPath, paths, overwrite = false) {
 			desc: "AdditionalStyling.css",
 		},
 		{
-			src: "src/stores/index.js",
-			dest: "src/stores/index.js",
-			desc: "Pinia store setup",
-		},
-		{
 			src: "src/Plugin.vue",
 			dest: "src/Plugin.vue",
 			desc: "Plugin.vue (Your app entry point)",
@@ -79,6 +74,23 @@ function copyTemplateFiles(projectPath, paths, overwrite = false) {
 			src: "src/DemoPage.vue",
 			dest: "src/DemoPage.vue",
 			desc: "DemoPage.vue (Example component)",
+		},
+	];
+
+	// Copy template files
+	filesToCopy.forEach((file) => {
+		const srcPath = path.join(paths.templateDir, file.src);
+		const destPath = path.join(projectPath, file.dest);
+		safeCopyFile(srcPath, destPath, file.desc, overwrite);
+	});
+}
+
+function copyBundleFiles(projectPath, paths, overwrite = false) {
+	const filesToCopy = [
+		{
+			src: "src/stores/index.js",
+			dest: "src/stores/index.js",
+			desc: "Pinia store setup",
 		},
 		{
 			src: "default-styling.css",
@@ -137,7 +149,6 @@ function copyTemplateFiles(projectPath, paths, overwrite = false) {
 		safeCopyFile(srcPath, destPath, file.desc, overwrite);
 	});
 }
-
 /**
  * Copy extension scripts to project
  * @param {string} projectPath - Target project path
@@ -523,7 +534,10 @@ async function initCommand(argv) {
 	const hasPackageJson = fs.existsSync(path.join(currentDir, "package.json"));
 	let projectPath = currentDir;
 	let projectName;
+
 	const overwrite = argv.local && argv.yes;
+	// Copy template files
+	const paths = resolveGxPaths();
 
 	// Handle --local flag: initialize in current directory
 	if (argv.local) {
@@ -541,6 +555,7 @@ async function initCommand(argv) {
 		if (hasPackageJson && !argv.name) {
 			console.log("Updating existing project...");
 			updateExistingProject(projectPath);
+			copyBundleFiles(projectPath, paths, false);
 			console.log("✅ Project updated!");
 			return;
 		}
@@ -588,9 +603,9 @@ async function initCommand(argv) {
 		console.log("⏭️  Skipping package.json (already exists)");
 	}
 
-	// Copy template files
-	const paths = resolveGxPaths();
+
 	copyTemplateFiles(projectPath, paths, overwrite);
+	copyBundleFiles(projectPath, paths, overwrite);
 	copyExtensionScripts(projectPath, paths, overwrite);
 	createSupportingFiles(projectPath);
 
