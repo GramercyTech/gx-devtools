@@ -41,10 +41,11 @@
     "gxp-api-server": "mcp/gxp-api-server.js"
   },
   "keywords": [
-    "tunnel",
-    "gtcp",
-    "eventfinity",
-    "gxp"
+    "gxp",
+    "gxp-devtools",
+    "gramercy",
+    "devtools",
+    "plugin"
   ],
   "author": "Peek",
   "license": "ISC",

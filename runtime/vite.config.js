@@ -132,22 +132,24 @@ export default defineConfig(({ mode }) => {
 	const toolkitPath = findToolkitPath();
 	const runtimeDir = path.resolve(toolkitPath, "runtime");
 
-	// Check for local dev files
+	// Check for local dev files (requires both env var AND file to exist)
 	const hasLocalIndexHtml = hasLocalFile("index.html");
 	const hasLocalMainJs = hasLocalFile("main.js");
+	const useLocalIndex = env.USE_LOCAL_INDEX === "true" && hasLocalIndexHtml;
+	const useLocalMain = env.USE_LOCAL_MAIN === "true" && hasLocalMainJs;
 
 	// Log which files are being used
-	console.log(`📄 index.html: ${hasLocalIndexHtml ? "local" : "runtime"}`);
-	console.log(`📄 main.js: ${hasLocalMainJs ? "local" : "runtime"}`);
+	console.log(`📄 index.html: ${useLocalIndex ? "local" : "runtime"}`);
+	console.log(`📄 main.js: ${useLocalMain ? "local" : "runtime"}`);
 
 	// Create plugin to serve runtime files (index.html and main.js) if no local ones exist
 	const runtimeFilesPlugin = {
 		name: "runtime-files",
 		configureServer(server) {
 			server.middlewares.use((req, res, next) => {
-				// Serve runtime index.html for root requests (if no local index.html)
+				// Serve runtime index.html for root requests (unless local index.html is opted in)
 				if (
-					!hasLocalIndexHtml &&
+					!useLocalIndex &&
 					(req.url === "/" || req.url === "/index.html")
 				) {
 					const runtimeIndexPath = path.join(runtimeDir, "index.html");
@@ -170,9 +172,9 @@ export default defineConfig(({ mode }) => {
 					}
 				}
 
-				// Serve runtime main.js for @gx-runtime/main.js requests (if no local main.js)
+				// Serve runtime main.js for @gx-runtime/main.js requests (unless local main.js is opted in)
 				if (
-					!hasLocalMainJs &&
+					!useLocalMain &&
 					(req.url === "/@gx-runtime/main.js" ||
 						req.url?.startsWith("/@gx-runtime/main.js?"))
 				) {

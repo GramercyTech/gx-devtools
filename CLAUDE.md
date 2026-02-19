@@ -28,6 +28,31 @@ gxdev init my-plugin
 gxdev dev --no-https  # or just: npm run dev-http
 ```
 
+## Adding to an Existing Project
+
+If you already have a Vue/Vite project, you can add the toolkit without scaffolding a new one:
+
+```bash
+cd ~/my-existing-project
+gxdev init
+```
+
+When run in a directory with an existing `package.json` (and no project name argument), `gxdev init` will:
+- Add missing required dependencies and devDependencies to `package.json`
+- Update mismatched dependency versions to the toolkit's expected versions
+- Add missing npm scripts (`dev`, `build`, `dev-http`, etc.)
+- Rename your existing `vite.config.js` to `vite.config.js.backup`
+- Copy bundle files: `app-manifest.json`, `.env.example`, store setup, config files, and AI agent configs
+
+It will **not** overwrite your source files (`src/Plugin.vue`, `src/DemoPage.vue`, `theme-layouts/`, etc.).
+
+By default, the dev server uses `index.html` and `main.js` from the toolkit runtime. If your project needs custom versions of these files, set the env vars in `.env`:
+```env
+USE_LOCAL_INDEX=true
+USE_LOCAL_MAIN=true
+```
+Both the env var and the corresponding local file must exist for the override to take effect.
+
 ## Features
 
 GxP Dev Devtools provides:
@@ -134,8 +159,8 @@ gx-devtools/
 ### Key Concepts
 
 **Runtime vs Template:**
-- `/runtime/` - Files that stay in node_modules and are imported at runtime
-- `/template/` - Files copied to user projects during `gxdev init`
+- `/runtime/` - Files that stay in node_modules and are imported at runtime. Includes `index.html` and `main.js` which are served by the Vite dev server by default (no local copy needed). Set `USE_LOCAL_INDEX`/`USE_LOCAL_MAIN` env vars to override with local copies.
+- `/template/` - Files copied to user projects during `gxdev init` (new projects get all files; existing projects only get bundle/config files)
 
 **Plugin Architecture:**
 1. **PortalContainer.vue** (runtime) - Platform emulator with mock router, theme, data
@@ -336,6 +361,8 @@ Key environment variables (set in `.env`):
 - `COMPONENT_PATH` - Main component path (default: `./src/Plugin.vue`)
 - `USE_HTTPS` - Enable HTTPS (default: true)
 - `CERT_PATH`, `KEY_PATH` - SSL certificate paths
+- `USE_LOCAL_INDEX` - Use local `index.html` instead of the toolkit runtime version (default: unset/false)
+- `USE_LOCAL_MAIN` - Use local `main.js` instead of the toolkit runtime version (default: unset/false)
 
 ## Key Dependencies
 - Vue 3 with Composition API
