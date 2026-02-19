@@ -635,52 +635,18 @@ export default function App({ autoStart, args }: AppProps) {
   };
 
   const handleAddDependency = async (cmdArgs: string[]) => {
-    // The add-dependency command is interactive and requires full terminal access
-    // We need to exit TUI and run it separately
-    addSystemLog('Launching Add Dependency wizard...');
-    addSystemLog('This command requires interactive terminal access.');
+    // The add-dependency wizard requires interactive terminal access (raw stdin)
+    // which conflicts with Ink's own stdin handling. Run it in a separate terminal.
+    const envFlag = cmdArgs.find(a => a === '-e' || a === '--env');
+    const envVal = envFlag ? cmdArgs[cmdArgs.indexOf(envFlag) + 1] : '';
+    const cmd = `gxdev add-dependency${envVal ? ` -e ${envVal}` : ''}`;
 
-    try {
-      const { spawn } = await import('child_process');
-      const path = await import('path');
-      const url = await import('url');
-
-      const __filename = url.fileURLToPath(import.meta.url);
-      const __dirname = path.dirname(__filename);
-
-      // Resolve to package root, then to gx-devtools.js
-      const packageRoot = path.resolve(__dirname, '..', '..');
-      const cliPath = path.join(packageRoot, 'bin', 'gx-devtools.js');
-
-      // Build args for the command
-      const args = ['add-dependency', ...cmdArgs];
-
-      // Stop all services before exiting
-      serviceManager.forceStopAll();
-
-      // Clear screen and exit TUI
-      process.stdout.write('\x1B[2J\x1B[0f');
-
-      // Spawn the add-dependency command with inherited stdio
-      const child = spawn('node', [cliPath, ...args], {
-        cwd: process.cwd(),
-        stdio: 'inherit',
-        shell: true,
-      });
-
-      child.on('close', (code) => {
-        console.log('\n');
-        console.log('─'.repeat(50));
-        console.log('To return to the TUI, run: gxdev');
-        console.log('─'.repeat(50));
-        process.exit(code || 0);
-      });
-
-      // Exit the ink app
-      exit();
-    } catch (err) {
-      addSystemLog(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
+    addSystemLog('');
+    addSystemLog('The Add Dependency wizard requires interactive terminal access.');
+    addSystemLog('Run this command in a separate terminal:');
+    addSystemLog('');
+    addSystemLog(`  \x1B[36m${cmd}\x1B[0m`);
+    addSystemLog('');
   };
 
   const getDefaultManifest = () => ({
