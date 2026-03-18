@@ -74,8 +74,10 @@ if (!isOneShot) {
 
         startTUI({ autoStart, args: tuiArgs });
       } catch (err) {
-        // TUI dependencies not available, fall back to traditional CLI
-        console.error('TUI error:', err.message);
+        // TUI not available or no TTY — fall back to traditional CLI
+        if (err.message !== 'NO_TTY') {
+          console.error('TUI error:', err.message);
+        }
         require("./lib/cli");
       }
     })();

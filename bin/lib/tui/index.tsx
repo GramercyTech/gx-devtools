@@ -26,17 +26,7 @@ export function startTUI(options: TUIOptions = {}) {
   // If stdin doesn't support raw mode, we need to handle it gracefully
   // Ink 5.x uses stdin by default and requires raw mode for input
   if (!stdinIsTTY) {
-    console.error('Warning: Terminal does not support interactive mode.');
-    console.error('The TUI requires an interactive terminal (TTY) to function.');
-    console.error('');
-    console.error('Try running the command directly from your terminal, not from a script or pipe.');
-    console.error('');
-    console.error('Alternatively, use the non-TUI commands:');
-    console.error('  npm run dev        # Start Vite dev server');
-    console.error('  npm run dev-http   # Start HTTP dev server');
-    console.error('  gxdev socket list   # List socket events');
-    process.exit(1);
-    return;
+    throw new Error('NO_TTY');
   }
 
   const { waitUntilExit } = render(
