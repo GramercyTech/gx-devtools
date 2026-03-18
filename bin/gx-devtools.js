@@ -37,6 +37,9 @@ const isOneShot = ONE_SHOT_COMMANDS.includes(command) ||
 // Check if we should use TUI with auto-start
 const isTuiCommand = TUI_AUTO_START_COMMANDS.includes(command);
 
+// --cli flag forces non-TUI mode regardless of TTY
+const forceCliMode = args.includes('--cli');
+
 // If no command or TUI command, try to launch TUI
 // Fall back to traditional CLI if TUI dependencies are not available
 if (!isOneShot) {
@@ -48,7 +51,7 @@ if (!isOneShot) {
   // Check if we're in an interactive terminal (TTY); fall back to CLI if not
   const isTTY = process.stdout.isTTY && process.stdin.isTTY;
 
-  if (fs.existsSync(tuiPath) && isTTY) {
+  if (fs.existsSync(tuiPath) && isTTY && !forceCliMode) {
     // Use dynamic import() for ESM modules (ink v5 is ESM-only)
     (async () => {
       try {
@@ -81,8 +84,8 @@ if (!isOneShot) {
         require("./lib/cli");
       }
     })();
-  } else if (!isTTY) {
-    // Non-interactive shell — skip TUI and run directly
+  } else if (!isTTY || forceCliMode) {
+    // Non-interactive shell or --cli flag — skip TUI and run directly
     require("./lib/cli");
   } else {
     // TUI not compiled yet, use traditional CLI
