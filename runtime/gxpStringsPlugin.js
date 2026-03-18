@@ -35,7 +35,9 @@ import { watch } from "vue";
  * @param {Object} store - The GxP Pinia store instance
  * @returns {Object} Vue plugin
  */
-export function createGxpStringsPlugin(store) {
+export function createGxpStringsPlugin(store, options = {}) {
+	const devServerBaseUrl = (options.devServerBaseUrl || "").replace(/\/+$/, "");
+
 	return {
 		install(app) {
 			// Register the v-gxp-string directive
@@ -98,7 +100,7 @@ export function createGxpStringsPlugin(store) {
 					el._gxpSrcKey = key;
 
 					// Initial update
-					updateElementSrc(el, key, defaultSrc, store);
+					updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
 
 					// Watch for changes in the appropriate store based on attributes
 					// Using deep: true to catch when entire object is replaced (async manifest load)
@@ -106,7 +108,7 @@ export function createGxpStringsPlugin(store) {
 						const watchSource = getSrcWatchSource(el, key, store);
 						if (watchSource) {
 							el._gxpSrcUnwatch = watch(watchSource, () => {
-								updateElementSrc(el, key, defaultSrc, store);
+								updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
 							}, { deep: true });
 						}
 					}
@@ -118,7 +120,7 @@ export function createGxpStringsPlugin(store) {
 					if (!key) return;
 
 					const defaultSrc = el._gxpSrcDefault || el.getAttribute("src") || "";
-					updateElementSrc(el, key, defaultSrc, store);
+					updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
 				},
 
 				// Cleanup when element is unmounted
@@ -139,7 +141,7 @@ export function createGxpStringsPlugin(store) {
 				mounted() {
 					this.$nextTick(() => {
 						processGxpStringAttributes(this.$el, store);
-						processGxpSrcAttributes(this.$el, store);
+						processGxpSrcAttributes(this.$el, store, devServerBaseUrl);
 					});
 
 					// Watch for manifest loading to re-process attributes
@@ -151,7 +153,7 @@ export function createGxpStringsPlugin(store) {
 								if (loaded) {
 									this.$nextTick(() => {
 										reprocessGxpStringAttributes(rootEl, store);
-										reprocessGxpSrcAttributes(rootEl, store);
+										reprocessGxpSrcAttributes(rootEl, store, devServerBaseUrl);
 									});
 								}
 							}
@@ -161,7 +163,7 @@ export function createGxpStringsPlugin(store) {
 				updated() {
 					this.$nextTick(() => {
 						processGxpStringAttributes(this.$el, store);
-						processGxpSrcAttributes(this.$el, store);
+						processGxpSrcAttributes(this.$el, store, devServerBaseUrl);
 					});
 				},
 				unmounted() {
@@ -261,10 +263,24 @@ function updateElementText(el, key, defaultValue, store) {
 }
 
 /**
+ * Resolve a default src path against the dev server base URL.
+ * Only applies to relative paths (starting with /) when a devServerBaseUrl is configured.
+ * Store-returned values are never prefixed — they are already absolute.
+ */
+function resolveDefaultSrc(defaultSrc, devServerBaseUrl) {
+	if (!devServerBaseUrl || !defaultSrc) return defaultSrc;
+	// Only prefix relative paths, not already-absolute URLs
+	if (defaultSrc.startsWith("/") && !defaultSrc.startsWith("//")) {
+		return devServerBaseUrl + defaultSrc;
+	}
+	return defaultSrc;
+}
+
+/**
  * Update element src attribute based on store value
  * Uses triggerState if gxp-state attribute is present, otherwise assetList
  */
-function updateElementSrc(el, key, defaultSrc, store) {
+function updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl) {
 	if (!store) {
 		return;
 	}
@@ -279,7 +295,7 @@ function updateElementSrc(el, key, defaultSrc, store) {
 	if (srcUrl && srcUrl !== defaultSrc) {
 		el.setAttribute("src", srcUrl);
 	} else if (defaultSrc) {
-		el.setAttribute("src", defaultSrc);
+		el.setAttribute("src", resolveDefaultSrc(defaultSrc, devServerBaseUrl));
 	}
 }
 
@@ -343,7 +359,7 @@ function reprocessGxpStringAttributes(rootEl, store) {
  * Process all elements with gxp-src attribute in a subtree
  * This handles elements that use the raw attribute without the v- directive
  */
-function processGxpSrcAttributes(rootEl, store) {
+function processGxpSrcAttributes(rootEl, store, devServerBaseUrl) {
 	if (!rootEl || !store) return;
 
 	// Handle case where rootEl is a text node or comment
@@ -362,14 +378,14 @@ function processGxpSrcAttributes(rootEl, store) {
 		el._gxpSrcKey = key;
 
 		// Update src
-		updateElementSrc(el, key, el._gxpSrcDefault, store);
+		updateElementSrc(el, key, el._gxpSrcDefault, store, devServerBaseUrl);
 
 		// Set up watcher for this element (if not already watching)
 		if (!el._gxpSrcUnwatch) {
 			const watchSource = getSrcWatchSource(el, key, store);
 			if (watchSource) {
 				el._gxpSrcUnwatch = watch(watchSource, () => {
-					updateElementSrc(el, key, el._gxpSrcDefault, store);
+					updateElementSrc(el, key, el._gxpSrcDefault, store, devServerBaseUrl);
 				}, { deep: true });
 			}
 		}
@@ -380,7 +396,7 @@ function processGxpSrcAttributes(rootEl, store) {
  * Re-process all elements with gxp-src attribute in a subtree
  * This is called when manifest loads to update elements that were already processed
  */
-function reprocessGxpSrcAttributes(rootEl, store) {
+function reprocessGxpSrcAttributes(rootEl, store, devServerBaseUrl) {
 	if (!rootEl || !store) return;
 	if (!rootEl.querySelectorAll) return;
 
@@ -391,7 +407,7 @@ function reprocessGxpSrcAttributes(rootEl, store) {
 		if (!key) return;
 
 		const defaultSrc = el._gxpSrcDefault || el.getAttribute("src") || "";
-		updateElementSrc(el, key, defaultSrc, store);
+		updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
 	});
 }
 
@@ -407,8 +423,8 @@ export function processGxpStrings(rootElement, store) {
  * Standalone function to process gxp-src attributes
  * Can be called manually if needed
  */
-export function processGxpSrcs(rootElement, store) {
-	processGxpSrcAttributes(rootElement, store);
+export function processGxpSrcs(rootElement, store, devServerBaseUrl) {
+	processGxpSrcAttributes(rootElement, store, devServerBaseUrl);
 }
 
 /**

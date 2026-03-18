@@ -34,7 +34,7 @@ const REQUIRED_DEV_DEPENDENCIES = {
 
 // Default scripts for package.json
 const DEFAULT_SCRIPTS = {
-	dev: "gxdev dev --with-socket",
+	dev: "gxdev dev",
 	"dev-app": "gxdev dev",
 	"dev-http": "gxdev dev --no-https",
 	build: "gxdev build",

@@ -24,7 +24,15 @@ async function init() {
 	app.use(pinia);
 
 	const gxpStore = useGxpStore();
-	app.use(createGxpStringsPlugin(gxpStore));
+
+	// Build the dev server base URL so gxp-src default paths resolve to the
+	// local dev server instead of the current domain (important when the app
+	// is injected into the cloud platform via browser extension).
+	const devProtocol = import.meta.env.VITE_USE_HTTPS !== "false" ? "https" : "http";
+	const devPort = import.meta.env.VITE_NODE_PORT || "3060";
+	const devServerBaseUrl = `${devProtocol}://localhost:${devPort}`;
+
+	app.use(createGxpStringsPlugin(gxpStore, { devServerBaseUrl }));
 
 	app.mount("#app");
 }

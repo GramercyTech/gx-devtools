@@ -45,7 +45,10 @@ if (!isOneShot) {
   // TUI output is in project root's dist/tui, not bin/dist/tui
   const tuiPath = path.join(__dirname, '..', 'dist', 'tui', 'index.js');
 
-  if (fs.existsSync(tuiPath)) {
+  // Check if we're in an interactive terminal (TTY); fall back to CLI if not
+  const isTTY = process.stdout.isTTY && process.stdin.isTTY;
+
+  if (fs.existsSync(tuiPath) && isTTY) {
     // Use dynamic import() for ESM modules (ink v5 is ESM-only)
     (async () => {
       try {
@@ -76,6 +79,9 @@ if (!isOneShot) {
         require("./lib/cli");
       }
     })();
+  } else if (!isTTY) {
+    // Non-interactive shell — skip TUI and run directly
+    require("./lib/cli");
   } else {
     // TUI not compiled yet, use traditional CLI
     console.log('Note: TUI not yet available. Run "npm run build:tui" to enable interactive mode.');
