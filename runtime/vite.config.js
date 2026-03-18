@@ -95,22 +95,11 @@ function getHttpsConfig(env) {
  * Find the gx-devtools package directory (works for both local and global installs)
  */
 function findToolkitPath() {
-	const packageName = "@gxp-dev/tools";
-
-	// Try local node_modules first
-	const localPath = path.resolve(process.cwd(), "node_modules", packageName);
-	if (fs.existsSync(localPath)) {
-		return localPath;
-	}
-
-	// Try to find via require.resolve
-	try {
-		const pkgPath = require.resolve(`${packageName}/package.json`);
-		return path.dirname(pkgPath);
-	} catch (e) {
-		// Fallback: assume we're in the toolkit itself during development
-		return process.cwd();
-	}
+	// Derive from this config file's own location — always reliable regardless
+	// of how the package is installed (local, global, npm link, CI, etc.)
+	// This file lives at <toolkit>/runtime/vite.config.js, so toolkit root is one level up.
+	const configFileDir = path.dirname(fileURLToPath(import.meta.url));
+	return path.resolve(configFileDir, "..");
 }
 
 /**
