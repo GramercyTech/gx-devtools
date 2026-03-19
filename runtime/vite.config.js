@@ -303,6 +303,9 @@ export default defineConfig(({ mode }) => {
 			port: parseInt(env.NODE_PORT) || 3060,
 			strictPort: true,
 			https: getHttpsConfig(env),
+			allowedHosts: env.ALLOWED_HOSTS
+				? env.ALLOWED_HOSTS.split(",").map((h) => h.trim()).filter(Boolean)
+				: [],
 			cors: {
 				origin: "*",
 				methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
