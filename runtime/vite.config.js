@@ -127,6 +127,10 @@ export default defineConfig(({ mode }) => {
 	const useLocalIndex = env.USE_LOCAL_INDEX === "true" && hasLocalIndexHtml;
 	const useLocalMain = env.USE_LOCAL_MAIN === "true" && hasLocalMainJs;
 
+	// Plugin enable/disable flags
+	const useSourceTracker = env.DISABLE_SOURCE_TRACKER !== "true";
+	const useInspector = env.DISABLE_INSPECTOR !== "true";
+
 	// Log which files are being used
 	console.log(`📄 index.html: ${useLocalIndex ? "local" : "runtime"}`);
 	console.log(`📄 main.js: ${useLocalMain ? "local" : "runtime"}`);
@@ -239,10 +243,10 @@ export default defineConfig(({ mode }) => {
 		plugins: [
 			runtimeFilesPlugin,
 			// Source tracker must run BEFORE vue() to transform templates before compilation
-			gxpSourceTrackerPlugin(),
+			...(useSourceTracker ? [gxpSourceTrackerPlugin()] : []),
 			vue(),
 			// GxP Inspector plugin for browser extension integration
-			gxpInspectorPlugin(),
+			...(useInspector ? [gxpInspectorPlugin()] : []),
 			externalGlobals(
 				{
 					vue: "Vue",
