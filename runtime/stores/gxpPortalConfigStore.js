@@ -262,31 +262,56 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	/**
 	 * Initialize primary WebSocket connection
 	 * Called synchronously when store is created
+	 *
+	 * Controlled by env vars:
+	 *   SOCKET_DRIVER = "io" (default) | "echo" | "false"
+	 *   SOCKET_URL    = explicit socket server URL (overrides auto-detected default)
 	 */
 	function initializeSockets() {
-		// Primary socket connection
-		// Use the same protocol as the current page for Socket.IO connection
-		const socketProtocol =
-			typeof window !== "undefined" && window.location.protocol === "https:"
-				? "https"
-				: "http";
-		const socketPort = import.meta.env.VITE_SOCKET_IO_PORT || 3069;
-		console.log(`[GxP Store] Connecting to Socket.IO on port ${socketPort}`);
-		const primarySocket = io(`${socketProtocol}://localhost:${socketPort}`);
+		const socketDriver = import.meta.env.SOCKET_DRIVER || "io";
 
-		sockets.primary = {
-			broadcast: function (event, data) {
-				primarySocket.emit(event, data);
-			},
-			listen: function (event, callback) {
-				return primarySocket.on(event, callback);
-			},
-			listenForStateChange: function (callback) {
-				return primarySocket.on("state-change", callback);
-			},
-		};
+		if (socketDriver !== "io") {
+			console.log(`[GxP Store] Sockets disabled (SOCKET_DRIVER=${socketDriver})`);
+			return;
+		}
 
-		socketConnections.primary = primarySocket;
+		// Resolve socket URL — explicit env var takes priority over auto-detected default
+		const socketUrl = (() => {
+			if (import.meta.env.SOCKET_URL) {
+				return import.meta.env.SOCKET_URL;
+			}
+			const protocol =
+				typeof window !== "undefined" && window.location.protocol === "https:"
+					? "https"
+					: "http";
+			const port = import.meta.env.VITE_SOCKET_IO_PORT || 3069;
+			return `${protocol}://localhost:${port}`;
+		})();
+
+		if (socketDriver === "io") {
+			console.log(`[GxP Store] Connecting via Socket.IO to ${socketUrl}`);
+			const primarySocket = io(socketUrl);
+
+			sockets.primary = {
+				broadcast: function (event, data) {
+					primarySocket.emit(event, data);
+				},
+				listen: function (event, callback) {
+					return primarySocket.on(event, callback);
+				},
+				listenForStateChange: function (callback) {
+					return primarySocket.on("state-change", callback);
+				},
+			};
+
+			socketConnections.primary = primarySocket;
+		} else if (socketDriver === "echo") {
+			console.log(`[GxP Store] Connecting via Laravel Echo to ${socketUrl}`);
+			// Echo driver — consumers can extend this via socketConnections.primary
+			console.warn("[GxP Store] Echo driver selected — configure Echo externally via socketConnections.primary");
+		} else {
+			console.warn(`[GxP Store] Unknown SOCKET_DRIVER "${socketDriver}", sockets not initialized`);
+		}
 	}
 
 	/**

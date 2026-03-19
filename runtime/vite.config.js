@@ -239,6 +239,10 @@ export default defineConfig(({ mode }) => {
 			"import.meta.env.VITE_SOCKET_IO_PORT": JSON.stringify(
 				env.SOCKET_IO_PORT || "3069"
 			),
+			"import.meta.env.SOCKET_URL": JSON.stringify(env.SOCKET_URL || ""),
+			"import.meta.env.SOCKET_DRIVER": JSON.stringify(
+				env.SOCKET_DRIVER || "io"
+			),
 		},
 		plugins: [
 			runtimeFilesPlugin,
