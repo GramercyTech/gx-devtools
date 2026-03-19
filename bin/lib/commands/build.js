@@ -12,9 +12,23 @@ const { exportCmd } = require("../constants");
 const { findProjectRoot, resolveGxPaths } = require("../utils");
 
 /**
- * Get the plugin name from package.json
+ * Get the plugin name from app-manifest.json (preferred) or package.json
  */
 function getPluginName(projectPath) {
+	// Check app-manifest.json first
+	try {
+		const manifestPath = path.join(projectPath, "app-manifest.json");
+		if (fs.existsSync(manifestPath)) {
+			const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+			if (manifest.name) {
+				return manifest.name.replace(/[^a-zA-Z0-9-_]/g, "-");
+			}
+		}
+	} catch (error) {
+		console.warn("Could not read app-manifest.json, falling back to package.json");
+	}
+
+	// Fall back to package.json
 	try {
 		const packageJsonPath = path.join(projectPath, "package.json");
 		if (fs.existsSync(packageJsonPath)) {
