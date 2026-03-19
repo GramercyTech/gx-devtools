@@ -313,17 +313,24 @@ export default defineConfig(({ mode }) => {
 			https: getHttpsConfig(env),
 			allowedHosts: env.ALLOWED_HOSTS
 				? env.ALLOWED_HOSTS.split(",").map((h) => h.trim()).filter(Boolean)
-				: [],
+				: "all",
 			cors: {
 				origin: "*",
-				methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+				methods: ["GET", "POST", "PUT, DELETE", "OPTIONS"],
 				allowedHeaders: ["*"],
 				credentials: false,
 			},
-			hmr: {
-				clientPort:
-					parseInt(env.CLIENT_PORT) || parseInt(env.NODE_PORT) || 3060,
-			},
+			hmr: env.HMR_HOST
+				? {
+						protocol: env.HMR_PROTOCOL || "wss",
+						host: env.HMR_HOST,
+						port: parseInt(env.HMR_PORT) || 443,
+						clientPort: parseInt(env.HMR_PORT) || 443,
+				  }
+				: {
+						clientPort:
+							parseInt(env.CLIENT_PORT) || parseInt(env.NODE_PORT) || 3060,
+				  },
 			host: true, // Allow access from network
 			// Allow serving files from the toolkit runtime directory
 			// Also resolve symlinks to allow files from the real path
