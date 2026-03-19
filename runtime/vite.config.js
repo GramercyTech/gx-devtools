@@ -332,8 +332,8 @@ export default defineConfig(({ mode }) => {
 				? {
 						protocol: env.HMR_PROTOCOL || "wss",
 						host: env.HMR_HOST,
-						port: parseInt(env.HMR_PORT) || 443,
-						clientPort: parseInt(env.HMR_PORT) || 443,
+						port: parseInt(env.HMR_PORT) || parseInt(env.CLIENT_PORT) || parseInt(env.NODE_PORT) || 3060,
+						clientPort: parseInt(env.HMR_CLIENT_PORT) || parseInt(env.CLIENT_PORT) || parseInt(env.NODE_PORT) || 3060,
 				  }
 				: {
 						clientPort:
