@@ -208,6 +208,14 @@ export default defineConfig(({ mode }) => {
 				name: "request-logger-cors",
 				configureServer(server) {
 					server.middlewares.use((req, res, next) => {
+						// Health check route
+						if (req.url === "/__health") {
+							res.statusCode = 200;
+							res.setHeader("Content-Type", "application/json");
+							res.end(JSON.stringify({ status: "ok" }));
+							return;
+						}
+
 						const start = Date.now();
 						const originalEnd = res.end;
 
