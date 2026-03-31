@@ -8,7 +8,6 @@ const path = require("path");
 const fs = require("fs");
 const shell = require("shelljs");
 const archiver = require("archiver");
-const { exportCmd } = require("../constants");
 const { findProjectRoot, resolveGxPaths } = require("../utils");
 
 /**
@@ -310,8 +309,6 @@ async function buildCommand(argv) {
 
 	console.log("🔨 Building plugin...\n");
 
-	const envVars = [];
-
 	// check if vite.config.js exists locally
 	let viteConfigPath = paths.viteConfigPath;
 	const localViteConfigPath = path.join(projectPath, "vite.config.js");
@@ -320,24 +317,18 @@ async function buildCommand(argv) {
 		console.log(`📁 Using local vite.config.js: ${viteConfigPath}`);
 	}
 
-	// Set variables only if not already defined in environment
+	// Set environment variables directly on process.env for cross-platform compatibility.
+	// Using shell-level "export"/"set" syntax breaks on Windows due to cmd.exe quote parsing.
 	if (!process.env.NODE_LOG_LEVEL) {
-		envVars.push(
-			`${exportCmd} NODE_LOG_LEVEL=${argv["node-log-level"] || "error"}`
-		);
+		process.env.NODE_LOG_LEVEL = argv["node-log-level"] || "error";
 	}
 	if (!process.env.COMPONENT_PATH) {
-		envVars.push(
-			`${exportCmd} COMPONENT_PATH=${
-				argv["component-path"] || "./src/Plugin.vue"
-			}`
-		);
+		process.env.COMPONENT_PATH = argv["component-path"] || "./src/Plugin.vue";
 	}
 
-	const command = [
-		...envVars,
-		`npx vite build --config "${viteConfigPath}"`,
-	].join(" && ");
+	// Normalize path separators to forward slashes for cross-platform shell compatibility
+	const normalizedViteConfigPath = viteConfigPath.replace(/\\/g, "/");
+	const command = `npx vite build --config "${normalizedViteConfigPath}"`;
 
 	const result = shell.exec(command);
 

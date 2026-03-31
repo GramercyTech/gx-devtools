@@ -320,7 +320,7 @@ export default defineConfig(({ mode }) => {
 		},
 		build: {
 			lib: {
-				entry: [env.COMPONENT_PATH || "./src/Plugin.vue"],
+				entry: [path.resolve(process.cwd(), env.COMPONENT_PATH || "./src/Plugin.vue")],
 				name: libName,
 				fileName: (format) => `plugin.${format}.js`,
 				formats: ["es"],

@@ -9,7 +9,6 @@ const path = require("path");
 const fs = require("fs");
 const shell = require("shelljs");
 const dotenv = require("dotenv");
-const { exportCmd } = require("../constants");
 const {
 	findProjectRoot,
 	resolveGxPaths,
@@ -82,10 +81,13 @@ function getBrowserExtensionConfig(browser, projectPath, paths, options = {}) {
 			return null;
 		}
 
+		// Normalize path separators for cross-platform shell compatibility
+		const normalizedScriptPath = scriptPath.replace(/\\/g, "/");
 		return {
 			name: "CHROME",
 			color: "blue",
-			command: `CHROME_EXTENSION_PATH="${extensionPath}" USE_HTTPS="${useHttps}" NODE_PORT="${port}" node "${scriptPath}"`,
+			// Inline KEY=VALUE env syntax doesn't work on Windows; env vars are set on process.env before exec
+			command: `node "${normalizedScriptPath}"`,
 			extensionPath,
 			startUrl,
 		};
@@ -200,34 +202,26 @@ function devCommand(argv) {
 		console.log("📦 Using runtime dev files (publish to customize)");
 	}
 
-	// Only set environment variables if they're not already set (allows .env to take precedence)
-	const envVars = [];
-
-	// Set variables only if not already defined in environment
+	// Set environment variables directly on process.env for cross-platform compatibility.
+	// Using shell-level "export"/"set" syntax breaks on Windows due to cmd.exe quote parsing.
 	if (!process.env.NODE_LOG_LEVEL) {
-		envVars.push(
-			`${exportCmd} NODE_LOG_LEVEL=${argv["node-log-level"] || "info"}`
-		);
+		process.env.NODE_LOG_LEVEL = argv["node-log-level"] || "info";
 	}
 	if (!process.env.NODE_PORT) {
-		envVars.push(`${exportCmd} NODE_PORT=${finalPort}`);
+		process.env.NODE_PORT = String(finalPort);
 	}
 	if (!process.env.COMPONENT_PATH) {
-		envVars.push(
-			`${exportCmd} COMPONENT_PATH=${
-				argv["component-path"] || "./src/Plugin.vue"
-			}`
-		);
+		process.env.COMPONENT_PATH = argv["component-path"] || "./src/Plugin.vue";
 	}
 
 	// Always set HTTPS-related variables (these are dynamic)
-	envVars.push(`${exportCmd} USE_HTTPS=${useHttps ? "true" : "false"}`);
-	envVars.push(`${exportCmd} CERT_PATH=${certPath}`);
-	envVars.push(`${exportCmd} KEY_PATH=${keyPath}`);
+	process.env.USE_HTTPS = useHttps ? "true" : "false";
+	process.env.CERT_PATH = certPath;
+	process.env.KEY_PATH = keyPath;
 
 	// Set mock API flag if requested
 	if (withMock) {
-		envVars.push(`${exportCmd} MOCK_API_ENABLED=true`);
+		process.env.MOCK_API_ENABLED = "true";
 	}
 
 	// Check for browser extension flags
@@ -266,6 +260,11 @@ function devCommand(argv) {
 		}
 	}
 
+	// Set CHROME_EXTENSION_PATH on process.env so launch-chrome.js inherits it
+	if (chromeConfig) {
+		process.env.CHROME_EXTENSION_PATH = chromeConfig.extensionPath;
+	}
+
 	// Build the command based on what's requested
 	let command;
 
@@ -274,18 +273,19 @@ function devCommand(argv) {
 	const names = [];
 	const colors = [];
 
+	// Normalize path separators to forward slashes for cross-platform shell compatibility
+	const normalizedViteConfigPath = viteConfigPath.replace(/\\/g, "/");
+
 	// Vite is always included
-	const viteCommand = [
-		...envVars,
-		`npx vite dev --config "${viteConfigPath}"`,
-	].join(" && ");
+	const viteCommand = `npx vite dev --config "${normalizedViteConfigPath}"`;
 	processes.push(`"${viteCommand}"`);
 	names.push("VITE");
 	colors.push("cyan");
 
 	// Socket server (on by default, skip if --no-socket or server.js not found)
 	if (serverJsPath) {
-		processes.push(`"npx nodemon \\"${serverJsPath}\\""`);
+		const normalizedServerPath = serverJsPath.replace(/\\/g, "/");
+		processes.push(`"npx nodemon \\"${normalizedServerPath}\\""`);
 		names.push("SOCKET");
 		colors.push("green");
 	}
@@ -312,9 +312,7 @@ function devCommand(argv) {
 		)}" --prefix-colors "${colors.join(",")}" ${processes.join(" ")}`;
 	} else {
 		// Just run Vite dev server alone
-		command = [...envVars, `npx vite dev --config "${viteConfigPath}"`].join(
-			" && "
-		);
+		command = `npx vite dev --config "${normalizedViteConfigPath}"`;
 	}
 
 	shell.exec(command);
