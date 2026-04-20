@@ -68,7 +68,7 @@ function getApiConfig() {
 	if (isDev) {
 		const protocol = useHttps ? "https" : "http";
 		return {
-			apiBaseUrl: `${protocol}://localhost:${mockPort}/api-proxy`,
+			apiBaseUrl: `${protocol}://localhost:${nodePort}/api-proxy`,
 			authToken: "", // Proxy injects the token server-side
 			projectId: projectId,
 		};

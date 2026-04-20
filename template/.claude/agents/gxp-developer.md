@@ -51,9 +51,8 @@ project/
 The store is the central hub for all platform data. Import it in any component:
 
 ```javascript
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
-// OR from local re-export:
-import { useGxpStore } from '@/stores/index.js';
+import { useGxpStore } from "@/stores/gxpPortalConfigStore";
+
 
 const store = useGxpStore();
 ```
@@ -78,16 +77,6 @@ store.getSetting('primary_color', '#FFD600');
 store.getAsset('hero_image', '/fallback.jpg');
 store.getState('current_step', 0);
 store.hasPermission('admin');
-```
-
-### Update Methods
-
-```javascript
-// Update store values programmatically
-store.updateString('welcome_title', 'New Title');
-store.updateSetting('primary_color', '#FF0000');
-store.updateAsset('hero_image', '/new-image.jpg');
-store.updateState('current_step', 2);
 ```
 
 ## API Calls - ALWAYS USE THE STORE
@@ -218,18 +207,17 @@ When creating new components, use this pattern:
     <h1 gxp-string="component_title">Default Title</h1>
     <img gxp-src="component_image" src="/placeholder.jpg" alt="">
 
-    <GxButton @click="handleAction" variant="primary">
+    <button @click="handleAction" variant="primary">
       <span gxp-string="action_button">Click Me</span>
-    </GxButton>
+    </button>
 
-    <GxSpinner v-if="loading" />
+    <div v-if="loading" class="spinner"></div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
-import { GxButton, GxSpinner } from '@gramercytech/gx-componentkit';
+import { useGxpStore } from "@/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
 const loading = ref(false);
@@ -260,21 +248,6 @@ onMounted(() => {
 }
 </style>
 ```
-
-## GxP Component Kit
-
-Use these pre-built components from `@gramercytech/gx-componentkit`:
-
-- `GxButton` - Styled buttons (variants: primary, secondary, outline)
-- `GxCard` - Card containers
-- `GxInput` - Form inputs with validation
-- `GxModal` - Modal dialogs
-- `GxSpinner` - Loading indicators
-- `GxAlert` - Notifications
-- `GxBadge` - Status badges
-- `GxAvatar` - User avatars
-- `GxProgress` - Progress bars
-- `GxTabs` - Tab navigation
 
 ## app-manifest.json
 
