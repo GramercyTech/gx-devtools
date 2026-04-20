@@ -203,6 +203,52 @@ export default defineConfig(({ mode }) => {
 					include: ["src/**"],
 				}
 			),
+			// Add this new plugin to the plugins array
+			{
+				name: "spa-fallback",
+				configureServer(server) {
+					return () => {
+					server.middlewares.use((req, res, next) => {
+						// Only handle GET requests for non-file routes
+						if (req.method !== "GET") {
+						next();
+						return;
+						}
+
+						// Skip API routes, health checks, and known file extensions
+						if (
+						req.url.startsWith("/@") ||
+						req.url.startsWith("/api") ||
+						req.url === "/__health" ||
+						/\.[a-z0-9]+$/i.test(req.url) // Has file extension
+						) {
+						next();
+						return;
+						}
+
+						// Serve index.html for all other routes (SPA fallback)
+						const indexPath = path.join(process.cwd(), "index.html");
+						if (fs.existsSync(indexPath)) {
+						server
+							.transformIndexHtml(
+							req.url,
+							fs.readFileSync(indexPath, "utf-8")
+							)
+							.then((html) => {
+							res.setHeader("Content-Type", "text/html");
+							res.end(html);
+							})
+							.catch((err) => {
+							console.error("Error serving SPA fallback:", err);
+							next(err);
+							});
+						} else {
+						next();
+						}
+					});
+					};
+				},
+			},
 			// Custom request logging and CORS plugin
 			{
 				name: "request-logger-cors",
@@ -259,7 +305,6 @@ export default defineConfig(({ mode }) => {
 		server: {
 			port: parseInt(env.NODE_PORT) || 3060,
 			strictPort: true,
-			fallback: 'index.html',
 			https: getHttpsConfig(env),
 			allowedHosts: env.ALLOWED_HOSTS
 				? env.ALLOWED_HOSTS.split(",").map((h) => h.trim()).filter(Boolean)
