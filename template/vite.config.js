@@ -259,6 +259,7 @@ export default defineConfig(({ mode }) => {
 		server: {
 			port: parseInt(env.NODE_PORT) || 3060,
 			strictPort: true,
+			fallback: 'index.html',
 			https: getHttpsConfig(env),
 			allowedHosts: env.ALLOWED_HOSTS
 				? env.ALLOWED_HOSTS.split(",").map((h) => h.trim()).filter(Boolean)
