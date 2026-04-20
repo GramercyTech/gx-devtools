@@ -140,17 +140,40 @@ export default defineConfig(({ mode }) => {
 		name: "runtime-files",
 		configureServer(server) {
 			server.middlewares.use((req, res, next) => {
-				// Serve runtime index.html for root requests (unless local index.html is opted in)
+				// Serve runtime index.html for root requests and SPA navigation requests
+				// (unless local index.html is opted in). SPA fallback is required so
+				// client-side routers (e.g. vue-router createWebHistory) can handle
+				// deep links when no physical index.html exists at the project root.
+				const rawUrl = req.url || "";
+				const urlPath = rawUrl.split("?")[0];
+				const accept = req.headers.accept || "";
+				const isGetOrHead = req.method === "GET" || req.method === "HEAD";
+				const isInternalPath =
+					urlPath.startsWith("/@") ||
+					urlPath.startsWith("/__") ||
+					urlPath.startsWith("/node_modules/") ||
+					urlPath.startsWith("/src/") ||
+					urlPath.startsWith("/dev-assets/") ||
+					urlPath.startsWith("/api-proxy/");
+				const hasExtension = path.extname(urlPath) !== "";
+				const isSpaNavigation =
+					isGetOrHead &&
+					!isInternalPath &&
+					!hasExtension &&
+					accept.includes("text/html");
+
 				if (
 					!useLocalIndex &&
-					(req.url === "/" || req.url === "/index.html")
+					(urlPath === "/" ||
+						urlPath === "/index.html" ||
+						isSpaNavigation)
 				) {
 					const runtimeIndexPath = path.join(runtimeDir, "index.html");
 					if (fs.existsSync(runtimeIndexPath)) {
 						// Read and transform the runtime index.html
 						server
 							.transformIndexHtml(
-								req.url,
+								rawUrl,
 								fs.readFileSync(runtimeIndexPath, "utf-8")
 							)
 							.then((html) => {
