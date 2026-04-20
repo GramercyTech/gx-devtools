@@ -208,44 +208,44 @@ export default defineConfig(({ mode }) => {
 				name: "spa-fallback",
 				configureServer(server) {
 					return () => {
-					server.middlewares.use((req, res, next) => {
-						// Only handle GET requests for non-file routes
-						if (req.method !== "GET") {
-						next();
-						return;
-						}
+						server.middlewares.use((req, res, next) => {
+							// Only handle GET requests for non-file routes
+							if (req.method !== "GET") {
+								next();
+								return;
+							}
 
-						// Skip API routes, health checks, and known file extensions
-						if (
-						req.url.startsWith("/@") ||
-						req.url.startsWith("/api") ||
-						req.url === "/__health" ||
-						/\.[a-z0-9]+$/i.test(req.url) // Has file extension
-						) {
-						next();
-						return;
-						}
+							// Skip API routes, health checks, known file extensions, and vite internals
+							if (
+								req.url.startsWith("/@") ||
+								req.url.startsWith("/api") ||
+								req.url === "/__health" ||
+								/\.[a-z0-9]+$/i.test(req.url) // Has file extension
+							) {
+								next();
+								return;
+							}
 
-						// Serve index.html for all other routes (SPA fallback)
-						const indexPath = path.join(process.cwd(), "index.html");
-						if (fs.existsSync(indexPath)) {
-						server
-							.transformIndexHtml(
-							req.url,
-							fs.readFileSync(indexPath, "utf-8")
-							)
-							.then((html) => {
-							res.setHeader("Content-Type", "text/html");
-							res.end(html);
-							})
-							.catch((err) => {
-							console.error("Error serving SPA fallback:", err);
-							next(err);
-							});
-						} else {
-						next();
-						}
-					});
+							// Check if local index.html exists, otherwise use toolkit version
+							const localIndexPath = path.join(process.cwd(), "index.html");
+							const toolkitIndexPath = path.join(runtimeDir, "index.html");
+							const indexPath = fs.existsSync(localIndexPath) ? localIndexPath : toolkitIndexPath;
+
+							if (fs.existsSync(indexPath)) {
+								server
+									.transformIndexHtml(req.url, fs.readFileSync(indexPath, "utf-8"))
+									.then((html) => {
+										res.setHeader("Content-Type", "text/html");
+										res.end(html);
+									})
+									.catch((err) => {
+										console.error("Error serving SPA fallback:", err);
+										next(err);
+									});
+							} else {
+								next();
+							}
+						});
 					};
 				},
 			},
