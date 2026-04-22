@@ -1,326 +1,342 @@
 <template>
-	<div class="plugin-container">
-		<!-- Example usage of the GxP Datastore -->
+	<div class="demo-container">
 		<div class="content-wrapper">
-			<h1 gxp-string="welcome_text">Welcome!</h1>
+			<!--
+				The GxP directives pull values from the datastore (app-manifest.json at dev-time).
+				Open Dev Tools (Ctrl+Shift+D) to edit any of these live — the page reacts.
+			-->
 
-			<div class="info-section">
-				<h2>Plugin Information</h2>
-				<p>
-					<strong>Primary Color:</strong>
-					<span gxp-string="primary_color"></span>
-				</p>
-				<p>
-					<strong>Project ID:</strong>
-					<span gxp-settings gxp-string="projectId"></span>
-				</p>
-				<p>
-					<strong>Environment:</strong>
-					<span gxp-settings gxp-string="environment"></span>
-				</p>
-			</div>
+			<!-- Hero image: gxp-src swaps `src` to the URL keyed by "hero_image" in assets -->
+			<img
+				gxp-src="hero_image"
+				src="/src/public/hero.jpg"
+				alt="Hero"
+				class="hero-image"
+			/>
 
-			<div class="assets-section">
-				<h2>Assets</h2>
+			<header class="hero">
+				<!-- gxp-string replaces the element's text with the value keyed "welcome_title" in strings -->
+				<h1 gxp-string="welcome_title">Welcome to the GxP Demo</h1>
+				<p gxp-string="welcome_subtitle" class="subtitle">
+					Edit these values live from the Dev Tools (Ctrl+Shift+D)
+				</p>
+			</header>
+
+			<!-- gxp-settings + gxp-string: read from manifest.settings instead of strings -->
+			<section class="panel">
+				<h2>Settings <span class="tag">gxp-settings</span></h2>
+				<dl>
+					<dt>Primary color</dt>
+					<dd>
+						<span
+							class="swatch"
+							:style="{ backgroundColor: gxpStore.getSetting('primary_color') }"
+						></span>
+						<code gxp-settings gxp-string="primary_color">#FFD600</code>
+					</dd>
+					<dt>Accent color</dt>
+					<dd>
+						<span
+							class="swatch"
+							:style="{ backgroundColor: gxpStore.getSetting('accent_color') }"
+						></span>
+						<code gxp-settings gxp-string="accent_color">#2962FF</code>
+					</dd>
+					<dt>Company name</dt>
+					<dd><code gxp-settings gxp-string="company_name">Acme Corp</code></dd>
+				</dl>
+			</section>
+
+			<!-- gxp-state + gxp-string: read from triggerState (typically updated by sockets or CLI) -->
+			<section class="panel">
+				<h2>Trigger state <span class="tag">gxp-state</span></h2>
+				<dl>
+					<dt>Current status</dt>
+					<dd><code gxp-state gxp-string="current_status">idle</code></dd>
+					<dt>Last event</dt>
+					<dd><code gxp-state gxp-string="last_event">none</code></dd>
+				</dl>
+			</section>
+
+			<!-- Logo demo: another gxp-src -->
+			<section class="panel logo-panel">
+				<h2>Asset <span class="tag">gxp-src</span></h2>
 				<img
-					v-if="gxpStore.getAsset('main_logo')"
-					:src="gxpStore.getAsset('main_logo')"
-					alt="Main Logo"
+					gxp-src="main_logo"
+					src="/src/public/logo.png"
+					alt="Logo"
 					class="logo"
 				/>
-				<div class="asset-controls">
-					<button @click="addDevAssets" class="action-btn secondary small">
-						Add Dev Assets
+				<p class="hint">
+					Change <code>assets.main_logo</code> in the Dev Tools Store Inspector
+					and watch this image swap.
+				</p>
+			</section>
+
+			<!-- Primary socket broadcast/listen demo -->
+			<section class="panel socket-panel">
+				<h2>Primary socket demo</h2>
+				<p gxp-string="socket_hint" class="hint">
+					Open this page in another window and messages broadcast on the
+					'primary' socket will arrive in both.
+				</p>
+
+				<div class="socket-controls">
+					<input
+						v-model="messageDraft"
+						type="text"
+						placeholder="Type a message…"
+						class="socket-input"
+						@keyup.enter="sendMessage"
+					/>
+					<button @click="sendMessage" class="btn primary">
+						<span gxp-string="send_button_label"
+							>Broadcast to primary socket</span
+						>
 					</button>
-					<button @click="listAllAssets" class="action-btn secondary small">
-						List Assets
-					</button>
-					<button @click="updateLogo" class="action-btn secondary small">
-						Update Logo
+					<button @click="openInNewWindow" class="btn secondary">
+						<span gxp-string="open_window_button_label"
+							>Open another window</span
+						>
 					</button>
 				</div>
-				<div v-if="currentAssets" class="asset-preview">
-					<h3>Current Assets:</h3>
-					<div
-						v-for="(url, key) in currentAssets"
-						:key="key"
-						class="asset-item"
-					>
-						<strong>{{ key }}:</strong>
-						<a :href="url" target="_blank" class="asset-link">{{ url }}</a>
+
+				<div class="socket-feed">
+					<div class="feed-column">
+						<h3>Sent from this window</h3>
+						<ul v-if="sentMessages.length">
+							<li v-for="(m, i) in sentMessages" :key="`s-${i}`">
+								<span class="time">{{ m.time }}</span> {{ m.text }}
+							</li>
+						</ul>
+						<p v-else class="empty">Nothing sent yet.</p>
+					</div>
+					<div class="feed-column">
+						<h3>Received from other windows</h3>
+						<ul v-if="receivedMessages.length">
+							<li v-for="(m, i) in receivedMessages" :key="`r-${i}`">
+								<span class="time">{{ m.time }}</span> {{ m.text }}
+							</li>
+						</ul>
+						<p v-else class="empty">Waiting for a message…</p>
 					</div>
 				</div>
-			</div>
-
-			<div class="actions-section">
-				<button
-					@click="handleApiCall"
-					class="action-btn"
-					:style="{ backgroundColor: gxpStore.getSetting('primary_color') }"
-				>
-					{{ gxpStore.getString("continue_button", "Continue") }}
-				</button>
-
-				<button @click="handleSocketTest" class="action-btn secondary">
-					Test Socket
-				</button>
-
-				<button
-					@click="props.router?.visit('/start')"
-					class="action-btn secondary"
-				>
-					{{ gxpStore.getString("back_button", "Back") }}
-				</button>
-			</div>
-
-			<div class="permissions-section">
-				<h2>Permissions</h2>
-				<ul>
-					<li
-						v-for="permission in [
-							'can_access_camera',
-							'can_save_data',
-							'can_share_content',
-						]"
-						:key="permission"
-					>
-						{{ permission }}:
-						<span
-							:class="gxpStore.hasPermission(permission) ? 'granted' : 'denied'"
-						>
-							{{ gxpStore.hasPermission(permission) ? "Granted" : "Denied" }}
-						</span>
-					</li>
-				</ul>
-			</div>
-
-			<div class="dependencies-section">
-				<h2>Available Dependencies</h2>
-				<div v-if="Array.isArray(gxpStore.dependencyList)">
-					<div
-						v-for="dependency in gxpStore.dependencyList"
-						:key="dependency.identifier"
-						class="dependency-item"
-					>
-						<h3>{{ dependency.identifier }}</h3>
-						<p><strong>Model:</strong> {{ dependency.model }}</p>
-						<p>
-							<strong>Events:</strong>
-							{{ Object.keys(dependency.events || {}).join(", ") || "None" }}
-						</p>
-						<button
-							@click="testDependencyAPI(dependency.identifier)"
-							class="action-btn secondary small"
-						>
-							Test API
-						</button>
-						<button
-							v-if="
-								dependency.events && Object.keys(dependency.events).length > 0
-							"
-							@click="setupDependencyListeners(dependency)"
-							class="action-btn secondary small"
-						>
-							Listen for Events
-						</button>
-					</div>
-				</div>
-				<div v-else>
-					<ul>
-						<li v-for="(id, key) in gxpStore.dependencyList" :key="key">
-							{{ key }}: {{ id }}
-						</li>
-					</ul>
-				</div>
-			</div>
-
-			<!-- Example of how to use socket listeners -->
-			<div class="socket-section">
-				<h2>Socket Events</h2>
-				<button @click="emitTestEvent" class="action-btn secondary">
-					Emit Test Event
-				</button>
-				<div v-if="socketMessages.length > 0" class="socket-messages">
-					<h3>Received Messages:</h3>
-					<ul>
-						<li v-for="(message, index) in socketMessages" :key="index">
-							{{ message }}
-						</li>
-					</ul>
-				</div>
-			</div>
-
-			<!-- Complete button -->
-			<div class="complete-section">
-				<button
-					@click="props.router?.visit('/final')"
-					class="action-btn complete"
-					:style="{
-						backgroundColor: gxpStore.getSetting('final_background_color'),
-					}"
-				>
-					Complete Experience
-				</button>
-			</div>
+			</section>
 		</div>
 	</div>
 </template>
 
 <style scoped>
-.plugin-container {
-	padding: 20px;
-	max-width: 800px;
+.demo-container {
+	padding: 24px;
+	max-width: 880px;
 	margin: 0 auto;
-	font-family: Arial, sans-serif;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	color: #1f2937;
 }
 
 .content-wrapper {
 	background: white;
+	border-radius: 12px;
+	padding: 32px;
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.hero-image {
+	width: 100%;
+	height: 180px;
+	object-fit: cover;
 	border-radius: 8px;
-	padding: 30px;
-	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+	margin-bottom: 20px;
+	background: #f3f4f6;
 }
 
-h1 {
+.hero h1 {
+	margin: 0 0 8px 0;
 	color: v-bind('gxpStore.getSetting("primary_color")');
+}
+
+.subtitle {
+	color: #6b7280;
+	margin: 0 0 24px 0;
+}
+
+.panel {
+	margin: 24px 0;
+	padding: 20px;
+	background: #f9fafb;
+	border-radius: 8px;
+	border-left: 4px solid v-bind('gxpStore.getSetting("accent_color")');
+}
+
+.panel h2 {
+	margin: 0 0 16px 0;
+	font-size: 18px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.tag {
+	font-size: 11px;
+	font-weight: 500;
+	padding: 2px 8px;
+	background: #e5e7eb;
+	color: #4b5563;
+	border-radius: 4px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+dl {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 8px 16px;
+	margin: 0;
+}
+
+dt {
+	font-weight: 600;
+	color: #374151;
+}
+
+dd {
+	margin: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 14px;
+	background: white;
+	padding: 2px 6px;
+	border-radius: 4px;
+	border: 1px solid #e5e7eb;
+}
+
+.swatch {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	border-radius: 3px;
+	border: 1px solid #e5e7eb;
+	vertical-align: middle;
+}
+
+.logo-panel {
 	text-align: center;
-	margin-bottom: 30px;
-}
-
-h2 {
-	color: #333;
-	border-bottom: 2px solid #eee;
-	padding-bottom: 10px;
-	margin: 20px 0 15px 0;
-}
-
-.info-section,
-.assets-section,
-.actions-section,
-.permissions-section,
-.dependencies-section,
-.socket-section,
-.complete-section {
-	margin: 20px 0;
 }
 
 .logo {
-	max-width: 200px;
+	max-width: 160px;
 	height: auto;
-	display: block;
-	margin: 10px 0;
+	margin: 8px 0;
 }
 
-.action-btn {
-	background-color: #007bff;
-	color: white;
+.hint {
+	color: #6b7280;
+	font-size: 14px;
+	margin: 8px 0 0 0;
+}
+
+.socket-controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 16px 0;
+}
+
+.socket-input {
+	flex: 1 1 220px;
+	padding: 10px 12px;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	font-size: 14px;
+}
+
+.btn {
 	border: none;
-	padding: 12px 24px;
-	margin: 5px;
-	border-radius: 4px;
+	padding: 10px 16px;
+	border-radius: 6px;
 	cursor: pointer;
-	font-size: 16px;
-	transition: background-color 0.3s;
+	font-size: 14px;
+	font-weight: 500;
+	transition: opacity 0.15s;
 }
 
-.action-btn:hover {
+.btn:hover {
 	opacity: 0.9;
 }
 
-.action-btn.secondary {
-	background-color: #6c757d;
+.btn.primary {
+	background: v-bind('gxpStore.getSetting("primary_color")');
+	color: #1f2937;
 }
 
-.action-btn.complete {
-	background-color: #28a745;
-	font-size: 18px;
-	padding: 15px 30px;
-	display: block;
-	margin: 20px auto 0;
+.btn.secondary {
+	background: v-bind('gxpStore.getSetting("accent_color")');
+	color: white;
 }
 
-.granted {
-	color: #28a745;
-	font-weight: bold;
+.socket-feed {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+	margin-top: 16px;
 }
 
-.denied {
-	color: #dc3545;
-	font-weight: bold;
+.feed-column {
+	background: white;
+	border-radius: 6px;
+	padding: 12px;
+	border: 1px solid #e5e7eb;
+	min-height: 120px;
 }
 
-.socket-messages {
-	background: #f8f9fa;
-	padding: 15px;
-	border-radius: 4px;
-	margin-top: 10px;
+.feed-column h3 {
+	margin: 0 0 8px 0;
+	font-size: 13px;
+	color: #6b7280;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 }
 
-.dependency-item {
-	background: #f8f9fa;
-	padding: 15px;
-	margin: 10px 0;
-	border-radius: 4px;
-	border-left: 4px solid #007bff;
-}
-
-.dependency-item h3 {
-	margin: 0 0 10px 0;
-	color: #007bff;
-}
-
-.action-btn.small {
-	padding: 8px 16px;
-	font-size: 14px;
-	margin: 2px;
-}
-
-ul {
-	list-style-type: none;
+.feed-column ul {
+	list-style: none;
 	padding: 0;
+	margin: 0;
+	font-size: 14px;
 }
 
-li {
-	padding: 5px 0;
-	border-bottom: 1px solid #eee;
+.feed-column li {
+	padding: 4px 0;
+	border-bottom: 1px solid #f3f4f6;
 }
 
-li:last-child {
+.feed-column li:last-child {
 	border-bottom: none;
 }
 
-.asset-controls {
-	margin: 15px 0;
+.time {
+	color: #9ca3af;
+	font-size: 12px;
+	margin-right: 6px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-.asset-preview {
-	background: #f8f9fa;
-	padding: 15px;
-	border-radius: 4px;
-	margin-top: 15px;
+.empty {
+	color: #9ca3af;
+	font-size: 14px;
+	margin: 0;
+	font-style: italic;
 }
 
-.asset-preview h3 {
-	margin: 0 0 10px 0;
-	color: #333;
-}
-
-.asset-item {
-	margin: 8px 0;
-	padding: 8px;
-	background: white;
-	border-radius: 4px;
-	border-left: 3px solid #007bff;
-}
-
-.asset-link {
-	color: #007bff;
-	text-decoration: none;
-	word-break: break-all;
-}
-
-.asset-link:hover {
-	text-decoration: underline;
+@media (max-width: 640px) {
+	.socket-feed {
+		grid-template-columns: 1fr;
+	}
 }
 </style>
 
@@ -330,183 +346,53 @@ defineOptions({
 })
 
 import { ref, onMounted, onUnmounted } from "vue"
-
-// Initialize the GxP store
 import { useGxpStore } from "@/stores/gxpPortalConfigStore"
 
 const gxpStore = useGxpStore()
 
-// Define props (router will be passed from platform)
-const props = defineProps({
-	router: {
-		type: Object,
-		required: false,
-		default: () => ({
-			visit: (url, options) =>
-				console.log("Router not available:", url, options),
-		}),
-	},
-})
+const messageDraft = ref("")
+const sentMessages = ref([])
+const receivedMessages = ref([])
 
-// Router is now available as props.router for navigation
+let unsubscribe = null
 
-// Local state
-const socketMessages = ref([])
-const socketUnsubscribers = ref([])
-const currentAssets = ref(null)
+const PRIMARY_SOCKET = "primary"
+const DEMO_EVENT = "demo-message"
 
-// Example API call using the store
-async function handleApiCall() {
-	try {
-		console.log("Making API call...")
-		// Example API call - this would work with your actual API
-		// const result = await gxpStore.apiGet('/some-endpoint');
-		// console.log('API Result:', result);
-
-		// For demo purposes, simulate API call
-		setTimeout(() => {
-			console.log("Simulated API call completed")
-		}, 1000)
-	} catch (error) {
-		console.error("API call failed:", error)
-	}
+function timestamp() {
+	return new Date().toLocaleTimeString()
 }
 
-// Example dependency API call using new methods
-async function testDependencyAPI(identifier) {
-	try {
-		console.log(`Testing API for dependency: ${identifier}`)
+function sendMessage() {
+	const text = messageDraft.value.trim()
+	if (!text) return
 
-		// Example of the new getList method
-		// const result = await gxpStore.getList(identifier, { page: 1, limit: 10 });
-		// console.log(`API Result for ${identifier}:`, result);
-
-		// For demo purposes, simulate API call
-		socketMessages.value.unshift(`API call simulated for ${identifier}`)
-	} catch (error) {
-		console.error(`API call failed for ${identifier}:`, error)
-		socketMessages.value.unshift(
-			`API call failed for ${identifier}: ${error.message}`,
-		)
-	}
-}
-
-// Set up socket listeners for a specific dependency
-function setupDependencyListeners(dependency) {
-	console.log(`Setting up listeners for ${dependency.identifier}`)
-
-	// Set up listeners for each event type
-	Object.keys(dependency.events || {}).forEach((eventType) => {
-		const eventName = dependency.events[eventType]
-
-		if (
-			gxpStore.sockets[dependency.identifier] &&
-			gxpStore.sockets[dependency.identifier][eventType]
-		) {
-			const unsubscribe = gxpStore.sockets[dependency.identifier][
-				eventType
-			].listen((data) => {
-				console.log(
-					`Received ${eventType} event for ${dependency.identifier}:`,
-					data,
-				)
-				socketMessages.value.unshift(
-					`${dependency.identifier}.${eventType}: ${data.message || JSON.stringify(data).substring(0, 50)}...`,
-				)
-			})
-
-			socketUnsubscribers.value.push(unsubscribe)
-		}
+	gxpStore.broadcast(PRIMARY_SOCKET, DEMO_EVENT, {
+		text,
+		sentAt: Date.now(),
 	})
 
-	socketMessages.value.unshift(
-		`Listening for events on ${dependency.identifier}`,
-	)
+	sentMessages.value.unshift({ text, time: timestamp() })
+	messageDraft.value = ""
 }
 
-// Example socket functionality
-function handleSocketTest() {
-	// Emit a test event
-	gxpStore.emitSocket("primary", "test-event", {
-		message: "Hello from plugin!",
-	})
-	console.log("Emitted test event via socket")
+function openInNewWindow() {
+	// Open a new window of the current page so two peers can exchange socket
+	// messages via the primary socket.
+	window.open(window.location.href, "_blank", "noopener,width=900,height=760")
 }
 
-function emitTestEvent() {
-	const timestamp = new Date().toLocaleTimeString()
-	gxpStore.emitSocket("primary", "plugin-message", {
-		message: `Test message at ${timestamp}`,
-		timestamp: Date.now(),
-	})
-
-	socketMessages.value.unshift(`Sent: Test message at ${timestamp}`)
-}
-
-// Asset management methods
-function addDevAssets() {
-	// Add some development assets using the convenience method
-	gxpStore.addDevAsset("main_logo", "logo-placeholder.png")
-	gxpStore.addDevAsset("background_image", "background-placeholder.jpg")
-	gxpStore.addDevAsset("product_image", "product-placeholder.jpg")
-	gxpStore.addDevAsset("avatar_placeholder", "avatar-placeholder.png")
-
-	console.log("Added development assets")
-	listAllAssets()
-}
-
-function listAllAssets() {
-	currentAssets.value = gxpStore.listAssets()
-	console.log("Listed all assets")
-}
-
-function updateLogo() {
-	// Example of updating a specific asset
-	const appPort = window.location.port || 3000
-	const appProtocol = window.location.protocol || "http"
-	const newLogoUrl = `${appProtocol}://localhost:${appPort}/dev-assets/images/logo-placeholder.png`
-	gxpStore.updateAsset("main_logo", newLogoUrl)
-	console.log("Updated logo asset")
-	listAllAssets()
-}
-
-// Set up socket listeners when component mounts
 onMounted(() => {
-	// Listen for test events
-	const unsubscribe1 = gxpStore.useSocketListener(
-		"primary",
-		"test-response",
-		(data) => {
-			console.log("Received test response:", data)
-			socketMessages.value.unshift(`Received: ${JSON.stringify(data)}`)
-		},
-	)
-
-	// Listen for any incoming messages
-	const unsubscribe2 = gxpStore.useSocketListener(
-		"primary",
-		"incoming-message",
-		(data) => {
-			console.log("Received incoming message:", data)
-			socketMessages.value.unshift(
-				`Incoming: ${data.message || JSON.stringify(data)}`,
-			)
-		},
-	)
-
-	// Store unsubscribers for cleanup
-	socketUnsubscribers.value = [unsubscribe1, unsubscribe2]
-
-	console.log("Plugin component mounted with GxP Datastore")
-	console.log("Available store methods:", Object.keys(gxpStore))
+	unsubscribe = gxpStore.listen(PRIMARY_SOCKET, DEMO_EVENT, (data) => {
+		const text =
+			typeof data?.text === "string" ? data.text : JSON.stringify(data)
+		receivedMessages.value.unshift({ text, time: timestamp() })
+	})
 })
 
-// Clean up socket listeners when component unmounts
 onUnmounted(() => {
-	socketUnsubscribers.value.forEach((unsubscribe) => {
-		if (typeof unsubscribe === "function") {
-			unsubscribe()
-		}
-	})
+	if (typeof unsubscribe === "function") {
+		unsubscribe()
+	}
 })
 </script>

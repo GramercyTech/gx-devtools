@@ -3,17 +3,32 @@
 	"version": "1.0.0",
 	"description": "GxToolkit Plugin",
 	"manifest_version": 3,
-	"asset_dir": "/src/assets/",
+	"asset_dir": "/src/public",
 	"configurationFile": "configuration.json",
 	"appInstructionsFile": "app-instructions.md",
 	"defaultStylingFile": "default-styling.css",
 	"settings": {
-		"primary_color": "#FFD600"
+		"primary_color": "#FFD600",
+		"accent_color": "#2962FF",
+		"company_name": "Acme Corp"
 	},
 	"strings": {
-		"default": {}
+		"default": {
+			"welcome_title": "Welcome to the GxP Demo",
+			"welcome_subtitle": "Edit these values live from the Dev Tools (Ctrl+Shift+D)",
+			"socket_hint": "Open this page in another window and messages broadcast on the 'primary' socket will arrive in both.",
+			"send_button_label": "Broadcast to primary socket",
+			"open_window_button_label": "Open another window"
+		}
 	},
-	"assets": {},
+	"assets": {
+		"main_logo": "/src/public/logo.png",
+		"hero_image": "/src/public/hero.jpg"
+	},
+	"triggerState": {
+		"current_status": "idle",
+		"last_event": "none"
+	},
 	"dependencies": [],
 	"permissions": []
 }

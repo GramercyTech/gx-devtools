@@ -113,6 +113,16 @@ function copyBundleFiles(projectPath, paths, overwrite = false) {
 			desc: "app-manifest.json",
 		},
 		{
+			src: "dev-assets/images/logo-placeholder.png",
+			dest: "src/public/logo.png",
+			desc: "src/public/logo.png (demo asset for gxp-src directive)",
+		},
+		{
+			src: "dev-assets/images/banner-placeholder.jpg",
+			dest: "src/public/hero.jpg",
+			desc: "src/public/hero.jpg (demo asset for gxp-src directive)",
+		},
+		{
 			src: "vite.extend.js",
 			dest: "vite.extend.js",
 			desc: "vite.extend.js (customize the Vite runtime config)",
@@ -220,12 +230,13 @@ function copyExtensionScripts(projectPath, paths, overwrite = false) {
  * @param {string} projectPath - Target project path
  */
 function createSupportingFiles(projectPath) {
-	// Create /src/assets/ directory
-	const assetsDir = path.join(projectPath, "src", "assets")
-	if (!fs.existsSync(assetsDir)) {
-		fs.mkdirSync(assetsDir, { recursive: true })
-		fs.writeFileSync(path.join(assetsDir, ".gitkeep"), "")
-		console.log("✓ Created src/assets/ directory for project assets")
+	// Create /src/public/ directory — served by Vite from the project root
+	// and referenced as `asset_dir: "/src/public"` in app-manifest.json.
+	const publicDir = path.join(projectPath, "src", "public")
+	if (!fs.existsSync(publicDir)) {
+		fs.mkdirSync(publicDir, { recursive: true })
+		fs.writeFileSync(path.join(publicDir, ".gitkeep"), "")
+		console.log("✓ Created src/public/ directory for project assets")
 	}
 
 	// Create .env file from .env.example

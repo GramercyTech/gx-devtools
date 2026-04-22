@@ -650,24 +650,6 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		return permissionFlags.value.includes(flag)
 	}
 
-	// Update methods - these replace the entire object to ensure Vue reactivity triggers
-	// Used by DevTools and for programmatic updates
-	function updateString(key, value) {
-		stringsList.value = { ...stringsList.value, [key]: value }
-	}
-
-	function updateSetting(key, value) {
-		pluginVars.value = { ...pluginVars.value, [key]: value }
-	}
-
-	function updateAsset(key, value) {
-		assetList.value = { ...assetList.value, [key]: value }
-	}
-
-	function updateState(key, value) {
-		triggerState.value = { ...triggerState.value, [key]: value }
-	}
-
 	// Convenience method to add dev assets with proper URL
 	function addDevAsset(key, filename) {
 		const appPort =
