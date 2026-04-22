@@ -48,6 +48,7 @@ function createPackageJson(projectPath, projectName, description = "") {
 		version: "1.0.0",
 		description: description || `GxP Plugin: ${projectName}`,
 		main: "main.js",
+		type: "module",
 		scripts: {
 			...DEFAULT_SCRIPTS,
 			placeholder:
@@ -131,6 +132,16 @@ function updateExistingProject(projectPath) {
 	try {
 		const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"))
 		let updated = false
+
+		// Ensure "type": "module" so vite.extend.js (and other ESM files) don't
+		// trigger Node's MODULE_TYPELESS_PACKAGE_JSON reparse warning.
+		// Only set it if the field is missing — don't silently flip a project
+		// that has explicitly chosen "commonjs".
+		if (!packageJson.type) {
+			packageJson.type = "module"
+			console.log('  + Setting "type": "module"')
+			updated = true
+		}
 
 		// Check and add/update dependencies
 		if (!packageJson.dependencies) {
