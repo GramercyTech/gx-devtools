@@ -56,7 +56,7 @@ function getApiConfig() {
 		// Mock API: use local dev server with random token
 		const protocol = useHttps ? "https" : "http"
 		return {
-			apiDocsBaseUrl: `${ENVIRONMENT_URLS.production.apiBaseUrl}`,
+			apiDocsBaseUrl: ENVIRONMENT_URLS.production.apiBaseUrl,
 			apiBaseUrl: `${protocol}://localhost:${mockPort}/mock-api`,
 			authToken: generateMockToken(),
 			projectId: "team/project",
@@ -327,7 +327,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		// Operations are built from OpenAPI spec paths
 		// Structure: { [operationId]: { method, path, parameters } }
 		try {
-			const specUrl = `${apiDocsBaseUrl}/api-specs/openapi.json`
+			const specUrl = `${apiDocsBaseUrl.value}/api-specs/openapi.json`
 			const response = await axios.get(specUrl)
 			const spec = response.data
 
