@@ -1,6 +1,6 @@
 {
 	"name": "@gxp-dev/tools",
-	"version": "2.0.64",
+	"version": "2.0.65",
 	"description": "Dev tools to create platform plugins",
 	"type": "commonjs",
 	"publishConfig": {
