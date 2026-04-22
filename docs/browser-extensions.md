@@ -36,6 +36,7 @@ gxdev dev --chrome --firefox
 ```
 
 This automatically:
+
 1. Starts the Vite development server
 2. Launches the browser with the extension loaded
 3. Navigates to your dev server URL
@@ -114,10 +115,10 @@ Open Chrome/Firefox DevTools (`F12` or `Cmd+Opt+I`) and look for the **GxP Inspe
 
 #### Visual Highlighting
 
-| State | Style |
-|-------|-------|
-| Hover | Orange dashed border |
-| Selected | Cyan pulsing glow |
+| State      | Style                |
+| ---------- | -------------------- |
+| Hover      | Orange dashed border |
+| Selected   | Cyan pulsing glow    |
 | GxP String | Blue indicator badge |
 
 #### Smart Labels
@@ -129,11 +130,13 @@ ComponentName::element::gxp-string-key
 ```
 
 Examples:
+
 - `DemoPage::h1::welcome_title`
 - `CheckInForm::button::btn_submit`
 - `Header::img::logo`
 
 This shows:
+
 1. **Vue component name** containing the element
 2. **HTML element type** (h1, button, img, etc.)
 3. **GxP string key** if the element has a gxp-string attribute
@@ -211,29 +214,38 @@ The content script (`content.js`) is injected into your development page and pro
 
 ```javascript
 // Highlight an element
-window.postMessage({
-  type: 'GXP_HIGHLIGHT_ELEMENT',
-  selector: '.my-element'
-}, '*');
+window.postMessage(
+  {
+    type: "GXP_HIGHLIGHT_ELEMENT",
+    selector: ".my-element",
+  },
+  "*",
+);
 
 // Clear highlights
-window.postMessage({
-  type: 'GXP_CLEAR_HIGHLIGHTS'
-}, '*');
+window.postMessage(
+  {
+    type: "GXP_CLEAR_HIGHLIGHTS",
+  },
+  "*",
+);
 ```
 
 ### Element Selection
 
 ```javascript
 // Enable selection mode
-window.postMessage({
-  type: 'GXP_ENABLE_SELECTION'
-}, '*');
+window.postMessage(
+  {
+    type: "GXP_ENABLE_SELECTION",
+  },
+  "*",
+);
 
 // Listen for selection
-window.addEventListener('message', (event) => {
-  if (event.data.type === 'GXP_ELEMENT_SELECTED') {
-    console.log('Selected:', event.data.element);
+window.addEventListener("message", (event) => {
+  if (event.data.type === "GXP_ELEMENT_SELECTED") {
+    console.log("Selected:", event.data.element);
   }
 });
 ```
@@ -244,16 +256,19 @@ The content script detects Vue components and exposes their data:
 
 ```javascript
 // Get component info for an element
-window.postMessage({
-  type: 'GXP_GET_COMPONENT_INFO',
-  selector: '.my-element'
-}, '*');
+window.postMessage(
+  {
+    type: "GXP_GET_COMPONENT_INFO",
+    selector: ".my-element",
+  },
+  "*",
+);
 
 // Receive component info
-window.addEventListener('message', (event) => {
-  if (event.data.type === 'GXP_COMPONENT_INFO') {
-    console.log('Component:', event.data.componentName);
-    console.log('Props:', event.data.props);
+window.addEventListener("message", (event) => {
+  if (event.data.type === "GXP_COMPONENT_INFO") {
+    console.log("Component:", event.data.componentName);
+    console.log("Props:", event.data.props);
   }
 });
 ```
@@ -279,12 +294,14 @@ dist/
 ### Chrome Packaging
 
 The Chrome extension is packaged using the `pack-chrome.js` script, which:
+
 1. Creates a ZIP of the extension files
 2. Can optionally sign with a private key
 
 ### Firefox Packaging
 
 The Firefox extension is built using `web-ext`:
+
 ```bash
 npx web-ext build --source-dir browser-extensions/firefox --artifacts-dir dist/firefox
 ```
@@ -346,15 +363,16 @@ Enable verbose logging in the extension settings for debugging.
 
 The extension complements the in-browser Dev Tools:
 
-| Feature | In-Browser Dev Tools | Browser Extension |
-|---------|---------------------|-------------------|
-| Store inspection | Full store editor | Read-only view |
-| Element highlighting | Via store keys | Via click selection |
-| String extraction | Manual | Automated |
-| Component inspection | Basic | Detailed |
-| Layout switching | Yes | No |
-| Socket simulation | Yes | No |
+| Feature              | In-Browser Dev Tools | Browser Extension   |
+| -------------------- | -------------------- | ------------------- |
+| Store inspection     | Full store editor    | Read-only view      |
+| Element highlighting | Via store keys       | Via click selection |
+| String extraction    | Manual               | Automated           |
+| Component inspection | Basic                | Detailed            |
+| Layout switching     | Yes                  | No                  |
+| Socket simulation    | Yes                  | No                  |
 
 Use both together for the best development experience:
+
 - **In-browser Dev Tools** (`Ctrl+Shift+D`) for store manipulation
 - **Browser Extension** for element inspection and string extraction

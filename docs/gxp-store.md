@@ -11,7 +11,7 @@ The GxP Store (`gxpPortalConfigStore`) is a Pinia store that provides reactive s
 ## Importing the Store
 
 ```javascript
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 // In your component setup
 const store = useGxpStore();
@@ -21,16 +21,16 @@ const store = useGxpStore();
 
 The store contains several reactive sections populated from your `app-manifest.json` and the platform:
 
-| Section | Description | Source |
-|---------|-------------|--------|
-| `pluginVars` | Plugin settings/configuration | `settings` in manifest |
-| `stringsList` | Translatable strings | `strings.default` in manifest |
-| `assetList` | Asset URLs | `assets` in manifest |
-| `triggerState` | Dynamic runtime state | `triggerState` in manifest |
-| `dependencyList` | External dependencies | Platform-injected |
-| `permissionFlags` | Granted permissions | Platform-injected |
-| `theme` | Platform theme colors | Platform-injected |
-| `router` | Navigation methods | Platform-injected |
+| Section           | Description                   | Source                        |
+| ----------------- | ----------------------------- | ----------------------------- |
+| `pluginVars`      | Plugin settings/configuration | `settings` in manifest        |
+| `stringsList`     | Translatable strings          | `strings.default` in manifest |
+| `assetList`       | Asset URLs                    | `assets` in manifest          |
+| `triggerState`    | Dynamic runtime state         | `triggerState` in manifest    |
+| `dependencyList`  | External dependencies         | Platform-injected             |
+| `permissionFlags` | Granted permissions           | Platform-injected             |
+| `theme`           | Platform theme colors         | Platform-injected             |
+| `router`          | Navigation methods            | Platform-injected             |
 
 ## Getter Methods
 
@@ -41,8 +41,8 @@ Use these methods to safely access store values with fallbacks:
 Get a string from `stringsList`:
 
 ```javascript
-const title = store.getString('welcome_title', 'Welcome');
-const button = store.getString('btn_submit', 'Submit');
+const title = store.getString("welcome_title", "Welcome");
+const button = store.getString("btn_submit", "Submit");
 ```
 
 ### `getSetting(key, defaultValue)`
@@ -50,9 +50,9 @@ const button = store.getString('btn_submit', 'Submit');
 Get a setting from `pluginVars`:
 
 ```javascript
-const color = store.getSetting('primary_color', '#000000');
-const timeout = store.getSetting('idle_timeout', 30);
-const enabled = store.getSetting('feature_enabled', false);
+const color = store.getSetting("primary_color", "#000000");
+const timeout = store.getSetting("idle_timeout", 30);
+const enabled = store.getSetting("feature_enabled", false);
 ```
 
 ### `getAsset(key, defaultValue)`
@@ -60,8 +60,8 @@ const enabled = store.getSetting('feature_enabled', false);
 Get an asset URL from `assetList`:
 
 ```javascript
-const logo = store.getAsset('logo', '/fallback-logo.png');
-const hero = store.getAsset('hero_image', '/placeholder.jpg');
+const logo = store.getAsset("logo", "/fallback-logo.png");
+const hero = store.getAsset("hero_image", "/placeholder.jpg");
 ```
 
 ### `getState(key, defaultValue)`
@@ -69,8 +69,8 @@ const hero = store.getAsset('hero_image', '/placeholder.jpg');
 Get a value from `triggerState`:
 
 ```javascript
-const step = store.getState('current_step', 1);
-const isActive = store.getState('is_active', false);
+const step = store.getState("current_step", 1);
+const isActive = store.getState("is_active", false);
 ```
 
 ### `hasPermission(permission)`
@@ -78,11 +78,11 @@ const isActive = store.getState('is_active', false);
 Check if a permission is granted:
 
 ```javascript
-if (store.hasPermission('camera')) {
+if (store.hasPermission("camera")) {
   // Camera access is available
 }
 
-if (store.hasPermission('bluetooth')) {
+if (store.hasPermission("bluetooth")) {
   // Bluetooth access is available
 }
 ```
@@ -94,7 +94,7 @@ if (store.hasPermission('bluetooth')) {
 Update a string value:
 
 ```javascript
-store.updateString('dynamic_message', 'Processing your request...');
+store.updateString("dynamic_message", "Processing your request...");
 ```
 
 ### `updateSetting(key, value)`
@@ -102,7 +102,7 @@ store.updateString('dynamic_message', 'Processing your request...');
 Update a setting value:
 
 ```javascript
-store.updateSetting('current_mode', 'advanced');
+store.updateSetting("current_mode", "advanced");
 ```
 
 ### `updateAsset(key, url)`
@@ -110,7 +110,7 @@ store.updateSetting('current_mode', 'advanced');
 Update an asset URL:
 
 ```javascript
-store.updateAsset('user_avatar', 'https://example.com/avatar.jpg');
+store.updateAsset("user_avatar", "https://example.com/avatar.jpg");
 ```
 
 ### `updateState(key, value)`
@@ -118,9 +118,9 @@ store.updateAsset('user_avatar', 'https://example.com/avatar.jpg');
 Update trigger state:
 
 ```javascript
-store.updateState('current_step', 2);
-store.updateState('is_loading', true);
-store.updateState('selected_item', { id: 123, name: 'Item' });
+store.updateState("current_step", 2);
+store.updateState("is_loading", true);
+store.updateState("selected_item", { id: 123, name: "Item" });
 ```
 
 ### `addDevAsset(key, filename)`
@@ -129,7 +129,7 @@ Add a development asset with the dev server URL prefix:
 
 ```javascript
 // Automatically prefixes with dev server URL
-store.addDevAsset('temp_image', 'screenshot.png');
+store.addDevAsset("temp_image", "screenshot.png");
 // Result: https://localhost:3060/dev-assets/images/screenshot.png
 ```
 
@@ -145,38 +145,38 @@ Call an API operation defined in your dependencies:
 const store = useGxpStore();
 
 // GET request - list resources
-const items = await store.callApi('access-points.index', 'access_points');
+const items = await store.callApi("access-points.index", "access_points");
 
 // GET request - single resource (path parameter)
-const item = await store.callApi('access-points.show', 'access_points', {
-  access_point: 123  // Path parameter
+const item = await store.callApi("access-points.show", "access_points", {
+  access_point: 123, // Path parameter
 });
 
 // POST request - create resource
-const newItem = await store.callApi('access-points.store', 'access_points', {
-  name: 'Main Entrance',
-  location: 'Building A'
+const newItem = await store.callApi("access-points.store", "access_points", {
+  name: "Main Entrance",
+  location: "Building A",
 });
 
 // PUT request - update resource
-const updated = await store.callApi('access-points.update', 'access_points', {
-  access_point: 123,  // Path parameter
-  name: 'Updated Name' // Body data
+const updated = await store.callApi("access-points.update", "access_points", {
+  access_point: 123, // Path parameter
+  name: "Updated Name", // Body data
 });
 
 // DELETE request
-await store.callApi('access-points.destroy', 'access_points', {
-  access_point: 123
+await store.callApi("access-points.destroy", "access_points", {
+  access_point: 123,
 });
 ```
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `operationId` | string | The operation key from your dependency's `operations` object |
-| `identifier` | string | The dependency identifier from `app-manifest.json` |
-| `additionalData` | object | Path parameters and/or request body data (optional) |
+| Parameter        | Type   | Description                                                  |
+| ---------------- | ------ | ------------------------------------------------------------ |
+| `operationId`    | string | The operation key from your dependency's `operations` object |
+| `identifier`     | string | The dependency identifier from `app-manifest.json`           |
+| `additionalData` | object | Path parameters and/or request body data (optional)          |
 
 **Returns:** `response.data` from the API response
 
@@ -193,10 +193,13 @@ await store.callApi('access-points.destroy', 'access_points', {
 
 ```javascript
 try {
-  const accessPoints = await store.callApi('access-points.index', 'access_points');
-  console.log('Loaded', accessPoints.length, 'access points');
+  const accessPoints = await store.callApi(
+    "access-points.index",
+    "access_points",
+  );
+  console.log("Loaded", accessPoints.length, "access points");
 } catch (error) {
-  console.error('Failed to load access points:', error.message);
+  console.error("Failed to load access points:", error.message);
 }
 ```
 
@@ -211,31 +214,31 @@ For direct API calls without the dependency system, use these methods:
 ### `apiGet(endpoint, params)`
 
 ```javascript
-const response = await store.apiGet('/events/123');
-const events = await store.apiGet('/events', { status: 'active' });
+const response = await store.apiGet("/events/123");
+const events = await store.apiGet("/events", { status: "active" });
 ```
 
 ### `apiPost(endpoint, data)`
 
 ```javascript
-const result = await store.apiPost('/checkin', {
+const result = await store.apiPost("/checkin", {
   attendee_id: 456,
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
 });
 ```
 
 ### `apiPut(endpoint, data)`
 
 ```javascript
-await store.apiPut('/attendees/456', {
-  checked_in: true
+await store.apiPut("/attendees/456", {
+  checked_in: true,
 });
 ```
 
 ### `apiDelete(endpoint)`
 
 ```javascript
-await store.apiDelete('/sessions/789');
+await store.apiDelete("/sessions/789");
 ```
 
 ## Socket.IO Integration
@@ -247,9 +250,9 @@ The store provides methods for real-time communication via Socket.IO:
 Send a socket event:
 
 ```javascript
-store.emitSocket('primary', 'checkin-complete', {
+store.emitSocket("primary", "checkin-complete", {
   attendee_id: 123,
-  badge_printed: true
+  badge_printed: true,
 });
 ```
 
@@ -258,9 +261,9 @@ store.emitSocket('primary', 'checkin-complete', {
 Listen for socket events:
 
 ```javascript
-store.listenSocket('primary', 'session-updated', (data) => {
-  console.log('Session updated:', data);
-  store.updateState('current_session', data);
+store.listenSocket("primary", "session-updated", (data) => {
+  console.log("Session updated:", data);
+  store.updateState("current_session", data);
 });
 ```
 
@@ -269,9 +272,9 @@ store.listenSocket('primary', 'session-updated', (data) => {
 Set up a socket listener for a specific dependency:
 
 ```javascript
-store.useSocketListener('badge-printer', 'print-complete', (result) => {
+store.useSocketListener("badge-printer", "print-complete", (result) => {
   if (result.success) {
-    store.updateState('badge_printing', false);
+    store.updateState("badge_printing", false);
   }
 });
 ```
@@ -283,7 +286,7 @@ The store is fully reactive. Use it directly in your templates:
 ```vue
 <template>
   <div :style="{ backgroundColor: store.getSetting('bg_color', '#fff') }">
-    <h1>{{ store.getString('title', 'Default Title') }}</h1>
+    <h1>{{ store.getString("title", "Default Title") }}</h1>
 
     <p v-if="store.triggerState.is_loading">Loading...</p>
 
@@ -294,7 +297,7 @@ The store is fully reactive. Use it directly in your templates:
 </template>
 
 <script setup>
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
 </script>
@@ -305,8 +308,8 @@ const store = useGxpStore();
 Use Vue's `watch` to react to store changes:
 
 ```javascript
-import { watch } from 'vue';
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { watch } from "vue";
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
 
@@ -315,17 +318,17 @@ watch(
   () => store.triggerState.current_step,
   (newStep, oldStep) => {
     console.log(`Step changed from ${oldStep} to ${newStep}`);
-  }
+  },
 );
 
 // Watch multiple values
 watch(
   () => [store.triggerState.is_active, store.pluginVars.mode],
   ([isActive, mode]) => {
-    if (isActive && mode === 'kiosk') {
+    if (isActive && mode === "kiosk") {
       startKioskMode();
     }
-  }
+  },
 );
 ```
 
@@ -334,18 +337,18 @@ watch(
 Create computed properties based on store values:
 
 ```javascript
-import { computed } from 'vue';
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { computed } from "vue";
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
 
-const isReady = computed(() =>
-  !store.triggerState.is_loading &&
-  store.triggerState.data !== null
+const isReady = computed(
+  () => !store.triggerState.is_loading && store.triggerState.data !== null,
 );
 
-const formattedCount = computed(() =>
-  `${store.triggerState.checked_in_count} of ${store.pluginVars.total_expected}`
+const formattedCount = computed(
+  () =>
+    `${store.triggerState.checked_in_count} of ${store.pluginVars.total_expected}`,
 );
 ```
 
@@ -357,13 +360,13 @@ Access platform theme values:
 const store = useGxpStore();
 
 // Theme colors
-const primaryColor = store.theme?.primary || '#1976D2';
-const backgroundColor = store.theme?.background || '#ffffff';
+const primaryColor = store.theme?.primary || "#1976D2";
+const backgroundColor = store.theme?.background || "#ffffff";
 
 // Use in styles
 const buttonStyle = computed(() => ({
   backgroundColor: store.theme?.primary,
-  color: store.theme?.onPrimary
+  color: store.theme?.onPrimary,
 }));
 ```
 

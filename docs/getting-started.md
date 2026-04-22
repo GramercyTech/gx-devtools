@@ -69,6 +69,7 @@ After the project files are created and dependencies installed, you'll enter an 
 ```
 
 Use **arrow keys** to select options:
+
 - First option is prepopulated from package.json
 - Second option lets you enter a custom value
 
@@ -103,10 +104,10 @@ If you select a provider, describe your plugin:
 
 #### Supported AI Providers
 
-| Provider | Authentication |
-|----------|----------------|
-| **Claude** | Claude CLI logged in (`claude login`) |
-| **Codex** | Codex CLI logged in (`codex auth`) |
+| Provider   | Authentication                                        |
+| ---------- | ----------------------------------------------------- |
+| **Claude** | Claude CLI logged in (`claude login`)                 |
+| **Codex**  | Codex CLI logged in (`codex auth`)                    |
 | **Gemini** | Gemini CLI, API key (`GEMINI_API_KEY`), or gcloud CLI |
 
 **Setting up providers:**
@@ -235,7 +236,7 @@ Open `src/Plugin.vue` and make a change:
 </template>
 
 <script setup>
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
 </script>
@@ -274,12 +275,12 @@ The TUI provides:
 
 ### TUI Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
+| Shortcut        | Action              |
+| --------------- | ------------------- |
 | `Ctrl+1/2/3...` | Switch service tabs |
-| `Ctrl+L` | Clear current log |
-| `Ctrl+C` | Exit application |
-| `Up/Down` | Scroll log panel |
+| `Ctrl+L`        | Clear current log   |
+| `Ctrl+C`        | Exit application    |
+| `Up/Down`       | Scroll log panel    |
 
 ## Next Steps
 

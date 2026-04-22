@@ -13,11 +13,13 @@ This guide covers common issues and frequently asked questions when developing w
 ### npm install fails with permission errors
 
 **Error:**
+
 ```
 EACCES: permission denied
 ```
 
 **Solution:**
+
 ```bash
 # Option 1: Use nvm to manage Node.js (recommended)
 nvm install 18
@@ -31,6 +33,7 @@ npm setup
 ### gxdev command not found
 
 **Error:**
+
 ```
 zsh: command not found: gxdev
 ```
@@ -38,16 +41,19 @@ zsh: command not found: gxdev
 **Solutions:**
 
 1. **Global install:**
+
 ```bash
 npm install -g @gxp-dev/tools
 ```
 
 2. **Or use npm dlx:**
+
 ```bash
 npm dlx gxdev init my-plugin
 ```
 
 3. **Or link locally (for toolkit development):**
+
 ```bash
 cd gx-devtools
 npm link
@@ -56,11 +62,13 @@ npm link
 ### TUI not available
 
 **Error:**
+
 ```
 TUI not available. Run "npm run build:tui" in gx-devtools first.
 ```
 
 **Solution:**
+
 ```bash
 # In the gx-devtools repository
 npm run build:tui
@@ -73,6 +81,7 @@ npm run build:tui
 ### SSL Certificate errors
 
 **Error:**
+
 ```
 NET::ERR_CERT_AUTHORITY_INVALID
 ```
@@ -80,6 +89,7 @@ NET::ERR_CERT_AUTHORITY_INVALID
 **Solutions:**
 
 1. **Generate certificates:**
+
 ```bash
 npm run setup-ssl
 # or
@@ -91,6 +101,7 @@ gxdev setup-ssl
    - Or add certificate to system keychain
 
 3. **Use HTTP instead:**
+
 ```bash
 gxdev dev --no-https
 npm run dev-http
@@ -99,6 +110,7 @@ npm run dev-http
 ### Port already in use
 
 **Error:**
+
 ```
 Error: Port 3060 is already in use
 ```
@@ -106,6 +118,7 @@ Error: Port 3060 is already in use
 **Solutions:**
 
 1. **Find and kill process:**
+
 ```bash
 # macOS/Linux
 lsof -i :3060
@@ -117,6 +130,7 @@ taskkill /PID <PID> /F
 ```
 
 2. **Use different port:**
+
 ```bash
 # In .env
 NODE_PORT=3061
@@ -125,6 +139,7 @@ NODE_PORT=3061
 ### Vite HMR not working
 
 **Symptoms:**
+
 - Changes don't reflect without refresh
 - Console shows HMR disconnect errors
 
@@ -132,6 +147,7 @@ NODE_PORT=3061
 
 1. **Check for syntax errors** in your Vue files
 2. **Restart dev server:**
+
 ```bash
 # In TUI
 /stop vite
@@ -141,6 +157,7 @@ NODE_PORT=3061
 ```
 
 3. **Clear Vite cache:**
+
 ```bash
 rm -rf node_modules/.vite
 npm run dev
@@ -155,6 +172,7 @@ npm run dev
 ### Build fails with import errors
 
 **Error:**
+
 ```
 Error: Cannot find module '@/components/...'
 ```
@@ -162,12 +180,13 @@ Error: Cannot find module '@/components/...'
 **Solutions:**
 
 1. **Check import paths** - ensure they use correct aliases:
+
 ```javascript
 // Correct
-import MyComponent from '@/components/MyComponent.vue';
+import MyComponent from "@/components/MyComponent.vue";
 
 // Wrong
-import MyComponent from './src/components/MyComponent.vue';
+import MyComponent from "./src/components/MyComponent.vue";
 ```
 
 2. **Verify vite.config.js** has correct aliases
@@ -177,21 +196,26 @@ import MyComponent from './src/components/MyComponent.vue';
 ### CSS not included in build
 
 **Symptoms:**
+
 - Styles missing in production
 - Components unstyled
 
 **Solutions:**
 
 1. **Use scoped styles:**
+
 ```vue
 <style scoped>
-.my-class { color: blue; }
+.my-class {
+  color: blue;
+}
 </style>
 ```
 
 2. **Import CSS in component:**
+
 ```javascript
-import './MyComponent.css';
+import "./MyComponent.css";
 ```
 
 3. **Check for CSS import errors** in terminal
@@ -203,15 +227,17 @@ import './MyComponent.css';
 **Solutions:**
 
 1. **Analyze bundle:**
+
 ```bash
 npx vite build --mode analyze
 ```
 
 2. **Check for unused dependencies**
 3. **Lazy load large components:**
+
 ```javascript
-const HeavyComponent = defineAsyncComponent(() =>
-  import('./HeavyComponent.vue')
+const HeavyComponent = defineAsyncComponent(
+  () => import("./HeavyComponent.vue"),
 );
 ```
 
@@ -224,17 +250,20 @@ const HeavyComponent = defineAsyncComponent(() =>
 ### Strings not updating from manifest
 
 **Symptoms:**
+
 - `gxp-string` elements show fallback values
 - Changes to manifest don't reflect
 
 **Solutions:**
 
 1. **Check JSON syntax:**
+
 ```bash
 cat app-manifest.json | python -m json.tool
 ```
 
 2. **Verify key names** match between manifest and template:
+
 ```json
 // manifest
 "strings": {
@@ -243,12 +272,15 @@ cat app-manifest.json | python -m json.tool
   }
 }
 ```
+
 ```html
 <!-- template -->
-<h1 gxp-string="welcome_title">Fallback</h1>  <!-- ← same key -->
+<h1 gxp-string="welcome_title">Fallback</h1>
+<!-- ← same key -->
 ```
 
 3. **Check console** for manifest loading errors:
+
 ```
 [GxP Store] Loaded configuration from app-manifest.json
 ```
@@ -258,6 +290,7 @@ cat app-manifest.json | python -m json.tool
 ### Hot reload not working for manifest
 
 **Symptoms:**
+
 - Must refresh page for manifest changes
 
 **Solutions:**
@@ -273,38 +306,43 @@ cat app-manifest.json | python -m json.tool
 ### Store not reactive
 
 **Symptoms:**
+
 - UI doesn't update when store changes
 - Computed properties don't recalculate
 
 **Solutions:**
 
 1. **Use store methods** for updates:
+
 ```javascript
 // Correct
-store.updateString('key', 'value');
+store.updateString("key", "value");
 
 // Wrong - not reactive
-store.stringsList.key = 'value';
+store.stringsList.key = "value";
 ```
 
 2. **Access via getters:**
+
 ```javascript
 // Reactive
-const title = computed(() => store.getString('title', 'Default'));
+const title = computed(() => store.getString("title", "Default"));
 
 // Not reactive if accessed once
-const title = store.getString('title', 'Default');
+const title = store.getString("title", "Default");
 ```
 
 3. **Use toRefs** for destructuring:
+
 ```javascript
-import { storeToRefs } from 'pinia';
+import { storeToRefs } from "pinia";
 const { stringsList, pluginVars } = storeToRefs(store);
 ```
 
 ### API calls failing
 
 **Symptoms:**
+
 - CORS errors
 - 401 Unauthorized
 - Network errors
@@ -312,12 +350,14 @@ const { stringsList, pluginVars } = storeToRefs(store);
 **Solutions:**
 
 1. **Check API environment:**
+
 ```bash
 # .env
 VITE_API_ENV=mock  # For local development
 ```
 
 2. **Verify API key** (for non-mock environments):
+
 ```bash
 VITE_API_KEY=your_key_here
 ```
@@ -333,6 +373,7 @@ VITE_API_KEY=your_key_here
 **Solutions:**
 
 1. **Check extension path:**
+
 ```bash
 gxdev ext:install chrome
 # Shows the correct path to load
@@ -367,6 +408,7 @@ gxdev ext:install chrome
 ### Cannot connect to socket server
 
 **Error:**
+
 ```
 Error: Cannot connect to Socket.IO server
 ```
@@ -374,6 +416,7 @@ Error: Cannot connect to Socket.IO server
 **Solutions:**
 
 1. **Start socket server:**
+
 ```bash
 gxdev dev --with-socket
 # or in TUI
@@ -381,6 +424,7 @@ gxdev dev --with-socket
 ```
 
 2. **Check port:**
+
 ```bash
 # Default: 3069
 # Verify in .env
@@ -401,6 +445,7 @@ SOCKET_IO_PORT=3069
 ### Event file not found
 
 **Error:**
+
 ```
 Event file not found: MyEvent.json
 ```
@@ -427,6 +472,7 @@ npm run dev-http  # or npm run dev for HTTPS
 ### Where is the final build output?
 
 After running `gxdev build`:
+
 ```
 dist/
 ├── build/           # Individual build files
@@ -441,6 +487,7 @@ The `.gxpapp` file is a ZIP archive ready for platform upload.
 ### How do I add a new translatable string?
 
 1. **Add to manifest:**
+
 ```json
 {
   "strings": {
@@ -452,11 +499,13 @@ The `.gxpapp` file is a ZIP archive ready for platform upload.
 ```
 
 2. **Use in template:**
+
 ```html
 <span gxp-string="new_string_key">Default text</span>
 ```
 
 Or via CLI:
+
 ```bash
 gxdev datastore add --type string --key new_string_key --value "Your text"
 ```

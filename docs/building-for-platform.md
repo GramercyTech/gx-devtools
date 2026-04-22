@@ -48,31 +48,34 @@ The build process:
 Your project's `vite.config.js` controls the build:
 
 ```javascript
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
-import path from 'path';
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+import path from "path";
 
 export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@layouts': path.resolve(__dirname, './theme-layouts'),
-      '@gx-runtime': path.resolve(__dirname, './node_modules/@gxp-dev/tools/runtime'),
+      "@": path.resolve(__dirname, "./src"),
+      "@layouts": path.resolve(__dirname, "./theme-layouts"),
+      "@gx-runtime": path.resolve(
+        __dirname,
+        "./node_modules/@gxp-dev/tools/runtime",
+      ),
     },
   },
   build: {
     lib: {
-      entry: path.resolve(__dirname, 'src/Plugin.vue'),
-      name: 'GxpPlugin',
+      entry: path.resolve(__dirname, "src/Plugin.vue"),
+      name: "GxpPlugin",
       fileName: (format) => `plugin.${format}.js`,
     },
     rollupOptions: {
-      external: ['vue', 'pinia'],
+      external: ["vue", "pinia"],
       output: {
         globals: {
-          vue: 'Vue',
-          pinia: 'Pinia',
+          vue: "Vue",
+          pinia: "Pinia",
         },
       },
     },
@@ -105,7 +108,7 @@ Before building for production:
 ```javascript
 // Remove or wrap in dev checks
 if (import.meta.env.DEV) {
-  console.log('Debug info:', data);
+  console.log("Debug info:", data);
 }
 ```
 
@@ -142,9 +145,9 @@ Test your plugin in all layout contexts:
 Use the Dev Tools layout switcher or:
 
 ```javascript
-window.gxDevTools.setLayout('public');
-window.gxDevTools.setLayout('private');
-window.gxDevTools.setLayout('system');
+window.gxDevTools.setLayout("public");
+window.gxDevTools.setLayout("private");
+window.gxDevTools.setLayout("system");
 ```
 
 ### 5. Validate Manifest
@@ -166,8 +169,8 @@ cat app-manifest.json | python -m json.tool
 
 ```javascript
 // Lazy load heavy components
-const HeavyChart = defineAsyncComponent(() =>
-  import('./components/HeavyChart.vue')
+const HeavyChart = defineAsyncComponent(
+  () => import("./components/HeavyChart.vue"),
 );
 ```
 
@@ -195,10 +198,10 @@ Consider what happens when the network is unavailable:
 const store = useGxpStore();
 
 try {
-  const data = await store.apiGet('/endpoint');
+  const data = await store.apiGet("/endpoint");
 } catch (error) {
   if (!navigator.onLine) {
-    store.updateState('offline_mode', true);
+    store.updateState("offline_mode", true);
   }
 }
 ```
@@ -247,6 +250,7 @@ Track your plugin versions:
 ```
 
 Use semantic versioning:
+
 - **MAJOR** - Breaking changes
 - **MINOR** - New features (backward compatible)
 - **PATCH** - Bug fixes
@@ -270,10 +274,10 @@ Check that all imports use the correct aliases:
 
 ```javascript
 // Correct
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 // Wrong - path won't resolve in production
-import { useGxpStore } from '../../node_modules/@gxp-dev/tools/runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from "../../node_modules/@gxp-dev/tools/runtime/stores/gxpPortalConfigStore";
 ```
 
 ### CSS Not Loading
@@ -299,6 +303,7 @@ Analyze your bundle:
 ```
 
 Check for:
+
 - Unused dependencies
 - Large libraries that could be lazy-loaded
 - Duplicate code

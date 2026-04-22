@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Text, useApp, useInput, useStdout } from 'ink';
-import WelcomeScreen from './components/WelcomeScreen.js';
-import Header from './components/Header.js';
-import TabBar from './components/TabBar.js';
-import LogPanel from './components/LogPanel.js';
-import CommandInput from './components/CommandInput.js';
-import AIPanel from './components/AIPanel.js';
+import React, { useState, useEffect, useCallback } from "react";
+import { Box, Text, useApp, useInput, useStdout } from "ink";
+import WelcomeScreen from "./components/WelcomeScreen.js";
+import Header from "./components/Header.js";
+import TabBar from "./components/TabBar.js";
+import LogPanel from "./components/LogPanel.js";
+import CommandInput from "./components/CommandInput.js";
+import AIPanel from "./components/AIPanel.js";
 import {
   serviceManager,
   startVite,
@@ -22,7 +22,7 @@ import {
   getAvailableProviders,
   getProviderStatus,
   AIProvider,
-} from './services/index.js';
+} from "./services/index.js";
 
 export interface Service {
   id: string;
@@ -36,7 +36,11 @@ interface ExtractedConfig {
   settings: Record<string, unknown>;
   assets: Record<string, string>;
   triggerState: Record<string, unknown>;
-  dependencies: Array<{ identifier: string; path: string; events?: Record<string, string> }>;
+  dependencies: Array<{
+    identifier: string;
+    path: string;
+    events?: Record<string, string>;
+  }>;
 }
 
 export interface AppProps {
@@ -63,42 +67,46 @@ export default function App({ autoStart, args }: AppProps) {
   // Sync services from ServiceManager
   const syncServices = useCallback(() => {
     const managerServices = serviceManager.getAllServices();
-    setServices(managerServices.map(s => ({
-      id: s.id,
-      name: s.name,
-      status: s.status,
-      logs: s.logs,
-    })));
+    setServices(
+      managerServices.map((s) => ({
+        id: s.id,
+        name: s.name,
+        status: s.status,
+        logs: s.logs,
+      })),
+    );
   }, []);
 
   // Set up ServiceManager event listeners
   useEffect(() => {
     const onLog = (id: string, message: string) => {
-      setServices(prev => prev.map(s =>
-        s.id === id ? { ...s, logs: [...s.logs, message] } : s
-      ));
+      setServices((prev) =>
+        prev.map((s) =>
+          s.id === id ? { ...s, logs: [...s.logs, message] } : s,
+        ),
+      );
     };
 
     const onStatusChange = (id: string, status: ServiceStatus) => {
-      setServices(prev => prev.map(s =>
-        s.id === id ? { ...s, status } : s
-      ));
+      setServices((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, status } : s)),
+      );
     };
 
     const onLogsCleared = (id: string) => {
-      setServices(prev => prev.map(s =>
-        s.id === id ? { ...s, logs: [] } : s
-      ));
+      setServices((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, logs: [] } : s)),
+      );
     };
 
-    serviceManager.on('log', onLog);
-    serviceManager.on('statusChange', onStatusChange);
-    serviceManager.on('logsCleared', onLogsCleared);
+    serviceManager.on("log", onLog);
+    serviceManager.on("statusChange", onStatusChange);
+    serviceManager.on("logsCleared", onLogsCleared);
 
     return () => {
-      serviceManager.off('log', onLog);
-      serviceManager.off('statusChange', onStatusChange);
-      serviceManager.off('logsCleared', onLogsCleared);
+      serviceManager.off("log", onLog);
+      serviceManager.off("statusChange", onStatusChange);
+      serviceManager.off("logsCleared", onLogsCleared);
     };
   }, []);
 
@@ -108,27 +116,27 @@ export default function App({ autoStart, args }: AppProps) {
       serviceManager.forceStopAll();
     };
 
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
+    process.on("SIGINT", cleanup);
+    process.on("SIGTERM", cleanup);
 
     return () => {
       cleanup();
-      process.off('SIGINT', cleanup);
-      process.off('SIGTERM', cleanup);
+      process.off("SIGINT", cleanup);
+      process.off("SIGTERM", cleanup);
     };
   }, []);
 
   // Handle keyboard shortcuts
   useInput((input, key) => {
     // Ctrl+C to exit
-    if (key.ctrl && input === 'c') {
+    if (key.ctrl && input === "c") {
       serviceManager.forceStopAll();
       exit();
       return;
     }
 
     // Ctrl+L to clear current log
-    if (key.ctrl && input === 'l') {
+    if (key.ctrl && input === "l") {
       if (services[activeTab]) {
         serviceManager.clearLogs(services[activeTab].id);
       }
@@ -136,8 +144,8 @@ export default function App({ autoStart, args }: AppProps) {
     }
 
     // Ctrl+K to stop current service
-    if (key.ctrl && input === 'k') {
-      if (services[activeTab] && services[activeTab].id !== 'system') {
+    if (key.ctrl && input === "k") {
+      if (services[activeTab] && services[activeTab].id !== "system") {
         stopService(services[activeTab].id);
       }
       return;
@@ -167,7 +175,7 @@ export default function App({ autoStart, args }: AppProps) {
   useEffect(() => {
     if (autoStart?.length) {
       setTimeout(() => {
-        autoStart.forEach(cmd => {
+        autoStart.forEach((cmd) => {
           handleCommand(`/${cmd}`);
         });
       }, 100);
@@ -176,86 +184,89 @@ export default function App({ autoStart, args }: AppProps) {
 
   const handleCommand = (input: string) => {
     const trimmed = input.trim();
-    if (!trimmed.startsWith('/')) return;
+    if (!trimmed.startsWith("/")) return;
 
-    const parts = trimmed.slice(1).split(' ');
+    const parts = trimmed.slice(1).split(" ");
     const command = parts[0];
     const cmdArgs = parts.slice(1);
 
     switch (command) {
-      case 'help':
+      case "help":
         addSystemLog(getHelpText());
         break;
 
-      case 'dev':
+      case "dev":
         startDevServer(cmdArgs);
         break;
 
-      case 'socket':
-        if (cmdArgs[0] === 'send') {
+      case "socket":
+        if (cmdArgs[0] === "send") {
           handleSocketSend(cmdArgs.slice(1));
-        } else if (cmdArgs[0] === 'list') {
+        } else if (cmdArgs[0] === "list") {
           handleSocketList();
         } else {
-          const socketWithMock = cmdArgs.includes('--with-mock') || args?.withMock === true;
+          const socketWithMock =
+            cmdArgs.includes("--with-mock") || args?.withMock === true;
           startSocketServer(socketWithMock);
         }
         break;
 
-      case 'mock':
+      case "mock":
         // Shorthand for /socket --with-mock
         startSocketServer(true);
         break;
 
-      case 'ext':
-        const browser = cmdArgs[0] || 'chrome';
+      case "ext":
+        const browser = cmdArgs[0] || "chrome";
         launchExtension(browser);
         break;
 
-      case 'stop':
+      case "stop":
         stopService(cmdArgs[0]);
         break;
 
-      case 'restart':
+      case "restart":
         restartService(cmdArgs[0]);
         break;
 
-      case 'clear':
+      case "clear":
         if (services[activeTab]) {
           serviceManager.clearLogs(services[activeTab].id);
         }
         break;
 
-      case 'quit':
-      case 'exit':
+      case "quit":
+      case "exit":
         serviceManager.forceStopAll();
         exit();
         break;
 
-      case 'ai':
+      case "ai":
         handleAICommand(cmdArgs);
         break;
 
-      case 'extract-config':
-      case 'extract':
+      case "extract-config":
+      case "extract":
         handleExtractConfig(cmdArgs);
         break;
 
-      case 'add-dependency':
+      case "add-dependency":
         handleAddDependency(cmdArgs);
         break;
 
       default:
-        addSystemLog(`Unknown command: ${command}. Type /help for available commands.`);
+        addSystemLog(
+          `Unknown command: ${command}. Type /help for available commands.`,
+        );
     }
   };
 
   const startDevServer = (cmdArgs: string[]) => {
-    const noHttps = cmdArgs.includes('--no-https') || args?.noHttps === true;
-    const noSocket = cmdArgs.includes('--no-socket') || args?.noSocket === true;
-    const withMock = cmdArgs.includes('--with-mock') || args?.withMock === true;
-    const withFirefox = cmdArgs.includes('--firefox') || args?.firefox === true;
-    const withChrome = cmdArgs.includes('--chrome') || args?.chrome === true;
+    const noHttps = cmdArgs.includes("--no-https") || args?.noHttps === true;
+    const noSocket = cmdArgs.includes("--no-socket") || args?.noSocket === true;
+    const withMock = cmdArgs.includes("--with-mock") || args?.withMock === true;
+    const withFirefox = cmdArgs.includes("--firefox") || args?.firefox === true;
+    const withChrome = cmdArgs.includes("--chrome") || args?.chrome === true;
 
     // Determine port from env or default
     const port = process.env.NODE_PORT || 3060;
@@ -265,10 +276,10 @@ export default function App({ autoStart, args }: AppProps) {
     const shouldStartSocket = !noSocket;
 
     // Check if already running
-    if (serviceManager.isRunning('vite')) {
-      addSystemLog('Vite dev server is already running.');
+    if (serviceManager.isRunning("vite")) {
+      addSystemLog("Vite dev server is already running.");
       // Switch to vite tab
-      const viteIdx = services.findIndex(s => s.id === 'vite');
+      const viteIdx = services.findIndex((s) => s.id === "vite");
       if (viteIdx >= 0) setActiveTab(viteIdx);
       return;
     }
@@ -276,34 +287,38 @@ export default function App({ autoStart, args }: AppProps) {
     startVite({ noHttps });
 
     // Also start socket server based on flags/env (with mock if requested)
-    if (shouldStartSocket && !serviceManager.isRunning('socket')) {
+    if (shouldStartSocket && !serviceManager.isRunning("socket")) {
       startSocket({ withMock });
     }
 
     // Launch browser extensions if requested (pass URL options)
-    if (withFirefox && !serviceManager.isRunning('ext-firefox')) {
-      startExtension({ browser: 'firefox', useHttps, port });
+    if (withFirefox && !serviceManager.isRunning("ext-firefox")) {
+      startExtension({ browser: "firefox", useHttps, port });
     }
-    if (withChrome && !serviceManager.isRunning('ext-chrome')) {
-      startExtension({ browser: 'chrome', useHttps, port });
+    if (withChrome && !serviceManager.isRunning("ext-chrome")) {
+      startExtension({ browser: "chrome", useHttps, port });
     }
 
     // Sync and switch to the new vite tab
     const updatedServices = serviceManager.getAllServices();
-    const viteIdx = updatedServices.findIndex(s => s.id === 'vite');
-    setServices(updatedServices.map(s => ({
-      id: s.id,
-      name: s.name,
-      status: s.status,
-      logs: s.logs,
-    })));
-    setActiveTab(viteIdx >= 0 ? viteIdx : Math.max(0, updatedServices.length - 1));
+    const viteIdx = updatedServices.findIndex((s) => s.id === "vite");
+    setServices(
+      updatedServices.map((s) => ({
+        id: s.id,
+        name: s.name,
+        status: s.status,
+        logs: s.logs,
+      })),
+    );
+    setActiveTab(
+      viteIdx >= 0 ? viteIdx : Math.max(0, updatedServices.length - 1),
+    );
   };
 
   const startSocketServer = (withMock: boolean = false) => {
-    if (serviceManager.isRunning('socket')) {
-      addSystemLog('Socket.IO server is already running.');
-      const socketIdx = services.findIndex(s => s.id === 'socket');
+    if (serviceManager.isRunning("socket")) {
+      addSystemLog("Socket.IO server is already running.");
+      const socketIdx = services.findIndex((s) => s.id === "socket");
       if (socketIdx >= 0) setActiveTab(socketIdx);
       return;
     }
@@ -312,19 +327,23 @@ export default function App({ autoStart, args }: AppProps) {
 
     // Sync and switch to the new socket tab
     const updatedServices = serviceManager.getAllServices();
-    const socketIdx = updatedServices.findIndex(s => s.id === 'socket');
-    setServices(updatedServices.map(s => ({
-      id: s.id,
-      name: s.name,
-      status: s.status,
-      logs: s.logs,
-    })));
-    setActiveTab(socketIdx >= 0 ? socketIdx : Math.max(0, updatedServices.length - 1));
+    const socketIdx = updatedServices.findIndex((s) => s.id === "socket");
+    setServices(
+      updatedServices.map((s) => ({
+        id: s.id,
+        name: s.name,
+        status: s.status,
+        logs: s.logs,
+      })),
+    );
+    setActiveTab(
+      socketIdx >= 0 ? socketIdx : Math.max(0, updatedServices.length - 1),
+    );
   };
 
   const launchExtension = (browser: string) => {
     const browserType = browser.toLowerCase() as BrowserType;
-    if (browserType !== 'chrome' && browserType !== 'firefox') {
+    if (browserType !== "chrome" && browserType !== "firefox") {
       addSystemLog(`Invalid browser: ${browser}. Use 'chrome' or 'firefox'.`);
       return;
     }
@@ -332,7 +351,7 @@ export default function App({ autoStart, args }: AppProps) {
     const serviceId = `ext-${browserType}`;
     if (serviceManager.isRunning(serviceId)) {
       addSystemLog(`${browser} extension is already running.`);
-      const extIdx = services.findIndex(s => s.id === serviceId);
+      const extIdx = services.findIndex((s) => s.id === serviceId);
       if (extIdx >= 0) setActiveTab(extIdx);
       return;
     }
@@ -341,29 +360,33 @@ export default function App({ autoStart, args }: AppProps) {
 
     // Sync and switch to the new extension tab
     const updatedServices = serviceManager.getAllServices();
-    const extIdx = updatedServices.findIndex(s => s.id === serviceId);
-    setServices(updatedServices.map(s => ({
-      id: s.id,
-      name: s.name,
-      status: s.status,
-      logs: s.logs,
-    })));
-    setActiveTab(extIdx >= 0 ? extIdx : Math.max(0, updatedServices.length - 1));
+    const extIdx = updatedServices.findIndex((s) => s.id === serviceId);
+    setServices(
+      updatedServices.map((s) => ({
+        id: s.id,
+        name: s.name,
+        status: s.status,
+        logs: s.logs,
+      })),
+    );
+    setActiveTab(
+      extIdx >= 0 ? extIdx : Math.max(0, updatedServices.length - 1),
+    );
   };
 
   const stopService = (serviceId?: string) => {
     const targetId = serviceId || services[activeTab]?.id;
     if (!targetId) {
-      addSystemLog('No service specified. Usage: /stop <service-id>');
+      addSystemLog("No service specified. Usage: /stop <service-id>");
       return;
     }
 
-    if (targetId === 'vite') {
+    if (targetId === "vite") {
       stopVite();
-    } else if (targetId === 'socket') {
+    } else if (targetId === "socket") {
       stopSocket();
-    } else if (targetId.startsWith('ext-')) {
-      const browser = targetId.replace('ext-', '') as BrowserType;
+    } else if (targetId.startsWith("ext-")) {
+      const browser = targetId.replace("ext-", "") as BrowserType;
       stopExtension(browser);
     } else {
       serviceManager.stop(targetId);
@@ -375,12 +398,12 @@ export default function App({ autoStart, args }: AppProps) {
   const restartService = (serviceId?: string) => {
     const targetId = serviceId || services[activeTab]?.id;
     if (!targetId) {
-      addSystemLog('No service to restart. Usage: /restart [service-id]');
+      addSystemLog("No service to restart. Usage: /restart [service-id]");
       return;
     }
 
-    if (targetId === 'system') {
-      addSystemLog('Cannot restart the system service.');
+    if (targetId === "system") {
+      addSystemLog("Cannot restart the system service.");
       return;
     }
 
@@ -395,7 +418,7 @@ export default function App({ autoStart, args }: AppProps) {
     const subCommand = cmdArgs[0];
 
     switch (subCommand) {
-      case 'model':
+      case "model":
         // Set or show current AI provider
         const providerArg = cmdArgs[1] as AIProvider | undefined;
         if (providerArg) {
@@ -409,28 +432,30 @@ export default function App({ autoStart, args }: AppProps) {
           // Show current provider and available providers
           const current = aiService.getProviderInfo();
           const providers = getAvailableProviders();
-          let message = `Current AI provider: ${current ? getProviderStatus(current) : 'None'}\n\nAvailable providers:`;
+          let message = `Current AI provider: ${current ? getProviderStatus(current) : "None"}\n\nAvailable providers:`;
           for (const p of providers) {
-            const status = p.available ? getProviderStatus(p) : `${p.name} (not available)`;
-            const marker = p.id === current?.id ? ' ← current' : '';
+            const status = p.available
+              ? getProviderStatus(p)
+              : `${p.name} (not available)`;
+            const marker = p.id === current?.id ? " ← current" : "";
             message += `\n  ${p.id}: ${status}${marker}`;
             if (!p.available && p.reason) {
               message += `\n       ${p.reason}`;
             }
           }
-          message += '\n\nUsage: /ai model <claude|codex|gemini>';
+          message += "\n\nUsage: /ai model <claude|codex|gemini>";
           addSystemLog(message);
         }
         break;
 
-      case 'status':
+      case "status":
         // Show detailed status of all providers
         const providers = getAvailableProviders();
         const currentProvider = aiService.getProvider();
-        let statusMsg = 'AI Provider Status:\n';
+        let statusMsg = "AI Provider Status:\n";
         for (const p of providers) {
-          const icon = p.available ? '✅' : '❌';
-          const current = p.id === currentProvider ? ' (current)' : '';
+          const icon = p.available ? "✅" : "❌";
+          const current = p.id === currentProvider ? " (current)" : "";
           statusMsg += `\n  ${icon} ${getProviderStatus(p)}${current}`;
           if (!p.available && p.reason) {
             statusMsg += `\n     ${p.reason}`;
@@ -439,38 +464,44 @@ export default function App({ autoStart, args }: AppProps) {
         addSystemLog(statusMsg);
         break;
 
-      case 'ask':
+      case "ask":
         // Quick question without opening panel
-        const question = cmdArgs.slice(1).join(' ');
+        const question = cmdArgs.slice(1).join(" ");
         if (!question) {
-          addSystemLog('Usage: /ai ask <your question>');
+          addSystemLog("Usage: /ai ask <your question>");
           return;
         }
         if (!aiService.isAvailable()) {
-          addSystemLog(`Current provider (${aiService.getProvider()}) is not available. Run /ai model to select a different provider.`);
+          addSystemLog(
+            `Current provider (${aiService.getProvider()}) is not available. Run /ai model to select a different provider.`,
+          );
           return;
         }
-        const providerName = aiService.getProviderInfo()?.name || 'AI';
+        const providerName = aiService.getProviderInfo()?.name || "AI";
         addSystemLog(`Asking ${providerName}: ${question}`);
         try {
           aiService.loadProjectContext(process.cwd());
           const response = await aiService.sendMessage(question);
           addSystemLog(`${providerName}: ${response}`);
         } catch (err) {
-          addSystemLog(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+          addSystemLog(
+            `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+          );
         }
         break;
 
-      case 'clear':
+      case "clear":
         aiService.clearConversation();
-        addSystemLog('Conversation history cleared.');
+        addSystemLog("Conversation history cleared.");
         break;
 
-      case 'chat':
+      case "chat":
       default:
         // Open AI chat panel
         if (!aiService.isAvailable()) {
-          addSystemLog(`Current provider (${aiService.getProvider()}) is not available. Run /ai model to select a different provider.`);
+          addSystemLog(
+            `Current provider (${aiService.getProvider()}) is not available. Run /ai model to select a different provider.`,
+          );
           return;
         }
         setShowAIPanel(true);
@@ -479,19 +510,19 @@ export default function App({ autoStart, args }: AppProps) {
 
   const addSystemLog = (message: string) => {
     // Use functional update to properly handle rapid successive calls
-    setServices(prev => {
-      const existingSystem = prev.find(s => s.id === 'system');
+    setServices((prev) => {
+      const existingSystem = prev.find((s) => s.id === "system");
       if (existingSystem) {
         // Add message to existing system service
-        return prev.map(s =>
-          s.id === 'system' ? { ...s, logs: [...s.logs, message] } : s
+        return prev.map((s) =>
+          s.id === "system" ? { ...s, logs: [...s.logs, message] } : s,
         );
       } else {
         // Create new system service with the message
         const newService: Service = {
-          id: 'system',
-          name: 'System',
-          status: 'running',
+          id: "system",
+          name: "System",
+          status: "running",
           logs: [message],
         };
         return [...prev, newService];
@@ -500,8 +531,8 @@ export default function App({ autoStart, args }: AppProps) {
 
     // Switch to system tab
     setTimeout(() => {
-      setServices(current => {
-        const sysIdx = current.findIndex(s => s.id === 'system');
+      setServices((current) => {
+        const sysIdx = current.findIndex((s) => s.id === "system");
         if (sysIdx >= 0) setActiveTab(sysIdx);
         return current; // Don't modify, just read
       });
@@ -510,7 +541,7 @@ export default function App({ autoStart, args }: AppProps) {
 
   const handleSocketSend = async (eventArgs: string[]) => {
     if (!eventArgs.length) {
-      addSystemLog('Usage: /socket send <event-name> [identifier]');
+      addSystemLog("Usage: /socket send <event-name> [identifier]");
       return;
     }
 
@@ -530,32 +561,34 @@ export default function App({ autoStart, args }: AppProps) {
   const handleSocketList = () => {
     const events = listSocketEvents();
     if (events.length === 0) {
-      addSystemLog('No socket events found. Check your socket-events directory.');
+      addSystemLog(
+        "No socket events found. Check your socket-events directory.",
+      );
       return;
     }
 
-    let message = 'Available socket events:\n';
+    let message = "Available socket events:\n";
     for (const event of events) {
       message += `\n  ${event.name}\n`;
       message += `    Event: ${event.event}\n`;
       message += `    Channel: ${event.channel}`;
     }
-    message += '\n\nUsage: /socket send <event-name> [identifier]';
+    message += "\n\nUsage: /socket send <event-name> [identifier]";
     addSystemLog(message);
   };
 
   const handleExtractConfig = async (cmdArgs: string[]) => {
-    const dryRun = cmdArgs.includes('--dry-run') || cmdArgs.includes('-d');
-    const overwrite = cmdArgs.includes('--overwrite') || cmdArgs.includes('-o');
+    const dryRun = cmdArgs.includes("--dry-run") || cmdArgs.includes("-d");
+    const overwrite = cmdArgs.includes("--overwrite") || cmdArgs.includes("-o");
 
-    addSystemLog('Scanning source files for GxP configuration...');
+    addSystemLog("Scanning source files for GxP configuration...");
 
     try {
       // Use dynamic imports for ES modules
-      const path = await import('path');
-      const fs = await import('fs');
-      const url = await import('url');
-      const { createRequire } = await import('module');
+      const path = await import("path");
+      const fs = await import("fs");
+      const url = await import("url");
+      const { createRequire } = await import("module");
 
       // Get the directory of this file and resolve to the utils directory
       const __filename = url.fileURLToPath(import.meta.url);
@@ -563,29 +596,40 @@ export default function App({ autoStart, args }: AppProps) {
 
       // The compiled JS is in dist/tui/, utils is in bin/lib/utils/
       // From dist/tui/ we need to go up to package root, then into bin/lib/utils/
-      const packageRoot = path.resolve(__dirname, '..', '..');
-      const utilsPath = path.join(packageRoot, 'bin', 'lib', 'utils', 'extract-config.js');
+      const packageRoot = path.resolve(__dirname, "..", "..");
+      const utilsPath = path.join(
+        packageRoot,
+        "bin",
+        "lib",
+        "utils",
+        "extract-config.js",
+      );
 
       // Create a require function to load CommonJS modules
       const requireCjs = createRequire(import.meta.url);
       const extractConfigUtils = requireCjs(utilsPath) as {
         extractConfigFromSource: (srcDir: string) => ExtractedConfig;
-        mergeConfig: (existing: Record<string, unknown>, extracted: ExtractedConfig, options: { overwrite: boolean }) => Record<string, unknown>;
+        mergeConfig: (
+          existing: Record<string, unknown>,
+          extracted: ExtractedConfig,
+          options: { overwrite: boolean },
+        ) => Record<string, unknown>;
         generateSummary: (config: ExtractedConfig) => string;
       };
 
       const projectPath = process.cwd();
-      const srcDir = path.join(projectPath, 'src');
-      const manifestPath = path.join(projectPath, 'app-manifest.json');
+      const srcDir = path.join(projectPath, "src");
+      const manifestPath = path.join(projectPath, "app-manifest.json");
 
       // Check if src directory exists
       if (!fs.existsSync(srcDir)) {
-        addSystemLog('Source directory not found: src/');
+        addSystemLog("Source directory not found: src/");
         return;
       }
 
       // Extract configuration
-      const extractedConfig = extractConfigUtils.extractConfigFromSource(srcDir);
+      const extractedConfig =
+        extractConfigUtils.extractConfigFromSource(srcDir);
       const summary = extractConfigUtils.generateSummary(extractedConfig);
       addSystemLog(summary);
 
@@ -598,13 +642,13 @@ export default function App({ autoStart, args }: AppProps) {
         extractedConfig.dependencies.length;
 
       if (totalItems === 0) {
-        addSystemLog('No GxP configuration found in source files.');
+        addSystemLog("No GxP configuration found in source files.");
         return;
       }
 
       if (dryRun) {
-        addSystemLog('Dry run mode - no changes made.');
-        addSystemLog('Run /extract-config without --dry-run to apply changes.');
+        addSystemLog("Dry run mode - no changes made.");
+        addSystemLog("Run /extract-config without --dry-run to apply changes.");
         return;
       }
 
@@ -612,49 +656,60 @@ export default function App({ autoStart, args }: AppProps) {
       let existingManifest: Record<string, unknown> = {};
       if (fs.existsSync(manifestPath)) {
         try {
-          existingManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+          existingManifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
         } catch {
-          addSystemLog('Could not parse existing manifest, creating new one.');
+          addSystemLog("Could not parse existing manifest, creating new one.");
           existingManifest = getDefaultManifest();
         }
       } else {
-        addSystemLog('Creating new app-manifest.json');
+        addSystemLog("Creating new app-manifest.json");
         existingManifest = getDefaultManifest();
       }
 
       // Merge and write
-      const mergedManifest = extractConfigUtils.mergeConfig(existingManifest, extractedConfig, { overwrite });
-      fs.writeFileSync(manifestPath, JSON.stringify(mergedManifest, null, '\t'));
-      addSystemLog('Updated app-manifest.json');
+      const mergedManifest = extractConfigUtils.mergeConfig(
+        existingManifest,
+        extractedConfig,
+        { overwrite },
+      );
+      fs.writeFileSync(
+        manifestPath,
+        JSON.stringify(mergedManifest, null, "\t"),
+      );
+      addSystemLog("Updated app-manifest.json");
     } catch (err) {
-      addSystemLog(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      addSystemLog(
+        `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+      );
     }
   };
 
   const handleAddDependency = async (cmdArgs: string[]) => {
     // The add-dependency wizard requires interactive terminal access (raw stdin)
     // which conflicts with Ink's own stdin handling. Run it in a separate terminal.
-    const envFlag = cmdArgs.find(a => a === '-e' || a === '--env');
-    const envVal = envFlag ? cmdArgs[cmdArgs.indexOf(envFlag) + 1] : '';
-    const cmd = `gxdev add-dependency${envVal ? ` -e ${envVal}` : ''}`;
+    const envFlag = cmdArgs.find((a) => a === "-e" || a === "--env");
+    const envVal = envFlag ? cmdArgs[cmdArgs.indexOf(envFlag) + 1] : "";
+    const cmd = `gxdev add-dependency${envVal ? ` -e ${envVal}` : ""}`;
 
-    addSystemLog('');
-    addSystemLog('The Add Dependency wizard requires interactive terminal access.');
-    addSystemLog('Run this command in a separate terminal:');
-    addSystemLog('');
+    addSystemLog("");
+    addSystemLog(
+      "The Add Dependency wizard requires interactive terminal access.",
+    );
+    addSystemLog("Run this command in a separate terminal:");
+    addSystemLog("");
     addSystemLog(`  \x1B[36m${cmd}\x1B[0m`);
-    addSystemLog('');
+    addSystemLog("");
   };
 
   const getDefaultManifest = () => ({
-    name: 'GxToolkit',
-    version: '1.0.0',
-    description: 'GxToolkit Plugin',
+    name: "GxToolkit",
+    version: "1.0.0",
+    description: "GxToolkit Plugin",
     manifest_version: 3,
-    asset_dir: '/src/assets/',
-    configurationFile: 'configuration.json',
-    appInstructionsFile: 'app-instructions.md',
-    defaultStylingFile: 'default-styling.css',
+    asset_dir: "/src/assets/",
+    configurationFile: "configuration.json",
+    appInstructionsFile: "app-instructions.md",
+    defaultStylingFile: "default-styling.css",
     settings: {},
     strings: { default: {} },
     assets: {},
@@ -725,10 +780,7 @@ Keyboard shortcuts:
   // Show AI panel
   if (showAIPanel) {
     return (
-      <AIPanel
-        onClose={() => setShowAIPanel(false)}
-        onLog={addSystemLog}
-      />
+      <AIPanel onClose={() => setShowAIPanel(false)} onLog={addSystemLog} />
     );
   }
 
@@ -742,7 +794,7 @@ Keyboard shortcuts:
 
   return (
     <Box flexDirection="column" height={terminalHeight}>
-      <Header projectName={process.cwd().split('/').pop() || 'gxdev'} />
+      <Header projectName={process.cwd().split("/").pop() || "gxdev"} />
 
       {services.length > 0 && (
         <TabBar
@@ -752,7 +804,13 @@ Keyboard shortcuts:
         />
       )}
 
-      <Box height={logPanelHeight} flexDirection="column" borderStyle="single" borderColor="gray" overflow="hidden">
+      <Box
+        height={logPanelHeight}
+        flexDirection="column"
+        borderStyle="single"
+        borderColor="gray"
+        overflow="hidden"
+      >
         {currentService ? (
           <LogPanel logs={currentService.logs} maxHeight={logPanelHeight} />
         ) : (
@@ -762,11 +820,15 @@ Keyboard shortcuts:
 
       <CommandInput
         onSubmit={handleCommand}
-        activeService={currentService ? {
-          id: currentService.id,
-          name: currentService.name,
-          status: currentService.status
-        } : null}
+        activeService={
+          currentService
+            ? {
+                id: currentService.id,
+                name: currentService.name,
+                status: currentService.status,
+              }
+            : null
+        }
         onSuggestionsChange={handleSuggestionsChange}
       />
     </Box>

@@ -6,12 +6,12 @@
  * and the background script for messaging.
  */
 
-(function() {
-  'use strict';
+(function () {
+  "use strict";
 
   // Configuration
-  const DEV_SERVER_URL = 'https://localhost:3060';
-  const API_PREFIX = '/__gxp-inspector';
+  const DEV_SERVER_URL = "https://localhost:3060";
+  const API_PREFIX = "/__gxp-inspector";
 
   // State
   let isSelectMode = false;
@@ -21,36 +21,36 @@
   let hasSelection = false; // Track if an element is currently selected
 
   // DOM Elements
-  const statusIndicator = document.getElementById('statusIndicator');
-  const selectBtn = document.getElementById('selectBtn');
-  const refreshBtn = document.getElementById('refreshBtn');
-  const emptyState = document.getElementById('emptyState');
-  const inspectorContent = document.getElementById('inspectorContent');
-  const componentName = document.getElementById('componentName');
-  const componentFile = document.getElementById('componentFile');
-  const stringsSection = document.getElementById('stringsSection');
-  const stringsCount = document.getElementById('stringsCount');
-  const stringsList = document.getElementById('stringsList');
-  const extractForm = document.getElementById('extractForm');
-  const extractText = document.getElementById('extractText');
-  const extractKey = document.getElementById('extractKey');
-  const extractFile = document.getElementById('extractFile');
-  const cancelExtract = document.getElementById('cancelExtract');
-  const doExtract = document.getElementById('doExtract');
-  const extractStatus = document.getElementById('extractStatus');
-  const propsSection = document.getElementById('propsSection');
-  const propsTree = document.getElementById('propsTree');
-  const dataSection = document.getElementById('dataSection');
-  const dataTree = document.getElementById('dataTree');
+  const statusIndicator = document.getElementById("statusIndicator");
+  const selectBtn = document.getElementById("selectBtn");
+  const refreshBtn = document.getElementById("refreshBtn");
+  const emptyState = document.getElementById("emptyState");
+  const inspectorContent = document.getElementById("inspectorContent");
+  const componentName = document.getElementById("componentName");
+  const componentFile = document.getElementById("componentFile");
+  const stringsSection = document.getElementById("stringsSection");
+  const stringsCount = document.getElementById("stringsCount");
+  const stringsList = document.getElementById("stringsList");
+  const extractForm = document.getElementById("extractForm");
+  const extractText = document.getElementById("extractText");
+  const extractKey = document.getElementById("extractKey");
+  const extractFile = document.getElementById("extractFile");
+  const cancelExtract = document.getElementById("cancelExtract");
+  const doExtract = document.getElementById("doExtract");
+  const extractStatus = document.getElementById("extractStatus");
+  const propsSection = document.getElementById("propsSection");
+  const propsTree = document.getElementById("propsTree");
+  const dataSection = document.getElementById("dataSection");
+  const dataTree = document.getElementById("dataTree");
 
   // Edit form elements
-  const editForm = document.getElementById('editForm');
-  const editKey = document.getElementById('editKey');
-  const editValue = document.getElementById('editValue');
-  const editFile = document.getElementById('editFile');
-  const cancelEdit = document.getElementById('cancelEdit');
-  const doEdit = document.getElementById('doEdit');
-  const editStatus = document.getElementById('editStatus');
+  const editForm = document.getElementById("editForm");
+  const editKey = document.getElementById("editKey");
+  const editValue = document.getElementById("editValue");
+  const editFile = document.getElementById("editFile");
+  const cancelEdit = document.getElementById("cancelEdit");
+  const doEdit = document.getElementById("doEdit");
+  const editStatus = document.getElementById("editStatus");
 
   // Track string info for editing
   let currentStringInfo = null;
@@ -65,20 +65,20 @@
       const response = await fetch(url, {
         ...options,
         headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        }
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
       });
       return await response.json();
     } catch (error) {
-      console.error('[GxP Panel] API Error:', error);
+      console.error("[GxP Panel] API Error:", error);
       return { success: false, error: error.message };
     }
   }
 
   async function checkConnection() {
     try {
-      const result = await apiCall('/ping');
+      const result = await apiCall("/ping");
       isConnected = result.success;
       updateConnectionStatus();
       return isConnected;
@@ -90,34 +90,34 @@
   }
 
   async function extractString(data) {
-    return apiCall('/extract-string', {
-      method: 'POST',
-      body: JSON.stringify(data)
+    return apiCall("/extract-string", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   }
 
   async function lookupString(text, filePath) {
-    return apiCall('/lookup-string', {
-      method: 'POST',
-      body: JSON.stringify({ text, filePath })
+    return apiCall("/lookup-string", {
+      method: "POST",
+      body: JSON.stringify({ text, filePath }),
     });
   }
 
   async function updateString(data) {
-    return apiCall('/update-string', {
-      method: 'POST',
-      body: JSON.stringify(data)
+    return apiCall("/update-string", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   }
 
   async function getStrings() {
-    return apiCall('/strings');
+    return apiCall("/strings");
   }
 
   async function analyzeText(text, filePath) {
-    return apiCall('/analyze-text', {
-      method: 'POST',
-      body: JSON.stringify({ text, filePath })
+    return apiCall("/analyze-text", {
+      method: "POST",
+      body: JSON.stringify({ text, filePath }),
     });
   }
 
@@ -149,7 +149,7 @@
       `);
       return true;
     } catch (error) {
-      console.error('Failed to enable inspector:', error);
+      console.error("Failed to enable inspector:", error);
       return false;
     }
   }
@@ -165,7 +165,7 @@
         }
       `);
     } catch (error) {
-      console.error('Failed to disable inspector:', error);
+      console.error("Failed to disable inspector:", error);
     }
   }
 
@@ -180,7 +180,7 @@
         }
       `);
     } catch (error) {
-      console.error('Failed to clear selection:', error);
+      console.error("Failed to clear selection:", error);
     }
   }
 
@@ -308,7 +308,7 @@
       `);
       return result;
     } catch (error) {
-      console.error('Failed to get selected element:', error);
+      console.error("Failed to get selected element:", error);
       return null;
     }
   }
@@ -319,23 +319,23 @@
 
   function updateConnectionStatus() {
     if (isConnected) {
-      statusIndicator.classList.add('connected');
-      statusIndicator.title = 'Connected to Vite dev server';
+      statusIndicator.classList.add("connected");
+      statusIndicator.title = "Connected to Vite dev server";
     } else {
-      statusIndicator.classList.remove('connected');
-      statusIndicator.title = 'Not connected - start Vite dev server';
+      statusIndicator.classList.remove("connected");
+      statusIndicator.title = "Not connected - start Vite dev server";
     }
   }
 
   function showEmptyState() {
-    emptyState.classList.remove('hidden');
-    inspectorContent.classList.add('hidden');
+    emptyState.classList.remove("hidden");
+    inspectorContent.classList.add("hidden");
     currentComponent = null;
   }
 
   function showInspectorContent() {
-    emptyState.classList.add('hidden');
-    inspectorContent.classList.remove('hidden');
+    emptyState.classList.add("hidden");
+    inspectorContent.classList.remove("hidden");
   }
 
   async function updateComponentInfo(data) {
@@ -350,10 +350,10 @@
     // Update component name and file
     if (data.component) {
       componentName.textContent = `<${data.component.name}>`;
-      componentFile.textContent = data.component.file || 'Unknown file';
+      componentFile.textContent = data.component.file || "Unknown file";
     } else {
       componentName.textContent = `<${data.tagName}>`;
-      componentFile.textContent = 'Not a Vue component';
+      componentFile.textContent = "Not a Vue component";
     }
 
     // Build string info list from attribute detection
@@ -362,7 +362,7 @@
 
     // Add strings from textsWithAttributes (direct element text with gxp-string detection)
     if (data.textsWithAttributes && data.textsWithAttributes.length > 0) {
-      data.textsWithAttributes.forEach(info => {
+      data.textsWithAttributes.forEach((info) => {
         stringInfos.push({
           text: info.text,
           isExtracted: info.isExtracted,
@@ -370,12 +370,14 @@
           // Use injected data-gxp-source attribute if available (from vite plugin)
           isDynamic: info.isDynamic || false,
           expression: info.sourceExpression || null,
-          expressionType: info.sourceExpression ? detectExpressionType(info.sourceExpression) : null
+          expressionType: info.sourceExpression
+            ? detectExpressionType(info.sourceExpression)
+            : null,
         });
       });
     } else if (data.texts && data.texts.length > 0) {
       // Fallback to plain texts if textsWithAttributes not available
-      data.texts.forEach(text => {
+      data.texts.forEach((text) => {
         stringInfos.push({
           text: text,
           isExtracted: data.isExtracted || false,
@@ -383,16 +385,20 @@
           // Check element-level source expression
           isDynamic: data.isDynamic || false,
           expression: data.sourceExpression || null,
-          expressionType: data.sourceExpression ? detectExpressionType(data.sourceExpression) : null
+          expressionType: data.sourceExpression
+            ? detectExpressionType(data.sourceExpression)
+            : null,
         });
       });
     }
 
     // Also add child elements with gxp-string attributes
     if (data.childGxpStrings && data.childGxpStrings.length > 0) {
-      data.childGxpStrings.forEach(child => {
+      data.childGxpStrings.forEach((child) => {
         // Check if this text is already in the list
-        const exists = stringInfos.some(info => info.text === child.text && info.key === child.key);
+        const exists = stringInfos.some(
+          (info) => info.text === child.text && info.key === child.key,
+        );
         if (!exists) {
           stringInfos.push({
             text: child.text,
@@ -401,7 +407,7 @@
             element: child.element,
             isDynamic: false,
             expression: null,
-            expressionType: null
+            expressionType: null,
           });
         }
       });
@@ -424,52 +430,53 @@
           }
         } catch (e) {
           // Ignore analysis errors, treat as static
-          console.warn('[GxP Panel] Failed to analyze text:', e);
+          console.warn("[GxP Panel] Failed to analyze text:", e);
         }
       }
     }
 
     // Update strings list display
     if (stringInfos.length > 0) {
-      stringsSection.classList.remove('hidden');
+      stringsSection.classList.remove("hidden");
       stringsCount.textContent = stringInfos.length;
 
       // Render the strings with their status
-      stringsList.innerHTML = stringInfos.map((info, index) => {
-        let badgeClass, badgeText, actionText, itemClass, showAction;
+      stringsList.innerHTML = stringInfos
+        .map((info, index) => {
+          let badgeClass, badgeText, actionText, itemClass, showAction;
 
-        if (info.isExtracted) {
-          badgeClass = 'extracted';
-          badgeText = 'gxp-string';
-          actionText = 'Edit';
-          itemClass = 'string-item extracted';
-          showAction = true;
-        } else if (info.isDynamic) {
-          badgeClass = 'dynamic';
-          badgeText = info.expressionType || 'dynamic';
-          actionText = '';
-          itemClass = 'string-item dynamic';
-          showAction = false;
-        } else {
-          badgeClass = 'raw';
-          badgeText = 'raw text';
-          actionText = 'Extract';
-          itemClass = 'string-item';
-          showAction = true;
-        }
+          if (info.isExtracted) {
+            badgeClass = "extracted";
+            badgeText = "gxp-string";
+            actionText = "Edit";
+            itemClass = "string-item extracted";
+            showAction = true;
+          } else if (info.isDynamic) {
+            badgeClass = "dynamic";
+            badgeText = info.expressionType || "dynamic";
+            actionText = "";
+            itemClass = "string-item dynamic";
+            showAction = false;
+          } else {
+            badgeClass = "raw";
+            badgeText = "raw text";
+            actionText = "Extract";
+            itemClass = "string-item";
+            showAction = true;
+          }
 
-        const expressionHtml = info.expression
-          ? `<span class="string-expression" title="Source: ${escapeHtml(info.expression)}">${escapeHtml(info.expression)}</span>`
-          : '';
+          const expressionHtml = info.expression
+            ? `<span class="string-expression" title="Source: ${escapeHtml(info.expression)}">${escapeHtml(info.expression)}</span>`
+            : "";
 
-        const actionHtml = showAction
-          ? `<div class="string-actions"><button class="action-btn" data-action="${info.isExtracted ? 'edit' : 'extract'}">${actionText}</button></div>`
-          : '';
+          const actionHtml = showAction
+            ? `<div class="string-actions"><button class="action-btn" data-action="${info.isExtracted ? "edit" : "extract"}">${actionText}</button></div>`
+            : "";
 
-        return `
+          return `
           <div class="${itemClass}" data-index="${index}" data-text="${escapeHtml(info.text)}"
-               data-extracted="${info.isExtracted}" data-key="${info.key || ''}"
-               data-dynamic="${info.isDynamic}" data-expression="${escapeHtml(info.expression || '')}">
+               data-extracted="${info.isExtracted}" data-key="${info.key || ""}"
+               data-dynamic="${info.isDynamic}" data-expression="${escapeHtml(info.expression || "")}">
             <div class="string-content">
               <span class="string-text">"${escapeHtml(info.text)}"</span>
               ${expressionHtml}
@@ -478,46 +485,47 @@
             ${actionHtml}
           </div>
         `;
-      }).join('');
+        })
+        .join("");
 
       // Add click handlers
-      stringsList.querySelectorAll('.string-item').forEach(item => {
-        item.addEventListener('click', () => {
+      stringsList.querySelectorAll(".string-item").forEach((item) => {
+        item.addEventListener("click", () => {
           selectStringItem(item);
         });
 
-        const actionBtn = item.querySelector('.action-btn');
+        const actionBtn = item.querySelector(".action-btn");
         if (actionBtn) {
           const action = actionBtn.dataset.action;
 
-          actionBtn.addEventListener('click', (e) => {
+          actionBtn.addEventListener("click", (e) => {
             e.stopPropagation();
-            if (action === 'edit') {
+            if (action === "edit") {
               showEditForm(item.dataset.text, item.dataset.key);
-            } else if (action === 'extract') {
+            } else if (action === "extract") {
               showExtractForm(item.dataset.text);
             }
           });
         }
       });
     } else {
-      stringsSection.classList.add('hidden');
+      stringsSection.classList.add("hidden");
     }
 
     // Update props
     if (data.component && Object.keys(data.component.props).length > 0) {
-      propsSection.classList.remove('hidden');
+      propsSection.classList.remove("hidden");
       propsTree.innerHTML = formatProps(data.component.props);
     } else {
-      propsSection.classList.add('hidden');
+      propsSection.classList.add("hidden");
     }
 
     // Update data
     if (data.component && Object.keys(data.component.data).length > 0) {
-      dataSection.classList.remove('hidden');
+      dataSection.classList.remove("hidden");
       dataTree.innerHTML = formatProps(data.component.data);
     } else {
-      dataSection.classList.add('hidden');
+      dataSection.classList.add("hidden");
     }
 
     // Hide extract form
@@ -525,20 +533,20 @@
   }
 
   function formatProps(obj, indent = 0) {
-    let html = '';
-    const indentStr = '  '.repeat(indent);
+    let html = "";
+    const indentStr = "  ".repeat(indent);
 
     for (const [key, value] of Object.entries(obj)) {
       const type = typeof value;
-      let valueHtml = '';
+      let valueHtml = "";
 
       if (value === null) {
         valueHtml = '<span class="prop-value boolean">null</span>';
-      } else if (type === 'boolean') {
+      } else if (type === "boolean") {
         valueHtml = `<span class="prop-value boolean">${value}</span>`;
-      } else if (type === 'number') {
+      } else if (type === "number") {
         valueHtml = `<span class="prop-value number">${value}</span>`;
-      } else if (type === 'string') {
+      } else if (type === "string") {
         valueHtml = `<span class="prop-value">"${escapeHtml(value)}"</span>`;
       } else if (Array.isArray(value)) {
         if (value.length === 0) {
@@ -546,7 +554,7 @@
         } else {
           valueHtml = `<span class="prop-value">[${value.length} items]</span>`;
         }
-      } else if (type === 'object') {
+      } else if (type === "object") {
         valueHtml = `<span class="prop-value">{...}</span>`;
       } else {
         valueHtml = `<span class="prop-value">${escapeHtml(String(value))}</span>`;
@@ -560,27 +568,27 @@
 
   function selectStringItem(item) {
     // Remove selection from all items
-    stringsList.querySelectorAll('.string-item').forEach(i => {
-      i.classList.remove('selected');
+    stringsList.querySelectorAll(".string-item").forEach((i) => {
+      i.classList.remove("selected");
     });
 
     // Select this item
-    item.classList.add('selected');
+    item.classList.add("selected");
     selectedString = item.dataset.text;
   }
 
   function showExtractForm(text) {
-    extractForm.classList.remove('hidden');
+    extractForm.classList.remove("hidden");
     extractText.value = text;
     extractKey.value = textToKey(text);
-    extractFile.value = currentComponent?.component?.file || '';
-    extractStatus.classList.add('hidden');
+    extractFile.value = currentComponent?.component?.file || "";
+    extractStatus.classList.add("hidden");
     selectedString = text;
   }
 
   function hideExtractForm() {
-    extractForm.classList.add('hidden');
-    extractStatus.classList.add('hidden');
+    extractForm.classList.add("hidden");
+    extractStatus.classList.add("hidden");
     selectedString = null;
   }
 
@@ -588,48 +596,50 @@
     // Hide extract form if visible
     hideExtractForm();
 
-    editForm.classList.remove('hidden');
-    editKey.value = key || '';
+    editForm.classList.remove("hidden");
+    editKey.value = key || "";
     editValue.value = text;
-    editFile.value = currentComponent?.component?.file || '';
-    editStatus.classList.add('hidden');
+    editFile.value = currentComponent?.component?.file || "";
+    editStatus.classList.add("hidden");
 
     // Store current string info for the update
     currentStringInfo = {
       oldKey: key,
       text: text,
-      filePath: currentComponent?.component?.file || ''
+      filePath: currentComponent?.component?.file || "",
     };
   }
 
   function hideEditForm() {
-    editForm.classList.add('hidden');
-    editStatus.classList.add('hidden');
+    editForm.classList.add("hidden");
+    editStatus.classList.add("hidden");
     currentStringInfo = null;
   }
 
-  function showEditStatus(message, type = 'info') {
+  function showEditStatus(message, type = "info") {
     editStatus.textContent = message;
     editStatus.className = `status-message ${type}`;
-    editStatus.classList.remove('hidden');
+    editStatus.classList.remove("hidden");
   }
 
-  function showStatus(message, type = 'info') {
+  function showStatus(message, type = "info") {
     extractStatus.textContent = message;
     extractStatus.className = `status-message ${type}`;
-    extractStatus.classList.remove('hidden');
+    extractStatus.classList.remove("hidden");
   }
 
   // ============================================================
   // Event Handlers
   // ============================================================
 
-  selectBtn.addEventListener('click', async () => {
+  selectBtn.addEventListener("click", async () => {
     if (isSelectMode) {
       // Cancel selection mode (clicking during selection)
       isSelectMode = false;
-      selectBtn.classList.remove('active');
-      selectBtn.querySelector('span').textContent = hasSelection ? 'Cancel Selection' : 'Select Element';
+      selectBtn.classList.remove("active");
+      selectBtn.querySelector("span").textContent = hasSelection
+        ? "Cancel Selection"
+        : "Select Element";
       await disableInspectorInPage();
     } else if (hasSelection) {
       // Clear selection (clicking when element is already selected)
@@ -637,33 +647,33 @@
       currentComponent = null;
       await clearSelectionInPage();
       showEmptyState();
-      selectBtn.querySelector('span').textContent = 'Select Element';
+      selectBtn.querySelector("span").textContent = "Select Element";
     } else {
       // Start selection mode
       isSelectMode = true;
-      selectBtn.classList.add('active');
-      selectBtn.querySelector('span').textContent = 'Cancel Selection';
+      selectBtn.classList.add("active");
+      selectBtn.querySelector("span").textContent = "Cancel Selection";
       await enableInspectorInPage();
     }
   });
 
-  refreshBtn.addEventListener('click', async () => {
+  refreshBtn.addEventListener("click", async () => {
     await checkConnection();
     const data = await getSelectedElement();
     updateComponentInfo(data);
   });
 
-  cancelExtract.addEventListener('click', () => {
+  cancelExtract.addEventListener("click", () => {
     hideExtractForm();
   });
 
-  cancelEdit.addEventListener('click', () => {
+  cancelEdit.addEventListener("click", () => {
     hideEditForm();
   });
 
-  doEdit.addEventListener('click', async () => {
+  doEdit.addEventListener("click", async () => {
     if (!currentStringInfo) {
-      showEditStatus('No string selected for editing', 'error');
+      showEditStatus("No string selected for editing", "error");
       return;
     }
 
@@ -672,33 +682,33 @@
     const filePath = editFile.value;
 
     if (!newKey) {
-      showEditStatus('String key is required', 'error');
+      showEditStatus("String key is required", "error");
       return;
     }
 
     if (!filePath) {
-      showEditStatus('Cannot determine source file', 'error');
+      showEditStatus("Cannot determine source file", "error");
       return;
     }
 
     if (!isConnected) {
-      showEditStatus('Not connected to Vite dev server', 'error');
+      showEditStatus("Not connected to Vite dev server", "error");
       return;
     }
 
     doEdit.disabled = true;
-    doEdit.textContent = 'Updating...';
+    doEdit.textContent = "Updating...";
 
     try {
       const result = await updateString({
         oldKey: currentStringInfo.oldKey,
         newKey: newKey,
         newValue: newValue,
-        filePath: filePath
+        filePath: filePath,
       });
 
       if (result.success) {
-        showEditStatus(`Success! Updated gxp-string="${newKey}"`, 'success');
+        showEditStatus(`Success! Updated gxp-string="${newKey}"`, "success");
 
         // Refresh the component info to reflect changes
         setTimeout(async () => {
@@ -707,44 +717,44 @@
           updateComponentInfo(data);
         }, 1500);
       } else {
-        showEditStatus(result.error || 'Update failed', 'error');
+        showEditStatus(result.error || "Update failed", "error");
       }
     } catch (error) {
-      showEditStatus(error.message, 'error');
+      showEditStatus(error.message, "error");
     } finally {
       doEdit.disabled = false;
-      doEdit.textContent = 'Update gxp-string';
+      doEdit.textContent = "Update gxp-string";
     }
   });
 
-  doExtract.addEventListener('click', async () => {
+  doExtract.addEventListener("click", async () => {
     const text = extractText.value;
     const key = extractKey.value;
     const filePath = extractFile.value;
 
     if (!text || !key) {
-      showStatus('Text and key are required', 'error');
+      showStatus("Text and key are required", "error");
       return;
     }
 
     if (!filePath) {
-      showStatus('Cannot determine source file', 'error');
+      showStatus("Cannot determine source file", "error");
       return;
     }
 
     if (!isConnected) {
-      showStatus('Not connected to Vite dev server', 'error');
+      showStatus("Not connected to Vite dev server", "error");
       return;
     }
 
     doExtract.disabled = true;
-    doExtract.textContent = 'Extracting...';
+    doExtract.textContent = "Extracting...";
 
     try {
       const result = await extractString({ text, key, filePath });
 
       if (result.success) {
-        showStatus(`Success! Added gxp-string="${key}" attribute`, 'success');
+        showStatus(`Success! Added gxp-string="${key}" attribute`, "success");
         // Refresh the component info to reflect changes
         setTimeout(async () => {
           hideExtractForm();
@@ -752,13 +762,13 @@
           updateComponentInfo(data);
         }, 1500);
       } else {
-        showStatus(result.error || 'Extraction failed', 'error');
+        showStatus(result.error || "Extraction failed", "error");
       }
     } catch (error) {
-      showStatus(error.message, 'error');
+      showStatus(error.message, "error");
     } finally {
       doExtract.disabled = false;
-      doExtract.textContent = 'Extract to gxp-string';
+      doExtract.textContent = "Extract to gxp-string";
     }
   });
 
@@ -768,21 +778,21 @@
 
   // Create a connection to the background script
   const backgroundConnection = chrome.runtime.connect({
-    name: 'gxp-devtools-panel'
+    name: "gxp-devtools-panel",
   });
 
   backgroundConnection.postMessage({
-    name: 'init',
-    tabId: chrome.devtools.inspectedWindow.tabId
+    name: "init",
+    tabId: chrome.devtools.inspectedWindow.tabId,
   });
 
   backgroundConnection.onMessage.addListener((message) => {
-    if (message.type === 'elementSelected') {
+    if (message.type === "elementSelected") {
       updateComponentInfo(message.data);
       isSelectMode = false;
       hasSelection = true;
-      selectBtn.classList.remove('active');
-      selectBtn.querySelector('span').textContent = 'Cancel Selection';
+      selectBtn.classList.remove("active");
+      selectBtn.querySelector("span").textContent = "Cancel Selection";
     }
   });
 
@@ -804,10 +814,10 @@
   function textToKey(text) {
     return text
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "_")
       .substring(0, 40)
-      .replace(/_+$/, '');
+      .replace(/_+$/, "");
   }
 
   /**
@@ -819,26 +829,26 @@
     if (!expression) return null;
 
     // Check for getString calls
-    if (expression.includes('getString')) {
-      return 'getString';
+    if (expression.includes("getString")) {
+      return "getString";
     }
 
     // Check for store access
-    if (expression.includes('Store') || expression.includes('store.')) {
-      return 'store';
+    if (expression.includes("Store") || expression.includes("store.")) {
+      return "store";
     }
 
     // Check for computed/method calls
-    if (expression.includes('(')) {
-      return 'computed';
+    if (expression.includes("(")) {
+      return "computed";
     }
 
     // Default to variable
-    return 'variable';
+    return "variable";
   }
 
   function escapeHtml(text) {
-    const div = document.createElement('div');
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
   }
@@ -848,7 +858,7 @@
   // ============================================================
 
   // Called when panel becomes visible
-  window.panelShown = function() {
+  window.panelShown = function () {
     checkConnection();
   };
 
@@ -858,5 +868,5 @@
   // Check connection periodically
   setInterval(checkConnection, 10000);
 
-  console.log('[GxP Panel] DevTools panel initialized');
+  console.log("[GxP Panel] DevTools panel initialized");
 })();

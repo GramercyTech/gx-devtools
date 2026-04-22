@@ -24,6 +24,7 @@ GxP plugins run inside a **container environment** provided by the `gxdev` devel
 ```
 
 **Key Principle**: Users ONLY edit files in `src/` directory. The runtime container handles:
+
 - Layout switching (Public, Private, System)
 - Dev tools modal (Ctrl+Shift+D)
 - Mock router for navigation
@@ -53,35 +54,35 @@ The store is the central hub for all platform data. Import it in any component:
 ```javascript
 import { useGxpStore } from "@/stores/gxpPortalConfigStore";
 
-
 const store = useGxpStore();
 ```
 
 ### Store Sections
 
-| Section | Purpose | Source |
-|---------|---------|--------|
-| `pluginVars` | Plugin settings/configuration | `app-manifest.json` → settings |
-| `stringsList` | Translatable UI strings | `app-manifest.json` → strings.default |
-| `assetList` | Asset URLs (images, etc.) | `app-manifest.json` → assets |
-| `triggerState` | Dynamic runtime state | `app-manifest.json` → triggerState |
-| `dependencyList` | External data dependencies | `app-manifest.json` → dependencies |
-| `permissionFlags` | Feature permissions | `app-manifest.json` → permissions |
+| Section           | Purpose                       | Source                                |
+| ----------------- | ----------------------------- | ------------------------------------- |
+| `pluginVars`      | Plugin settings/configuration | `app-manifest.json` → settings        |
+| `stringsList`     | Translatable UI strings       | `app-manifest.json` → strings.default |
+| `assetList`       | Asset URLs (images, etc.)     | `app-manifest.json` → assets          |
+| `triggerState`    | Dynamic runtime state         | `app-manifest.json` → triggerState    |
+| `dependencyList`  | External data dependencies    | `app-manifest.json` → dependencies    |
+| `permissionFlags` | Feature permissions           | `app-manifest.json` → permissions     |
 
 ### Getter Methods
 
 ```javascript
 // Get values with fallbacks
-store.getString('welcome_title', 'Default Title');
-store.getSetting('primary_color', '#FFD600');
-store.getAsset('hero_image', '/fallback.jpg');
-store.getState('current_step', 0);
-store.hasPermission('admin');
+store.getString("welcome_title", "Default Title");
+store.getSetting("primary_color", "#FFD600");
+store.getAsset("hero_image", "/fallback.jpg");
+store.getState("current_step", 0);
+store.hasPermission("admin");
 ```
 
 ## API Calls - ALWAYS USE THE STORE
 
 **CRITICAL**: Never use axios or fetch directly. Always use the store's API methods which handle:
+
 - Authentication (Bearer token injection)
 - Base URL configuration based on environment
 - Proxy handling for CORS in development
@@ -91,35 +92,35 @@ store.hasPermission('admin');
 const store = useGxpStore();
 
 // GET request
-const data = await store.apiGet('/api/v1/attendees', { event_id: 123 });
+const data = await store.apiGet("/api/v1/attendees", { event_id: 123 });
 
 // POST request
-const result = await store.apiPost('/api/v1/check-ins', {
+const result = await store.apiPost("/api/v1/check-ins", {
   attendee_id: 456,
-  station_id: 'kiosk-1'
+  station_id: "kiosk-1",
 });
 
 // PUT request
-await store.apiPut('/api/v1/attendees/456', { status: 'checked_in' });
+await store.apiPut("/api/v1/attendees/456", { status: "checked_in" });
 
 // PATCH request
-await store.apiPatch('/api/v1/attendees/456', { badge_printed: true });
+await store.apiPatch("/api/v1/attendees/456", { badge_printed: true });
 
 // DELETE request
-await store.apiDelete('/api/v1/check-ins/789');
+await store.apiDelete("/api/v1/check-ins/789");
 ```
 
 ### API Environment Configuration
 
 The store reads `VITE_API_ENV` from `.env`:
 
-| Environment | API Base URL |
-|-------------|--------------|
-| `mock` | Local mock server (default) |
-| `local` | https://dashboard.eventfinity.test |
-| `develop` | https://api.zenith-develop.env.eventfinity.app |
-| `staging` | https://api.efz-staging.env.eventfinity.app |
-| `production` | https://api.gramercy.cloud |
+| Environment  | API Base URL                                   |
+| ------------ | ---------------------------------------------- |
+| `mock`       | Local mock server (default)                    |
+| `local`      | https://dashboard.eventfinity.test             |
+| `develop`    | https://api.zenith-develop.env.eventfinity.app |
+| `staging`    | https://api.efz-staging.env.eventfinity.app    |
+| `production` | https://api.gramercy.cloud                     |
 
 ## WebSocket Events
 
@@ -129,16 +130,16 @@ WebSockets are pre-configured through the store. Listen for real-time events:
 const store = useGxpStore();
 
 // Listen on primary socket
-store.listenSocket('primary', 'EventName', (data) => {
-  console.log('Event received:', data);
+store.listenSocket("primary", "EventName", (data) => {
+  console.log("Event received:", data);
 });
 
 // Emit to primary socket
-store.emitSocket('primary', 'client-event', { message: 'Hello' });
+store.emitSocket("primary", "client-event", { message: "Hello" });
 
 // For dependency-based sockets (configured in app-manifest.json)
-store.useSocketListener('dependency_identifier', 'updated', (data) => {
-  console.log('Dependency updated:', data);
+store.useSocketListener("dependency_identifier", "updated", (data) => {
+  console.log("Dependency updated:", data);
 });
 ```
 
@@ -165,7 +166,7 @@ Then listen:
 
 ```javascript
 store.sockets.ai_session?.created?.listen((data) => {
-  console.log('AI message created:', data);
+  console.log("AI message created:", data);
 });
 ```
 
@@ -191,10 +192,10 @@ store.sockets.ai_session?.created?.listen((data) => {
 
 ```html
 <!-- Replace src from assetList (default) -->
-<img gxp-src="hero_image" src="/placeholder.jpg" alt="Hero">
+<img gxp-src="hero_image" src="/placeholder.jpg" alt="Hero" />
 
 <!-- Replace src from triggerState -->
-<img gxp-src="dynamic_image" gxp-state src="/placeholder.jpg">
+<img gxp-src="dynamic_image" gxp-state src="/placeholder.jpg" />
 ```
 
 ## Component Template
@@ -205,7 +206,7 @@ When creating new components, use this pattern:
 <template>
   <div class="my-component">
     <h1 gxp-string="component_title">Default Title</h1>
-    <img gxp-src="component_image" src="/placeholder.jpg" alt="">
+    <img gxp-src="component_image" src="/placeholder.jpg" alt="" />
 
     <button @click="handleAction" variant="primary">
       <span gxp-string="action_button">Click Me</span>
@@ -216,7 +217,7 @@ When creating new components, use this pattern:
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted } from "vue";
 import { useGxpStore } from "@/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
@@ -226,9 +227,9 @@ const data = ref(null);
 async function handleAction() {
   loading.value = true;
   try {
-    data.value = await store.apiGet('/api/v1/endpoint');
+    data.value = await store.apiGet("/api/v1/endpoint");
   } catch (error) {
-    console.error('API Error:', error);
+    console.error("API Error:", error);
   } finally {
     loading.value = false;
   }
@@ -236,7 +237,7 @@ async function handleAction() {
 
 onMounted(() => {
   // Listen for real-time updates
-  store.listenSocket('primary', 'DataUpdated', (eventData) => {
+  store.listenSocket("primary", "DataUpdated", (eventData) => {
     data.value = eventData;
   });
 });

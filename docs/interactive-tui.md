@@ -45,36 +45,36 @@ gxdev dev --with-socket --chrome
 
 ### Components
 
-| Component | Description |
-|-----------|-------------|
-| **Header** | Shows version and current project name |
-| **Tab Bar** | Service tabs with status indicators |
-| **Log Panel** | Real-time logs from the active service |
-| **Command Input** | Slash command entry with autocomplete |
-| **Hints** | Keyboard shortcuts reference |
+| Component         | Description                            |
+| ----------------- | -------------------------------------- |
+| **Header**        | Shows version and current project name |
+| **Tab Bar**       | Service tabs with status indicators    |
+| **Log Panel**     | Real-time logs from the active service |
+| **Command Input** | Slash command entry with autocomplete  |
+| **Hints**         | Keyboard shortcuts reference           |
 
 ## Services
 
 The TUI manages multiple services, each with its own tab:
 
-| Service | Tab Name | Description |
-|---------|----------|-------------|
-| System | System | General messages and help output |
-| Vite | Vite | Development server logs |
-| Socket.IO | Socket | Socket server logs (if enabled) |
-| Chrome | Chrome | Chrome extension launcher |
-| Firefox | Firefox | Firefox extension launcher |
+| Service   | Tab Name | Description                      |
+| --------- | -------- | -------------------------------- |
+| System    | System   | General messages and help output |
+| Vite      | Vite     | Development server logs          |
+| Socket.IO | Socket   | Socket server logs (if enabled)  |
+| Chrome    | Chrome   | Chrome extension launcher        |
+| Firefox   | Firefox  | Firefox extension launcher       |
 
 ### Service Status Indicators
 
 Each tab shows the service status:
 
-| Indicator | Status |
-|-----------|--------|
-| `●` (green) | Running |
-| `○` (gray) | Stopped |
+| Indicator    | Status   |
+| ------------ | -------- |
+| `●` (green)  | Running  |
+| `○` (gray)   | Stopped  |
 | `◐` (yellow) | Starting |
-| `✕` (red) | Error |
+| `✕` (red)    | Error    |
 
 ## Slash Commands
 
@@ -146,40 +146,40 @@ The TUI includes optional Gemini AI integration:
 
 ### Navigation
 
-| Shortcut | Action |
-|----------|--------|
-| `Tab` | Cycle to next tab |
-| `Shift+Tab` | Cycle to previous tab |
-| `←` / `→` | Switch tabs (left/right) |
-| `Cmd+1` through `Cmd+9` | Jump to tab by number |
+| Shortcut                  | Action                              |
+| ------------------------- | ----------------------------------- |
+| `Tab`                     | Cycle to next tab                   |
+| `Shift+Tab`               | Cycle to previous tab               |
+| `←` / `→`                 | Switch tabs (left/right)            |
+| `Cmd+1` through `Cmd+9`   | Jump to tab by number               |
 | `Ctrl+1` through `Ctrl+9` | Jump to tab by number (alternative) |
 
 ### Log Panel
 
-| Shortcut | Action |
-|----------|--------|
-| `Shift+↑` | Scroll logs up |
-| `Shift+↓` | Scroll logs down |
-| `Cmd+↑` | Jump to top of logs |
-| `Cmd+↓` | Jump to bottom of logs |
-| `Ctrl+L` | Clear current log panel |
+| Shortcut  | Action                  |
+| --------- | ----------------------- |
+| `Shift+↑` | Scroll logs up          |
+| `Shift+↓` | Scroll logs down        |
+| `Cmd+↑`   | Jump to top of logs     |
+| `Cmd+↓`   | Jump to bottom of logs  |
+| `Ctrl+L`  | Clear current log panel |
 
 ### Service Control
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+K` | Stop current service |
+| Shortcut | Action                                |
+| -------- | ------------------------------------- |
+| `Ctrl+K` | Stop current service                  |
 | `Ctrl+C` | Exit application (stops all services) |
 
 ### Command Input
 
-| Shortcut | Action |
-|----------|--------|
-| `↑` | Previous command (history) |
-| `↓` | Next command (history) |
-| `Tab` | Autocomplete command |
-| `Enter` | Execute command |
-| `Escape` | Clear input |
+| Shortcut | Action                     |
+| -------- | -------------------------- |
+| `↑`      | Previous command (history) |
+| `↓`      | Next command (history)     |
+| `Tab`    | Autocomplete command       |
+| `Enter`  | Execute command            |
+| `Escape` | Clear input                |
 
 ## Command Autocomplete
 
@@ -192,6 +192,7 @@ The TUI provides intelligent autocomplete:
 5. Press `Enter` to select
 
 Example:
+
 ```
 > /de          # Type partial command
   /dev         # Autocomplete suggestion
@@ -224,6 +225,7 @@ Environment variable `SOCKET_IO_ENABLED=true` makes Socket.IO auto-start with `/
 ### ANSI Color Support
 
 The log panel renders ANSI color codes for formatted output:
+
 - Vite's colored output
 - Error highlighting
 - Success/warning indicators
@@ -239,6 +241,7 @@ Logs are kept in memory for the session. Use `/clear` to reset the current tab's
 ## Welcome Screen
 
 When no services are running, the TUI shows a welcome screen with:
+
 - Quick start commands
 - Keyboard shortcut reference
 - Project information
@@ -292,16 +295,17 @@ When Gemini is authenticated, `/gemini` opens an interactive chat panel:
 
 The TUI respects these environment variables:
 
-| Variable | Description |
-|----------|-------------|
-| `NODE_PORT` | Dev server port (default: 3060) |
-| `SOCKET_IO_PORT` | Socket server port (default: 3069) |
-| `SOCKET_IO_ENABLED` | Auto-start Socket.IO with /dev |
-| `USE_HTTPS` | Use HTTPS for dev server |
+| Variable            | Description                        |
+| ------------------- | ---------------------------------- |
+| `NODE_PORT`         | Dev server port (default: 3060)    |
+| `SOCKET_IO_PORT`    | Socket server port (default: 3069) |
+| `SOCKET_IO_ENABLED` | Auto-start Socket.IO with /dev     |
+| `USE_HTTPS`         | Use HTTPS for dev server           |
 
 ### Project Detection
 
 The TUI auto-detects:
+
 - Project name from `package.json`
 - Available socket events from `socket-events/`
 - Extension paths in `browser-extensions/`
@@ -311,6 +315,7 @@ The TUI auto-detects:
 ### Service Crashes
 
 If a service crashes:
+
 1. The tab indicator turns red
 2. Error output appears in the log
 3. The service can be restarted with `/restart`
@@ -318,11 +323,13 @@ If a service crashes:
 ### Port Conflicts
 
 If a port is in use:
+
 ```
 Error: Port 3060 is already in use
 ```
 
 Solutions:
+
 1. Stop the conflicting process
 2. Set a different port in `.env`
 3. Use `--port` flag (if available)
@@ -330,6 +337,7 @@ Solutions:
 ### Extension Launch Failures
 
 If browser extension fails to launch:
+
 1. Check browser is installed
 2. Verify extension directory exists
 3. Check browser isn't already running with conflicting profile

@@ -13,23 +13,27 @@
 
 // Check if we're in the page context (already injected) vs content script context
 // In page context, neither 'browser' nor 'chrome' runtime APIs are available
-const isContentScriptContext = (typeof browser !== 'undefined' && browser.runtime) ||
-                                (typeof chrome !== 'undefined' && chrome.runtime);
+const isContentScriptContext =
+  (typeof browser !== "undefined" && browser.runtime) ||
+  (typeof chrome !== "undefined" && chrome.runtime);
 
-if (isContentScriptContext && typeof window.__gxpInspectorInjected === 'undefined') {
+if (
+  isContentScriptContext &&
+  typeof window.__gxpInspectorInjected === "undefined"
+) {
   // We're in the content script context - inject into page
-  const runtime = typeof browser !== 'undefined' ? browser : chrome;
-  const script = document.createElement('script');
-  script.src = runtime.runtime.getURL('inspector.js');
-  script.onload = function() {
+  const runtime = typeof browser !== "undefined" ? browser : chrome;
+  const script = document.createElement("script");
+  script.src = runtime.runtime.getURL("inspector.js");
+  script.onload = function () {
     this.remove();
   };
   (document.head || document.documentElement).appendChild(script);
 
   // Also set up message relay from page to extension
-  window.addEventListener('message', (event) => {
+  window.addEventListener("message", (event) => {
     if (event.source !== window) return;
-    if (event.data?.type === 'GXP_INSPECTOR_MESSAGE') {
+    if (event.data?.type === "GXP_INSPECTOR_MESSAGE") {
       runtime.runtime.sendMessage(event.data.payload);
     }
   });
@@ -42,7 +46,7 @@ if (isContentScriptContext && typeof window.__gxpInspectorInjected === 'undefine
 window.__gxpInspectorInjected = true;
 
 (function () {
-  'use strict';
+  "use strict";
 
   // If gxpInspector already exists, we're done (prevent double init)
   if (window.gxpInspector) {
@@ -50,8 +54,8 @@ window.__gxpInspectorInjected = true;
   }
 
   // Configuration
-  const DEV_SERVER_URL = 'https://localhost:3060';
-  const API_PREFIX = '/__gxp-inspector';
+  const DEV_SERVER_URL = "https://localhost:3060";
+  const API_PREFIX = "/__gxp-inspector";
 
   // State
   let inspectorEnabled = false;
@@ -71,30 +75,30 @@ window.__gxpInspectorInjected = true;
       const response = await fetch(url, {
         ...options,
         headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        }
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
       });
       return await response.json();
     } catch (error) {
-      console.error('[GxP Inspector] API Error:', error);
+      console.error("[GxP Inspector] API Error:", error);
       return { success: false, error: error.message };
     }
   }
 
   async function ping() {
-    return apiCall('/ping');
+    return apiCall("/ping");
   }
 
   async function extractString(data) {
-    return apiCall('/extract-string', {
-      method: 'POST',
-      body: JSON.stringify(data)
+    return apiCall("/extract-string", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   }
 
   async function getStrings() {
-    return apiCall('/strings');
+    return apiCall("/strings");
   }
 
   // ============================================================
@@ -121,14 +125,18 @@ window.__gxpInspectorInjected = true;
     if (!vueInstance) return null;
 
     const type = vueInstance.type;
-    const name = type?.name || type?.__name || type?.__file?.split('/').pop()?.replace('.vue', '') || 'Anonymous';
+    const name =
+      type?.name ||
+      type?.__name ||
+      type?.__file?.split("/").pop()?.replace(".vue", "") ||
+      "Anonymous";
     const file = type?.__file || null;
 
     // Helper to safely serialize a value (handles circular refs, functions, etc.)
     function safeSerialize(value) {
       if (value === null || value === undefined) return value;
-      if (typeof value === 'function') return '[Function]';
-      if (typeof value !== 'object') return value;
+      if (typeof value === "function") return "[Function]";
+      if (typeof value !== "object") return value;
 
       try {
         // Try JSON stringify/parse to get a clean copy
@@ -136,14 +144,14 @@ window.__gxpInspectorInjected = true;
       } catch {
         // If that fails, return a string representation
         if (Array.isArray(value)) return `[Array(${value.length})]`;
-        return '{...}';
+        return "{...}";
       }
     }
 
     // Get props
     const props = {};
     if (vueInstance.props) {
-      Object.keys(vueInstance.props).forEach(key => {
+      Object.keys(vueInstance.props).forEach((key) => {
         props[key] = safeSerialize(vueInstance.props[key]);
       });
     }
@@ -151,9 +159,9 @@ window.__gxpInspectorInjected = true;
     // Get component data/state
     const data = {};
     if (vueInstance.setupState) {
-      Object.keys(vueInstance.setupState).forEach(key => {
+      Object.keys(vueInstance.setupState).forEach((key) => {
         const value = vueInstance.setupState[key];
-        if (typeof value !== 'function') {
+        if (typeof value !== "function") {
           data[key] = safeSerialize(value);
         }
       });
@@ -165,7 +173,7 @@ window.__gxpInspectorInjected = true;
   function getTextContent(el) {
     // Get direct text content, excluding child elements
     const texts = [];
-    el.childNodes.forEach(node => {
+    el.childNodes.forEach((node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         const text = node.textContent.trim();
         if (text) texts.push(text);
@@ -178,7 +186,7 @@ window.__gxpInspectorInjected = true;
    * Check if an element has a gxp-string attribute (indicating it's already extracted)
    */
   function getGxpStringKey(el) {
-    return el?.getAttribute?.('gxp-string') || null;
+    return el?.getAttribute?.("gxp-string") || null;
   }
 
   /**
@@ -189,7 +197,7 @@ window.__gxpInspectorInjected = true;
    */
   function getGxpSourceExpression(el) {
     if (!el || !el.getAttribute) return null;
-    return el.getAttribute('data-gxp-expr') || null;
+    return el.getAttribute("data-gxp-expr") || null;
   }
 
   /**
@@ -204,7 +212,7 @@ window.__gxpInspectorInjected = true;
     // Check for data-gxp-source attribute (injected by vite plugin for {{ expressions }})
     const sourceExpression = getGxpSourceExpression(el);
 
-    el.childNodes.forEach(node => {
+    el.childNodes.forEach((node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         const text = node.textContent.trim();
         if (text) {
@@ -213,7 +221,7 @@ window.__gxpInspectorInjected = true;
             gxpStringKey: elementKey,
             isExtracted: elementKey !== null,
             sourceExpression: sourceExpression,
-            isDynamic: sourceExpression !== null
+            isDynamic: sourceExpression !== null,
           });
         }
       }
@@ -227,16 +235,16 @@ window.__gxpInspectorInjected = true;
    */
   function findChildGxpStrings(el) {
     const strings = [];
-    const elements = el.querySelectorAll('[gxp-string]');
+    const elements = el.querySelectorAll("[gxp-string]");
 
-    elements.forEach(child => {
-      const key = child.getAttribute('gxp-string');
+    elements.forEach((child) => {
+      const key = child.getAttribute("gxp-string");
       const text = child.textContent.trim();
       if (key && text) {
         strings.push({
           key: key,
           text: text,
-          element: child.tagName.toLowerCase()
+          element: child.tagName.toLowerCase(),
         });
       }
     });
@@ -263,8 +271,8 @@ window.__gxpInspectorInjected = true;
       // Default to raw text
       const textInfo = {
         text: text,
-        type: 'raw',
-        index: index
+        type: "raw",
+        index: index,
       };
 
       // We'll mark it as potentially from getString if we can detect it
@@ -300,11 +308,11 @@ window.__gxpInspectorInjected = true;
   function createHighlightOverlay() {
     if (highlightOverlay) return highlightOverlay;
 
-    highlightOverlay = document.createElement('div');
-    highlightOverlay.id = 'gxp-inspector-highlight';
+    highlightOverlay = document.createElement("div");
+    highlightOverlay.id = "gxp-inspector-highlight";
 
-    const style = document.createElement('style');
-    style.id = 'gxp-highlight-style';
+    const style = document.createElement("style");
+    style.id = "gxp-highlight-style";
     style.textContent = `
       /* Pointer cursor when in selection mode */
       body.gxp-inspector-selecting,
@@ -338,7 +346,7 @@ window.__gxpInspectorInjected = true;
 
     highlightOverlay.innerHTML = `<div class="gxp-highlight-label"></div>`;
 
-    if (!document.getElementById('gxp-highlight-style')) {
+    if (!document.getElementById("gxp-highlight-style")) {
       document.head.appendChild(style);
     }
     document.body.appendChild(highlightOverlay);
@@ -349,10 +357,10 @@ window.__gxpInspectorInjected = true;
     if (!el || !highlightOverlay) return;
 
     const rect = el.getBoundingClientRect();
-    const label = highlightOverlay.querySelector('.gxp-highlight-label');
+    const label = highlightOverlay.querySelector(".gxp-highlight-label");
 
     // Position the highlight overlay directly
-    highlightOverlay.style.display = 'block';
+    highlightOverlay.style.display = "block";
     highlightOverlay.style.left = `${rect.left}px`;
     highlightOverlay.style.top = `${rect.top}px`;
     highlightOverlay.style.width = `${rect.width}px`;
@@ -364,7 +372,7 @@ window.__gxpInspectorInjected = true;
 
   function hideHighlight() {
     if (highlightOverlay) {
-      highlightOverlay.style.display = 'none';
+      highlightOverlay.style.display = "none";
     }
   }
 
@@ -375,11 +383,11 @@ window.__gxpInspectorInjected = true;
   function createSelectionHighlight() {
     if (selectionHighlight) return selectionHighlight;
 
-    selectionHighlight = document.createElement('div');
-    selectionHighlight.id = 'gxp-inspector-selection';
+    selectionHighlight = document.createElement("div");
+    selectionHighlight.id = "gxp-inspector-selection";
 
-    const style = document.createElement('style');
-    style.id = 'gxp-selection-style';
+    const style = document.createElement("style");
+    style.id = "gxp-selection-style";
     style.textContent = `
       #gxp-inspector-selection {
         position: fixed;
@@ -427,7 +435,7 @@ window.__gxpInspectorInjected = true;
 
     selectionHighlight.innerHTML = `<div class="gxp-selection-label"></div>`;
 
-    if (!document.getElementById('gxp-selection-style')) {
+    if (!document.getElementById("gxp-selection-style")) {
       document.head.appendChild(style);
     }
     document.body.appendChild(selectionHighlight);
@@ -442,10 +450,10 @@ window.__gxpInspectorInjected = true;
 
     createSelectionHighlight();
     const rect = el.getBoundingClientRect();
-    const label = selectionHighlight.querySelector('.gxp-selection-label');
+    const label = selectionHighlight.querySelector(".gxp-selection-label");
 
     // Position the main overlay element directly
-    selectionHighlight.style.display = 'block';
+    selectionHighlight.style.display = "block";
     selectionHighlight.style.left = `${rect.left}px`;
     selectionHighlight.style.top = `${rect.top}px`;
     selectionHighlight.style.width = `${rect.width}px`;
@@ -457,13 +465,17 @@ window.__gxpInspectorInjected = true;
 
   function hideSelectionHighlight() {
     if (selectionHighlight) {
-      selectionHighlight.style.display = 'none';
+      selectionHighlight.style.display = "none";
     }
   }
 
   // Update selection highlight position on scroll/resize
   function updateSelectionPosition() {
-    if (selectedElement && selectionHighlight && selectionHighlight.style.display !== 'none') {
+    if (
+      selectedElement &&
+      selectionHighlight &&
+      selectionHighlight.style.display !== "none"
+    ) {
       updateSelectionHighlight(selectedElement);
     }
   }
@@ -475,8 +487,8 @@ window.__gxpInspectorInjected = true;
   function createInspectorPanel() {
     if (inspectorPanel) return inspectorPanel;
 
-    inspectorPanel = document.createElement('div');
-    inspectorPanel.id = 'gxp-inspector-panel';
+    inspectorPanel = document.createElement("div");
+    inspectorPanel.id = "gxp-inspector-panel";
     inspectorPanel.innerHTML = `
       <div class="gxp-panel-header">
         <span class="gxp-panel-title">GxP Component Inspector</span>
@@ -518,7 +530,7 @@ window.__gxpInspectorInjected = true;
       </div>
     `;
 
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       #gxp-inspector-panel {
         position: fixed;
@@ -704,11 +716,15 @@ window.__gxpInspectorInjected = true;
     document.body.appendChild(inspectorPanel);
 
     // Event handlers
-    inspectorPanel.querySelector('.gxp-panel-close').addEventListener('click', () => {
-      disableInspector();
-    });
+    inspectorPanel
+      .querySelector(".gxp-panel-close")
+      .addEventListener("click", () => {
+        disableInspector();
+      });
 
-    inspectorPanel.querySelector('.gxp-extract-button').addEventListener('click', handleExtract);
+    inspectorPanel
+      .querySelector(".gxp-extract-button")
+      .addEventListener("click", handleExtract);
 
     return inspectorPanel;
   }
@@ -721,108 +737,114 @@ window.__gxpInspectorInjected = true;
     const texts = getTextContent(el);
 
     // Update component info
-    const nameEl = inspectorPanel.querySelector('.gxp-component-name');
-    const fileEl = inspectorPanel.querySelector('.gxp-component-file');
+    const nameEl = inspectorPanel.querySelector(".gxp-component-name");
+    const fileEl = inspectorPanel.querySelector(".gxp-component-file");
 
     if (info) {
       nameEl.textContent = `<${info.name}>`;
-      fileEl.textContent = info.file || 'Unknown file';
+      fileEl.textContent = info.file || "Unknown file";
     } else {
       nameEl.textContent = `<${el.tagName.toLowerCase()}>`;
-      fileEl.textContent = 'Not a Vue component';
+      fileEl.textContent = "Not a Vue component";
     }
 
     // Update strings list
-    const stringsSection = inspectorPanel.querySelector('.gxp-strings-section');
-    const stringsList = inspectorPanel.querySelector('.gxp-strings-list');
+    const stringsSection = inspectorPanel.querySelector(".gxp-strings-section");
+    const stringsList = inspectorPanel.querySelector(".gxp-strings-list");
 
     if (texts.length > 0) {
-      stringsSection.style.display = 'block';
-      stringsList.innerHTML = texts.map(text => `
+      stringsSection.style.display = "block";
+      stringsList.innerHTML = texts
+        .map(
+          (text) => `
         <div class="gxp-string-item" data-text="${escapeHtml(text)}">
           <span class="gxp-string-text">${escapeHtml(text)}</span>
           <button class="gxp-string-extract">Extract</button>
         </div>
-      `).join('');
+      `,
+        )
+        .join("");
 
       // Add click handlers
-      stringsList.querySelectorAll('.gxp-string-item').forEach(item => {
-        item.querySelector('.gxp-string-extract').addEventListener('click', (e) => {
-          e.stopPropagation();
-          showExtractForm(item.dataset.text, info?.file);
-        });
+      stringsList.querySelectorAll(".gxp-string-item").forEach((item) => {
+        item
+          .querySelector(".gxp-string-extract")
+          .addEventListener("click", (e) => {
+            e.stopPropagation();
+            showExtractForm(item.dataset.text, info?.file);
+          });
       });
     } else {
-      stringsSection.style.display = 'none';
+      stringsSection.style.display = "none";
     }
 
     // Update props section
-    const propsSection = inspectorPanel.querySelector('.gxp-props-section');
-    const propsContent = inspectorPanel.querySelector('.gxp-props-content');
+    const propsSection = inspectorPanel.querySelector(".gxp-props-section");
+    const propsContent = inspectorPanel.querySelector(".gxp-props-content");
 
     if (info && Object.keys(info.props).length > 0) {
-      propsSection.style.display = 'block';
+      propsSection.style.display = "block";
       propsContent.textContent = JSON.stringify(info.props, null, 2);
     } else {
-      propsSection.style.display = 'none';
+      propsSection.style.display = "none";
     }
   }
 
   function showExtractForm(text, filePath) {
-    const extractSection = inspectorPanel.querySelector('.gxp-extract-section');
-    const textInput = inspectorPanel.querySelector('.gxp-extract-text');
-    const keyInput = inspectorPanel.querySelector('.gxp-extract-key');
-    const fileInput = inspectorPanel.querySelector('.gxp-extract-file');
-    const statusEl = inspectorPanel.querySelector('.gxp-extract-status');
+    const extractSection = inspectorPanel.querySelector(".gxp-extract-section");
+    const textInput = inspectorPanel.querySelector(".gxp-extract-text");
+    const keyInput = inspectorPanel.querySelector(".gxp-extract-key");
+    const fileInput = inspectorPanel.querySelector(".gxp-extract-file");
+    const statusEl = inspectorPanel.querySelector(".gxp-extract-status");
 
-    extractSection.style.display = 'block';
+    extractSection.style.display = "block";
     textInput.value = text;
     keyInput.value = textToKey(text);
-    fileInput.value = filePath || '';
-    statusEl.style.display = 'none';
-    statusEl.className = 'gxp-extract-status';
+    fileInput.value = filePath || "";
+    statusEl.style.display = "none";
+    statusEl.className = "gxp-extract-status";
   }
 
   async function handleExtract() {
-    const textInput = inspectorPanel.querySelector('.gxp-extract-text');
-    const keyInput = inspectorPanel.querySelector('.gxp-extract-key');
-    const fileInput = inspectorPanel.querySelector('.gxp-extract-file');
-    const button = inspectorPanel.querySelector('.gxp-extract-button');
-    const statusEl = inspectorPanel.querySelector('.gxp-extract-status');
+    const textInput = inspectorPanel.querySelector(".gxp-extract-text");
+    const keyInput = inspectorPanel.querySelector(".gxp-extract-key");
+    const fileInput = inspectorPanel.querySelector(".gxp-extract-file");
+    const button = inspectorPanel.querySelector(".gxp-extract-button");
+    const statusEl = inspectorPanel.querySelector(".gxp-extract-status");
 
     const text = textInput.value;
     const key = keyInput.value;
     const filePath = fileInput.value;
 
     if (!text || !key || !filePath) {
-      statusEl.textContent = 'All fields are required';
-      statusEl.className = 'gxp-extract-status error';
+      statusEl.textContent = "All fields are required";
+      statusEl.className = "gxp-extract-status error";
       return;
     }
 
     button.disabled = true;
-    button.textContent = 'Extracting...';
+    button.textContent = "Extracting...";
 
     try {
       const result = await extractString({
         text,
         key,
-        filePath
+        filePath,
       });
 
       if (result.success) {
         statusEl.textContent = `Success! Added getString('${key}') to ${filePath}`;
-        statusEl.className = 'gxp-extract-status success';
+        statusEl.className = "gxp-extract-status success";
       } else {
-        statusEl.textContent = result.error || 'Extraction failed';
-        statusEl.className = 'gxp-extract-status error';
+        statusEl.textContent = result.error || "Extraction failed";
+        statusEl.className = "gxp-extract-status error";
       }
     } catch (error) {
       statusEl.textContent = error.message;
-      statusEl.className = 'gxp-extract-status error';
+      statusEl.className = "gxp-extract-status error";
     } finally {
       button.disabled = false;
-      button.textContent = 'Extract to getString()';
+      button.textContent = "Extract to getString()";
     }
   }
 
@@ -834,8 +856,12 @@ window.__gxpInspectorInjected = true;
     if (!inspectorEnabled) return;
 
     const el = e.target;
-    if (el === highlightOverlay || highlightOverlay?.contains(el) ||
-        el === inspectorPanel || inspectorPanel?.contains(el)) {
+    if (
+      el === highlightOverlay ||
+      highlightOverlay?.contains(el) ||
+      el === inspectorPanel ||
+      inspectorPanel?.contains(el)
+    ) {
       return;
     }
 
@@ -849,9 +875,14 @@ window.__gxpInspectorInjected = true;
     if (!inspectorEnabled) return;
 
     const el = e.target;
-    if (el === highlightOverlay || highlightOverlay?.contains(el) ||
-        el === inspectorPanel || inspectorPanel?.contains(el) ||
-        el === selectionHighlight || selectionHighlight?.contains(el)) {
+    if (
+      el === highlightOverlay ||
+      highlightOverlay?.contains(el) ||
+      el === inspectorPanel ||
+      inspectorPanel?.contains(el) ||
+      el === selectionHighlight ||
+      selectionHighlight?.contains(el)
+    ) {
       return;
     }
 
@@ -899,28 +930,31 @@ window.__gxpInspectorInjected = true;
       gxpStringKey: gxpStringKey,
       isExtracted: gxpStringKey !== null,
       sourceExpression: sourceExpression,
-      isDynamic: sourceExpression !== null
+      isDynamic: sourceExpression !== null,
     };
 
     // Send to content script via postMessage (since we're in page context)
     // The content script will relay to the background script
-    window.postMessage({
-      type: 'GXP_INSPECTOR_MESSAGE',
-      payload: {
-        type: 'elementSelected',
-        data: data
-      }
-    }, '*');
+    window.postMessage(
+      {
+        type: "GXP_INSPECTOR_MESSAGE",
+        payload: {
+          type: "elementSelected",
+          data: data,
+        },
+      },
+      "*",
+    );
   }
 
   function handleKeyDown(e) {
     // Escape to disable inspector
-    if (e.key === 'Escape' && inspectorEnabled) {
+    if (e.key === "Escape" && inspectorEnabled) {
       disableInspector();
     }
 
     // Ctrl+Shift+I to toggle inspector
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "I") {
       e.preventDefault();
       toggleInspector();
     }
@@ -938,19 +972,19 @@ window.__gxpInspectorInjected = true;
     createInspectorPanel();
 
     // Add selecting class for pointer cursor
-    document.body.classList.add('gxp-inspector-selecting');
+    document.body.classList.add("gxp-inspector-selecting");
 
     // Hide previous selection highlight when entering selection mode
     hideSelectionHighlight();
     selectedElement = null;
     window.__gxpSelectedElement = null;
 
-    document.addEventListener('mousemove', handleMouseMove, true);
-    document.addEventListener('click', handleClick, true);
-    window.addEventListener('scroll', updateSelectionPosition, true);
-    window.addEventListener('resize', updateSelectionPosition);
+    document.addEventListener("mousemove", handleMouseMove, true);
+    document.addEventListener("click", handleClick, true);
+    window.addEventListener("scroll", updateSelectionPosition, true);
+    window.addEventListener("resize", updateSelectionPosition);
 
-    console.log('[GxP Inspector] Enabled - Hover over elements to inspect');
+    console.log("[GxP Inspector] Enabled - Hover over elements to inspect");
   }
 
   function disableInspector() {
@@ -960,22 +994,22 @@ window.__gxpInspectorInjected = true;
     hideHighlight();
 
     // Remove selecting class for pointer cursor
-    document.body.classList.remove('gxp-inspector-selecting');
+    document.body.classList.remove("gxp-inspector-selecting");
 
     if (inspectorPanel) {
       inspectorPanel.remove();
       inspectorPanel = null;
     }
 
-    document.removeEventListener('mousemove', handleMouseMove, true);
-    document.removeEventListener('click', handleClick, true);
+    document.removeEventListener("mousemove", handleMouseMove, true);
+    document.removeEventListener("click", handleClick, true);
     // Keep scroll/resize listeners for selection highlight position updates
     // They will be removed when a new selection starts
 
     // Don't clear selectedElement here - we want to keep the selection
     hoveredElement = null;
 
-    console.log('[GxP Inspector] Disabled - Selection preserved');
+    console.log("[GxP Inspector] Disabled - Selection preserved");
   }
 
   // Clear selection completely (called when user wants to deselect)
@@ -983,8 +1017,8 @@ window.__gxpInspectorInjected = true;
     hideSelectionHighlight();
     selectedElement = null;
     window.__gxpSelectedElement = null;
-    window.removeEventListener('scroll', updateSelectionPosition, true);
-    window.removeEventListener('resize', updateSelectionPosition);
+    window.removeEventListener("scroll", updateSelectionPosition, true);
+    window.removeEventListener("resize", updateSelectionPosition);
   }
 
   function toggleInspector() {
@@ -1022,31 +1056,31 @@ window.__gxpInspectorInjected = true;
     parts.push(el.tagName.toLowerCase());
 
     // Check for gxp-string attribute
-    const gxpStringKey = el.getAttribute('gxp-string');
+    const gxpStringKey = el.getAttribute("gxp-string");
     if (gxpStringKey) {
       parts.push(gxpStringKey);
     }
 
     // Check for gxp-src attribute (for images/assets)
-    const gxpSrcKey = el.getAttribute('gxp-src');
+    const gxpSrcKey = el.getAttribute("gxp-src");
     if (gxpSrcKey && !gxpStringKey) {
       parts.push(gxpSrcKey);
     }
 
-    return parts.join('::');
+    return parts.join("::");
   }
 
   function textToKey(text) {
     return text
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "_")
       .substring(0, 40)
-      .replace(/_+$/, '');
+      .replace(/_+$/, "");
   }
 
   function escapeHtml(text) {
-    const div = document.createElement('div');
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
   }
@@ -1056,7 +1090,7 @@ window.__gxpInspectorInjected = true;
   // ============================================================
 
   // Add keyboard listener
-  document.addEventListener('keydown', handleKeyDown);
+  document.addEventListener("keydown", handleKeyDown);
 
   // Expose API
   window.gxpInspector = {
@@ -1065,23 +1099,25 @@ window.__gxpInspectorInjected = true;
     toggle: toggleInspector,
     isEnabled: () => inspectorEnabled,
     clearSelection: clearSelection,
-    ping: ping
+    ping: ping,
   };
 
   // Listen for messages from content script (which relays from popup/background)
-  window.addEventListener('message', (event) => {
+  window.addEventListener("message", (event) => {
     if (event.source !== window) return;
-    if (event.data?.type === 'GXP_INSPECTOR_ACTION') {
+    if (event.data?.type === "GXP_INSPECTOR_ACTION") {
       const action = event.data.action;
-      if (action === 'toggleInspector') {
+      if (action === "toggleInspector") {
         toggleInspector();
-      } else if (action === 'enable') {
+      } else if (action === "enable") {
         enableInspector();
-      } else if (action === 'disable') {
+      } else if (action === "disable") {
         disableInspector();
       }
     }
   });
 
-  console.log('[GxP Inspector] Loaded in page context. Press Ctrl+Shift+I to toggle inspector.');
+  console.log(
+    "[GxP Inspector] Loaded in page context. Press Ctrl+Shift+I to toggle inspector.",
+  );
 })();

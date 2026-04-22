@@ -1,15 +1,15 @@
 {
-    "additionalTabs": [
+  "additionalTabs": [
+    {
+      "type": "card_list",
+      "cards": [
         {
-            "type": "card_list",
-            "cards": [
-                {
-                    "cols": 12,
-                    "type": "fields_list",
-                    "title": "Configuration",
-                    "fieldsList": []
-				}
-			]
-		}
-	]
+          "cols": 12,
+          "type": "fields_list",
+          "title": "Configuration",
+          "fieldsList": []
+        }
+      ]
+    }
+  ]
 }

@@ -56,7 +56,7 @@ Access in your component:
 const store = useGxpStore();
 
 // Get a setting with fallback
-const color = store.getSetting('primary_color', '#000000');
+const color = store.getSetting("primary_color", "#000000");
 
 // Check if setting exists
 if (store.pluginVars.enable_animations) {
@@ -99,7 +99,7 @@ Access programmatically:
 
 ```javascript
 const store = useGxpStore();
-const title = store.getString('welcome_title', 'Default Title');
+const title = store.getString("welcome_title", "Default Title");
 ```
 
 :::tip Hot Reload
@@ -132,7 +132,7 @@ Access programmatically:
 
 ```javascript
 const store = useGxpStore();
-const heroUrl = store.getAsset('hero_image', '/fallback.jpg');
+const heroUrl = store.getAsset("hero_image", "/fallback.jpg");
 ```
 
 ### Trigger State (`triggerState`)
@@ -163,11 +163,11 @@ Update programmatically:
 const store = useGxpStore();
 
 // Update state
-store.updateState('current_step', 2);
-store.updateState('checked_in_count', store.triggerState.checked_in_count + 1);
+store.updateState("current_step", 2);
+store.updateState("checked_in_count", store.triggerState.checked_in_count + 1);
 
 // Read state
-const step = store.getState('current_step', 1);
+const step = store.getState("current_step", 1);
 ```
 
 ### Dependencies
@@ -202,14 +202,14 @@ Dependencies define external API services your plugin can interact with. Each de
 
 #### Dependency Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `identifier` | string | Unique identifier for this dependency (used in `callApi`) |
-| `model` | string | The model/resource name from the API |
-| `permissionKey` | string | The permission key used for access control |
-| `permissions` | array | List of permissions required to use this dependency |
-| `operations` | object | Map of operationId to `method:path` (e.g., `"get:/v1/..."`) |
-| `events` | object | Map of socket event names this dependency can emit/receive |
+| Field           | Type   | Description                                                 |
+| --------------- | ------ | ----------------------------------------------------------- |
+| `identifier`    | string | Unique identifier for this dependency (used in `callApi`)   |
+| `model`         | string | The model/resource name from the API                        |
+| `permissionKey` | string | The permission key used for access control                  |
+| `permissions`   | array  | List of permissions required to use this dependency         |
+| `operations`    | object | Map of operationId to `method:path` (e.g., `"get:/v1/..."`) |
+| `events`        | object | Map of socket event names this dependency can emit/receive  |
 
 #### Using the Add Dependency Wizard
 
@@ -220,6 +220,7 @@ gxdev add-dependency
 ```
 
 This interactive wizard will:
+
 1. Load the OpenAPI specification from the API
 2. Display available API tags/models
 3. Let you select which endpoints to include
@@ -232,40 +233,47 @@ This interactive wizard will:
 Once defined, call any operation using `gxpStore.callApi()`:
 
 ```javascript
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
 
 // List all access points
-const accessPoints = await store.callApi('access-points.index', 'access_points');
+const accessPoints = await store.callApi(
+  "access-points.index",
+  "access_points",
+);
 
 // Get a specific access point
-const accessPoint = await store.callApi('access-points.show', 'access_points', {
-  access_point: 123
+const accessPoint = await store.callApi("access-points.show", "access_points", {
+  access_point: 123,
 });
 
 // Create a new access point
-const newAccessPoint = await store.callApi('access-points.store', 'access_points', {
-  name: 'Main Entrance',
-  location: 'Building A'
-});
+const newAccessPoint = await store.callApi(
+  "access-points.store",
+  "access_points",
+  {
+    name: "Main Entrance",
+    location: "Building A",
+  },
+);
 
 // Update an access point
-await store.callApi('access-points.update', 'access_points', {
+await store.callApi("access-points.update", "access_points", {
   access_point: 123,
-  name: 'Updated Name'
+  name: "Updated Name",
 });
 
 // Delete an access point
-await store.callApi('access-points.destroy', 'access_points', {
-  access_point: 123
+await store.callApi("access-points.destroy", "access_points", {
+  access_point: 123,
 });
 ```
 
 The `callApi` method signature:
 
 ```javascript
-store.callApi(operationId, identifier, additionalData = {})
+store.callApi(operationId, identifier, (additionalData = {}));
 ```
 
 - **operationId**: The operation key from `operations` (e.g., `'access-points.index'`)
@@ -280,11 +288,7 @@ Define permissions required by the plugin:
 
 ```json
 {
-  "permissions": [
-    "camera",
-    "bluetooth",
-    "notifications"
-  ]
+  "permissions": ["camera", "bluetooth", "notifications"]
 }
 ```
 
@@ -293,7 +297,7 @@ Check permissions in code:
 ```javascript
 const store = useGxpStore();
 
-if (store.hasPermission('camera')) {
+if (store.hasPermission("camera")) {
   // Enable camera features
 }
 ```
@@ -337,14 +341,14 @@ if (store.hasPermission('camera')) {
 
 ## Directive Reference
 
-| Directive | Modifier | Source | Example |
-|-----------|----------|--------|---------|
-| `gxp-string` | (none) | `stringsList` | `<h1 gxp-string="title">Default</h1>` |
-| `gxp-string` | `gxp-settings` | `pluginVars` | `<span gxp-string="company" gxp-settings>Acme</span>` |
-| `gxp-string` | `gxp-assets` | `assetList` | `<span gxp-string="logo_url" gxp-assets>/logo.png</span>` |
-| `gxp-string` | `gxp-state` | `triggerState` | `<span gxp-string="count" gxp-state>0</span>` |
-| `gxp-src` | (none) | `assetList` | `<img gxp-src="hero" src="/placeholder.jpg" />` |
-| `gxp-src` | `gxp-state` | `triggerState` | `<img gxp-src="badge" gxp-state src="/placeholder.jpg" />` |
+| Directive    | Modifier       | Source         | Example                                                    |
+| ------------ | -------------- | -------------- | ---------------------------------------------------------- |
+| `gxp-string` | (none)         | `stringsList`  | `<h1 gxp-string="title">Default</h1>`                      |
+| `gxp-string` | `gxp-settings` | `pluginVars`   | `<span gxp-string="company" gxp-settings>Acme</span>`      |
+| `gxp-string` | `gxp-assets`   | `assetList`    | `<span gxp-string="logo_url" gxp-assets>/logo.png</span>`  |
+| `gxp-string` | `gxp-state`    | `triggerState` | `<span gxp-string="count" gxp-state>0</span>`              |
+| `gxp-src`    | (none)         | `assetList`    | `<img gxp-src="hero" src="/placeholder.jpg" />`            |
+| `gxp-src`    | `gxp-state`    | `triggerState` | `<img gxp-src="badge" gxp-state src="/placeholder.jpg" />` |
 
 ## Best Practices
 

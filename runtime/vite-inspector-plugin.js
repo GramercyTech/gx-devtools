@@ -7,8 +7,8 @@
  * - Update Vue source files
  */
 
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 
 /**
  * Generate a key from text content
@@ -18,10 +18,10 @@ import path from 'path';
 function textToKey(text) {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, "_")
     .substring(0, 40)
-    .replace(/_+$/, ''); // Remove trailing underscores
+    .replace(/_+$/, ""); // Remove trailing underscores
 }
 
 /**
@@ -29,16 +29,16 @@ function textToKey(text) {
  */
 async function parseBody(req) {
   return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => body += chunk);
-    req.on('end', () => {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
       try {
         resolve(JSON.parse(body));
       } catch (e) {
-        reject(new Error('Invalid JSON'));
+        reject(new Error("Invalid JSON"));
       }
     });
-    req.on('error', reject);
+    req.on("error", reject);
   });
 }
 
@@ -47,7 +47,7 @@ async function parseBody(req) {
  */
 function sendJson(res, data, status = 200) {
   res.statusCode = status;
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(data));
 }
 
@@ -56,14 +56,14 @@ function sendJson(res, data, status = 200) {
  */
 export function gxpInspectorPlugin() {
   return {
-    name: 'gxp-inspector',
+    name: "gxp-inspector",
 
     configureServer(server) {
       // API endpoint prefix
-      const API_PREFIX = '/__gxp-inspector';
+      const API_PREFIX = "/__gxp-inspector";
 
       // Watch for app-manifest.json changes and trigger HMR
-      const manifestPath = path.join(process.cwd(), 'app-manifest.json');
+      const manifestPath = path.join(process.cwd(), "app-manifest.json");
       let manifestWatcher = null;
 
       // Setup manifest file watcher
@@ -71,32 +71,45 @@ export function gxpInspectorPlugin() {
         // Use chokidar if available (Vite uses it internally)
         if (server.watcher) {
           server.watcher.add(manifestPath);
-          server.watcher.on('change', (changedPath) => {
-            if (changedPath === manifestPath || changedPath.endsWith('app-manifest.json')) {
-              console.log('[GxP Inspector] app-manifest.json changed, sending HMR update');
+          server.watcher.on("change", (changedPath) => {
+            if (
+              changedPath === manifestPath ||
+              changedPath.endsWith("app-manifest.json")
+            ) {
+              console.log(
+                "[GxP Inspector] app-manifest.json changed, sending HMR update",
+              );
               try {
-                const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+                const manifest = JSON.parse(
+                  fs.readFileSync(manifestPath, "utf-8"),
+                );
                 // Send custom HMR event to all connected clients
                 server.ws.send({
-                  type: 'custom',
-                  event: 'gxp:manifest-update',
-                  data: manifest
+                  type: "custom",
+                  event: "gxp:manifest-update",
+                  data: manifest,
                 });
               } catch (e) {
-                console.warn('[GxP Inspector] Could not parse app-manifest.json:', e.message);
+                console.warn(
+                  "[GxP Inspector] Could not parse app-manifest.json:",
+                  e.message,
+                );
                 // Send reload signal if parse failed
                 server.ws.send({
-                  type: 'custom',
-                  event: 'gxp:manifest-reload',
-                  data: {}
+                  type: "custom",
+                  event: "gxp:manifest-reload",
+                  data: {},
                 });
               }
             }
           });
-          console.log('[GxP Inspector] Watching app-manifest.json for changes');
+          console.log("[GxP Inspector] Watching app-manifest.json for changes");
         }
       } catch (e) {
-        console.warn('[GxP Inspector] Could not setup manifest watcher:', e.message);
+        console.warn(
+          "[GxP Inspector] Could not setup manifest watcher:",
+          e.message,
+        );
       }
 
       server.middlewares.use(async (req, res, next) => {
@@ -105,57 +118,63 @@ export function gxpInspectorPlugin() {
           return next();
         }
 
-        const endpoint = req.url.replace(API_PREFIX, '').split('?')[0];
+        const endpoint = req.url.replace(API_PREFIX, "").split("?")[0];
 
         try {
           // GET /ping - Health check
-          if (req.method === 'GET' && endpoint === '/ping') {
+          if (req.method === "GET" && endpoint === "/ping") {
             return sendJson(res, {
               success: true,
-              status: 'ok',
-              version: '1.0.0',
-              projectRoot: process.cwd()
+              status: "ok",
+              version: "1.0.0",
+              projectRoot: process.cwd(),
             });
           }
 
           // GET /strings - Get current strings from app-manifest.json
-          if (req.method === 'GET' && endpoint === '/strings') {
-            const manifestPath = path.join(process.cwd(), 'app-manifest.json');
+          if (req.method === "GET" && endpoint === "/strings") {
+            const manifestPath = path.join(process.cwd(), "app-manifest.json");
 
             if (!fs.existsSync(manifestPath)) {
               // Return empty strings if manifest doesn't exist yet
               return sendJson(res, {
                 success: true,
-                stringsList: {}
+                stringsList: {},
               });
             }
 
-            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
             return sendJson(res, {
               success: true,
-              stringsList: manifest.strings?.default || {}
+              stringsList: manifest.strings?.default || {},
             });
           }
 
           // POST /lookup-string - Check if a text value exists in manifest and return its key
-          if (req.method === 'POST' && endpoint === '/lookup-string') {
+          if (req.method === "POST" && endpoint === "/lookup-string") {
             const body = await parseBody(req);
             const { text, filePath } = body;
 
             if (!text) {
-              return sendJson(res, {
-                success: false,
-                error: 'text is required'
-              }, 400);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: "text is required",
+                },
+                400,
+              );
             }
 
-            const manifestPath = path.join(process.cwd(), 'app-manifest.json');
+            const manifestPath = path.join(process.cwd(), "app-manifest.json");
             let foundKey = null;
             let isFromGetString = false;
 
             // Check if text exists as a value in the manifest
             if (fs.existsSync(manifestPath)) {
-              const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+              const manifest = JSON.parse(
+                fs.readFileSync(manifestPath, "utf-8"),
+              );
               const strings = manifest.strings?.default || {};
 
               // Find key by value
@@ -171,9 +190,12 @@ export function gxpInspectorPlugin() {
             if (foundKey && filePath) {
               const fullPath = path.resolve(process.cwd(), filePath);
               if (fs.existsSync(fullPath)) {
-                const fileContent = fs.readFileSync(fullPath, 'utf-8');
+                const fileContent = fs.readFileSync(fullPath, "utf-8");
                 // Check for getString('key' or getString("key"
-                const getStringRegex = new RegExp(`getString\\s*\\(\\s*['"]${foundKey}['"]`, 'g');
+                const getStringRegex = new RegExp(
+                  `getString\\s*\\(\\s*['"]${foundKey}['"]`,
+                  "g",
+                );
                 if (getStringRegex.test(fileContent)) {
                   isFromGetString = true;
                 }
@@ -185,66 +207,81 @@ export function gxpInspectorPlugin() {
               found: foundKey !== null,
               key: foundKey,
               isFromGetString: isFromGetString,
-              text: text
+              text: text,
             });
           }
 
           // POST /update-string - Update an existing gxp-string attribute key/value in manifest and source
-          if (req.method === 'POST' && endpoint === '/update-string') {
+          if (req.method === "POST" && endpoint === "/update-string") {
             const body = await parseBody(req);
             const {
-              oldKey,         // The current key
-              newKey,         // The new key (can be same as oldKey)
-              newValue,       // The new default value (text content)
-              filePath        // The Vue file path
+              oldKey, // The current key
+              newKey, // The new key (can be same as oldKey)
+              newValue, // The new default value (text content)
+              filePath, // The Vue file path
             } = body;
 
             if (!oldKey || !newKey || !filePath) {
-              return sendJson(res, {
-                success: false,
-                error: 'oldKey, newKey, and filePath are required'
-              }, 400);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: "oldKey, newKey, and filePath are required",
+                },
+                400,
+              );
             }
 
             const fullPath = path.resolve(process.cwd(), filePath);
 
             if (!fs.existsSync(fullPath)) {
-              return sendJson(res, {
-                success: false,
-                error: `File not found: ${filePath}`
-              }, 404);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: `File not found: ${filePath}`,
+                },
+                404,
+              );
             }
 
             // Read the Vue file
-            let fileContent = fs.readFileSync(fullPath, 'utf-8');
+            let fileContent = fs.readFileSync(fullPath, "utf-8");
 
             // Find and replace the gxp-string attribute
             // Match: gxp-string="oldKey"
-            const oldAttrRegex = new RegExp(`gxp-string="${oldKey}"`, 'g');
+            const oldAttrRegex = new RegExp(`gxp-string="${oldKey}"`, "g");
 
             let replaced = false;
             if (oldAttrRegex.test(fileContent)) {
               oldAttrRegex.lastIndex = 0;
-              fileContent = fileContent.replace(oldAttrRegex, `gxp-string="${newKey}"`);
+              fileContent = fileContent.replace(
+                oldAttrRegex,
+                `gxp-string="${newKey}"`,
+              );
               replaced = true;
             }
 
             if (!replaced) {
-              return sendJson(res, {
-                success: false,
-                error: `Could not find gxp-string="${oldKey}" in ${filePath}`
-              }, 400);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: `Could not find gxp-string="${oldKey}" in ${filePath}`,
+                },
+                400,
+              );
             }
 
             // Write the updated file
-            fs.writeFileSync(fullPath, fileContent, 'utf-8');
+            fs.writeFileSync(fullPath, fileContent, "utf-8");
 
             // Update app-manifest.json
-            const manifestPath = path.join(process.cwd(), 'app-manifest.json');
+            const manifestPath = path.join(process.cwd(), "app-manifest.json");
             let manifest = {};
 
             if (fs.existsSync(manifestPath)) {
-              manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+              manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
             } else {
               manifest = {
                 name: "GxToolkit",
@@ -253,7 +290,7 @@ export function gxpInspectorPlugin() {
                 manifest_version: 3,
                 settings: {},
                 strings: { default: {} },
-                assets: {}
+                assets: {},
               };
             }
 
@@ -261,7 +298,10 @@ export function gxpInspectorPlugin() {
             manifest.strings.default = manifest.strings.default || {};
 
             // Remove old key if different from new key
-            if (oldKey !== newKey && manifest.strings.default[oldKey] !== undefined) {
+            if (
+              oldKey !== newKey &&
+              manifest.strings.default[oldKey] !== undefined
+            ) {
               delete manifest.strings.default[oldKey];
             }
 
@@ -270,31 +310,39 @@ export function gxpInspectorPlugin() {
               manifest.strings.default[newKey] = newValue;
             }
 
-            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+            fs.writeFileSync(
+              manifestPath,
+              JSON.stringify(manifest, null, 2),
+              "utf-8",
+            );
 
             return sendJson(res, {
               success: true,
               oldKey,
               newKey,
               newValue,
-              file: filePath
+              file: filePath,
             });
           }
 
           // POST /extract-string - Extract a string by adding gxp-string attribute
-          if (req.method === 'POST' && endpoint === '/extract-string') {
+          if (req.method === "POST" && endpoint === "/extract-string") {
             const body = await parseBody(req);
             const {
-              text,           // The original text to extract
-              key,            // Optional: custom key (otherwise generated from text)
-              filePath,       // The Vue file path (relative to project root)
+              text, // The original text to extract
+              key, // Optional: custom key (otherwise generated from text)
+              filePath, // The Vue file path (relative to project root)
             } = body;
 
             if (!text || !filePath) {
-              return sendJson(res, {
-                success: false,
-                error: 'text and filePath are required'
-              }, 400);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: "text and filePath are required",
+                },
+                400,
+              );
             }
 
             const stringKey = key || textToKey(text);
@@ -302,22 +350,32 @@ export function gxpInspectorPlugin() {
 
             // Validate file exists
             if (!fs.existsSync(fullPath)) {
-              return sendJson(res, {
-                success: false,
-                error: `File not found: ${filePath}`
-              }, 404);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: `File not found: ${filePath}`,
+                },
+                404,
+              );
             }
 
             // Read the Vue file
-            let fileContent = fs.readFileSync(fullPath, 'utf-8');
+            let fileContent = fs.readFileSync(fullPath, "utf-8");
 
             // Find and replace the text in the template section
-            const templateMatch = fileContent.match(/<template>([\s\S]*?)<\/template>/);
+            const templateMatch = fileContent.match(
+              /<template>([\s\S]*?)<\/template>/,
+            );
             if (!templateMatch) {
-              return sendJson(res, {
-                success: false,
-                error: 'No template section found in file'
-              }, 400);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: "No template section found in file",
+                },
+                400,
+              );
             }
 
             let template = templateMatch[1];
@@ -330,26 +388,35 @@ export function gxpInspectorPlugin() {
             // We need to find the opening tag that contains this text
 
             // First try: Look for >text< pattern and work backwards to find the opening tag
-            const textPattern = new RegExp(`(<([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>\\s*)${escapeRegex(text)}(\\s*<)`, 'g');
+            const textPattern = new RegExp(
+              `(<([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>\\s*)${escapeRegex(text)}(\\s*<)`,
+              "g",
+            );
 
             if (textPattern.test(template)) {
               textPattern.lastIndex = 0; // Reset regex
-              template = template.replace(textPattern, (match, openTag, tagName, attrs, closeStart) => {
-                // Check if gxp-string attribute already exists
-                if (attrs.includes('gxp-string=')) {
-                  return match; // Already has the attribute
-                }
-                // Add gxp-string attribute to the opening tag
-                const newOpenTag = `<${tagName}${attrs} gxp-string="${stringKey}">`;
-                return `${newOpenTag}${text}${closeStart}`;
-              });
+              template = template.replace(
+                textPattern,
+                (match, openTag, tagName, attrs, closeStart) => {
+                  // Check if gxp-string attribute already exists
+                  if (attrs.includes("gxp-string=")) {
+                    return match; // Already has the attribute
+                  }
+                  // Add gxp-string attribute to the opening tag
+                  const newOpenTag = `<${tagName}${attrs} gxp-string="${stringKey}">`;
+                  return `${newOpenTag}${text}${closeStart}`;
+                },
+              );
               replaced = true;
             }
 
             // If pattern 1 didn't work, try a simpler approach for standalone text
             if (!replaced) {
               // Look for the text and find its parent tag
-              const simpleTextPattern = new RegExp(`(>\\s*)${escapeRegex(text)}(\\s*</)`, 'g');
+              const simpleTextPattern = new RegExp(
+                `(>\\s*)${escapeRegex(text)}(\\s*</)`,
+                "g",
+              );
               if (simpleTextPattern.test(template)) {
                 // We found the text, now we need to add attribute to parent
                 // This is trickier - let's find the text position and work backwards
@@ -357,19 +424,25 @@ export function gxpInspectorPlugin() {
                 if (textIndex !== -1) {
                   // Find the opening tag before this text
                   let tagStart = textIndex;
-                  while (tagStart > 0 && template[tagStart] !== '<') {
+                  while (tagStart > 0 && template[tagStart] !== "<") {
                     tagStart--;
                   }
 
                   // Extract the tag
-                  const tagEnd = template.indexOf('>', tagStart);
+                  const tagEnd = template.indexOf(">", tagStart);
                   if (tagEnd !== -1 && tagEnd <= textIndex) {
                     const openTag = template.substring(tagStart, tagEnd + 1);
                     // Check if it already has gxp-string
-                    if (!openTag.includes('gxp-string=')) {
+                    if (!openTag.includes("gxp-string=")) {
                       // Add the attribute before the closing >
-                      const newOpenTag = openTag.replace(/>$/, ` gxp-string="${stringKey}">`);
-                      template = template.substring(0, tagStart) + newOpenTag + template.substring(tagEnd + 1);
+                      const newOpenTag = openTag.replace(
+                        />$/,
+                        ` gxp-string="${stringKey}">`,
+                      );
+                      template =
+                        template.substring(0, tagStart) +
+                        newOpenTag +
+                        template.substring(tagEnd + 1);
                       replaced = true;
                     }
                   }
@@ -378,26 +451,31 @@ export function gxpInspectorPlugin() {
             }
 
             if (!replaced) {
-              return sendJson(res, {
-                success: false,
-                error: `Could not find "${text}" in template section`,
-                suggestion: 'The text might be part of a more complex expression or already extracted'
-              }, 400);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: `Could not find "${text}" in template section`,
+                  suggestion:
+                    "The text might be part of a more complex expression or already extracted",
+                },
+                400,
+              );
             }
 
             // Update the file content with new template
             fileContent = fileContent.replace(originalTemplate, template);
 
             // Write the updated file
-            fs.writeFileSync(fullPath, fileContent, 'utf-8');
+            fs.writeFileSync(fullPath, fileContent, "utf-8");
 
             // Now update app-manifest.json with the new string
-            const manifestPath = path.join(process.cwd(), 'app-manifest.json');
+            const manifestPath = path.join(process.cwd(), "app-manifest.json");
             let manifest = {};
 
             // Create default manifest structure if file doesn't exist
             if (fs.existsSync(manifestPath)) {
-              manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+              manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
             } else {
               // Create default manifest
               manifest = {
@@ -407,9 +485,9 @@ export function gxpInspectorPlugin() {
                 manifest_version: 3,
                 settings: {},
                 strings: {
-                  default: {}
+                  default: {},
                 },
-                assets: {}
+                assets: {},
               };
             }
 
@@ -420,7 +498,11 @@ export function gxpInspectorPlugin() {
             // Only add if not already exists
             if (!manifest.strings.default[stringKey]) {
               manifest.strings.default[stringKey] = text;
-              fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+              fs.writeFileSync(
+                manifestPath,
+                JSON.stringify(manifest, null, 2),
+                "utf-8",
+              );
             }
 
             return sendJson(res, {
@@ -428,28 +510,32 @@ export function gxpInspectorPlugin() {
               key: stringKey,
               text: text,
               file: filePath,
-              attributeAdded: true
+              attributeAdded: true,
             });
           }
 
           // POST /add-string - Just add a string to app-manifest.json without modifying source
-          if (req.method === 'POST' && endpoint === '/add-string') {
+          if (req.method === "POST" && endpoint === "/add-string") {
             const body = await parseBody(req);
             const { key, value } = body;
 
             if (!key || !value) {
-              return sendJson(res, {
-                success: false,
-                error: 'key and value are required'
-              }, 400);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: "key and value are required",
+                },
+                400,
+              );
             }
 
-            const manifestPath = path.join(process.cwd(), 'app-manifest.json');
+            const manifestPath = path.join(process.cwd(), "app-manifest.json");
             let manifest = {};
 
             // Create default manifest structure if file doesn't exist
             if (fs.existsSync(manifestPath)) {
-              manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+              manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
             } else {
               manifest = {
                 name: "GxToolkit",
@@ -458,9 +544,9 @@ export function gxpInspectorPlugin() {
                 manifest_version: 3,
                 settings: {},
                 strings: {
-                  default: {}
+                  default: {},
                 },
-                assets: {}
+                assets: {},
               };
             }
 
@@ -469,103 +555,129 @@ export function gxpInspectorPlugin() {
             manifest.strings.default = manifest.strings.default || {};
             manifest.strings.default[key] = value;
 
-            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+            fs.writeFileSync(
+              manifestPath,
+              JSON.stringify(manifest, null, 2),
+              "utf-8",
+            );
 
             return sendJson(res, {
               success: true,
               key,
-              value
+              value,
             });
           }
 
           // GET /file - Get file content
-          if (req.method === 'GET' && endpoint === '/file') {
-            const url = new URL(req.url, 'http://localhost');
-            const filePath = url.searchParams.get('path');
+          if (req.method === "GET" && endpoint === "/file") {
+            const url = new URL(req.url, "http://localhost");
+            const filePath = url.searchParams.get("path");
 
             if (!filePath) {
-              return sendJson(res, {
-                success: false,
-                error: 'path parameter required'
-              }, 400);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: "path parameter required",
+                },
+                400,
+              );
             }
 
             const fullPath = path.resolve(process.cwd(), filePath);
 
             if (!fs.existsSync(fullPath)) {
-              return sendJson(res, {
-                success: false,
-                error: 'File not found'
-              }, 404);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: "File not found",
+                },
+                404,
+              );
             }
 
-            const content = fs.readFileSync(fullPath, 'utf-8');
+            const content = fs.readFileSync(fullPath, "utf-8");
 
             return sendJson(res, {
               success: true,
               path: filePath,
-              content
+              content,
             });
           }
 
           // POST /update-file - Direct file update
-          if (req.method === 'POST' && endpoint === '/update-file') {
+          if (req.method === "POST" && endpoint === "/update-file") {
             const body = await parseBody(req);
             const { filePath, content, backup } = body;
 
             if (!filePath || content === undefined) {
-              return sendJson(res, {
-                success: false,
-                error: 'filePath and content are required'
-              }, 400);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: "filePath and content are required",
+                },
+                400,
+              );
             }
 
             const fullPath = path.resolve(process.cwd(), filePath);
 
             // Create backup if requested
             if (backup && fs.existsSync(fullPath)) {
-              const backupPath = fullPath + '.backup';
+              const backupPath = fullPath + ".backup";
               fs.copyFileSync(fullPath, backupPath);
             }
 
-            fs.writeFileSync(fullPath, content, 'utf-8');
+            fs.writeFileSync(fullPath, content, "utf-8");
 
             return sendJson(res, {
               success: true,
-              path: filePath
+              path: filePath,
             });
           }
 
           // POST /analyze-text - Analyze if text content comes from a dynamic expression
-          if (req.method === 'POST' && endpoint === '/analyze-text') {
+          if (req.method === "POST" && endpoint === "/analyze-text") {
             const body = await parseBody(req);
             const { text, filePath } = body;
 
             if (!text || !filePath) {
-              return sendJson(res, {
-                success: false,
-                error: 'text and filePath are required'
-              }, 400);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: "text and filePath are required",
+                },
+                400,
+              );
             }
 
             const fullPath = path.resolve(process.cwd(), filePath);
 
             if (!fs.existsSync(fullPath)) {
-              return sendJson(res, {
-                success: false,
-                error: `File not found: ${filePath}`
-              }, 404);
+              return sendJson(
+                res,
+                {
+                  success: false,
+                  error: `File not found: ${filePath}`,
+                },
+                404,
+              );
             }
 
-            const fileContent = fs.readFileSync(fullPath, 'utf-8');
+            const fileContent = fs.readFileSync(fullPath, "utf-8");
 
             // Extract template section
-            const templateMatch = fileContent.match(/<template>([\s\S]*?)<\/template>/);
+            const templateMatch = fileContent.match(
+              /<template>([\s\S]*?)<\/template>/,
+            );
             if (!templateMatch) {
               return sendJson(res, {
                 success: true,
                 isDynamic: false,
-                reason: 'No template section found'
+                reason: "No template section found",
               });
             }
 
@@ -574,12 +686,15 @@ export function gxpInspectorPlugin() {
               isDynamic: false,
               expressionType: null,
               expression: null,
-              sourceKey: null
+              sourceKey: null,
             };
 
             // Check if the exact text appears as static content (not in an expression)
             // Static text would appear as >text< without {{ }}
-            const staticTextPattern = new RegExp(`>\\s*${escapeRegex(text)}\\s*<`, 'g');
+            const staticTextPattern = new RegExp(
+              `>\\s*${escapeRegex(text)}\\s*<`,
+              "g",
+            );
             const hasStaticText = staticTextPattern.test(template);
 
             // Check for template expressions {{ ... }} that might produce this text
@@ -592,33 +707,41 @@ export function gxpInspectorPlugin() {
               expressions.push({
                 full: match[0],
                 expression: match[1].trim(),
-                index: match.index
+                index: match.index,
               });
             }
 
             // Extract script setup section to find variable definitions
-            const scriptSetupMatch = fileContent.match(/<script\s+setup[^>]*>([\s\S]*?)<\/script>/);
-            const scriptMatch = fileContent.match(/<script(?!\s+setup)[^>]*>([\s\S]*?)<\/script>/);
-            const scriptContent = scriptSetupMatch?.[1] || scriptMatch?.[1] || '';
+            const scriptSetupMatch = fileContent.match(
+              /<script\s+setup[^>]*>([\s\S]*?)<\/script>/,
+            );
+            const scriptMatch = fileContent.match(
+              /<script(?!\s+setup)[^>]*>([\s\S]*?)<\/script>/,
+            );
+            const scriptContent =
+              scriptSetupMatch?.[1] || scriptMatch?.[1] || "";
 
             // Check for getString calls that might produce this text
             // Pattern: gxpStore.getString('key') or getString('key')
-            const getStringPattern = /(?:gxpStore\.)?getString\s*\(\s*['"]([^'"]+)['"]/g;
+            const getStringPattern =
+              /(?:gxpStore\.)?getString\s*\(\s*['"]([^'"]+)['"]/g;
             const getStringCalls = [];
 
             while ((match = getStringPattern.exec(fileContent)) !== null) {
               getStringCalls.push({
                 key: match[1],
-                full: match[0]
+                full: match[0],
               });
             }
 
             // Check manifest for getString keys that match this text
-            const manifestPath = path.join(process.cwd(), 'app-manifest.json');
+            const manifestPath = path.join(process.cwd(), "app-manifest.json");
             let manifestStrings = {};
             if (fs.existsSync(manifestPath)) {
               try {
-                const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+                const manifest = JSON.parse(
+                  fs.readFileSync(manifestPath, "utf-8"),
+                );
                 manifestStrings = manifest.strings?.default || {};
               } catch (e) {
                 // Ignore parse errors
@@ -629,7 +752,7 @@ export function gxpInspectorPlugin() {
             for (const call of getStringCalls) {
               if (manifestStrings[call.key] === text) {
                 result.isDynamic = true;
-                result.expressionType = 'getString';
+                result.expressionType = "getString";
                 result.expression = `getString('${call.key}')`;
                 result.sourceKey = call.key;
                 break;
@@ -644,23 +767,38 @@ export function gxpInspectorPlugin() {
               for (const expr of expressions) {
                 // Check if expression references a variable that might contain this text
                 // Look for the variable in script content
-                const varName = expr.expression.split('.')[0].split('(')[0].trim();
+                const varName = expr.expression
+                  .split(".")[0]
+                  .split("(")[0]
+                  .trim();
 
                 // Check for ref/reactive definitions
-                const refPattern = new RegExp(`(?:const|let|var)\\s+${varName}\\s*=\\s*(?:ref|reactive)\\s*\\(\\s*['"]${escapeRegex(text)}['"]`, 'g');
-                const constPattern = new RegExp(`(?:const|let|var)\\s+${varName}\\s*=\\s*['"]${escapeRegex(text)}['"]`, 'g');
+                const refPattern = new RegExp(
+                  `(?:const|let|var)\\s+${varName}\\s*=\\s*(?:ref|reactive)\\s*\\(\\s*['"]${escapeRegex(text)}['"]`,
+                  "g",
+                );
+                const constPattern = new RegExp(
+                  `(?:const|let|var)\\s+${varName}\\s*=\\s*['"]${escapeRegex(text)}['"]`,
+                  "g",
+                );
 
-                if (refPattern.test(scriptContent) || constPattern.test(scriptContent)) {
+                if (
+                  refPattern.test(scriptContent) ||
+                  constPattern.test(scriptContent)
+                ) {
                   result.isDynamic = true;
-                  result.expressionType = 'variable';
+                  result.expressionType = "variable";
                   result.expression = expr.expression;
                   break;
                 }
 
                 // Check for computed properties or store getters
-                if (expr.expression.includes('Store') || expr.expression.includes('store')) {
+                if (
+                  expr.expression.includes("Store") ||
+                  expr.expression.includes("store")
+                ) {
                   result.isDynamic = true;
-                  result.expressionType = 'store';
+                  result.expressionType = "store";
                   result.expression = expr.expression;
                   break;
                 }
@@ -668,15 +806,19 @@ export function gxpInspectorPlugin() {
             }
 
             // Check for gxp-string attribute with this text - if found, it's managed by directive
-            const gxpStringPattern = new RegExp(`gxp-string=["'][^"']+["'][^>]*>\\s*${escapeRegex(text)}\\s*<`, 'g');
+            const gxpStringPattern = new RegExp(
+              `gxp-string=["'][^"']+["'][^>]*>\\s*${escapeRegex(text)}\\s*<`,
+              "g",
+            );
             if (gxpStringPattern.test(template)) {
               result.isDynamic = true;
-              result.expressionType = 'gxp-directive';
-              result.expression = 'gxp-string directive';
+              result.expressionType = "gxp-directive";
+              result.expression = "gxp-string directive";
             }
 
             // Additional check: look for the text value in props/settings patterns
-            const settingsPattern = /(?:pluginVars|settings|props)\s*\.\s*(\w+)/g;
+            const settingsPattern =
+              /(?:pluginVars|settings|props)\s*\.\s*(\w+)/g;
             while ((match = settingsPattern.exec(template)) !== null) {
               // Check if this setting might produce the text
               result.possibleSettings = result.possibleSettings || [];
@@ -688,16 +830,16 @@ export function gxpInspectorPlugin() {
               ...result,
               hasStaticText,
               expressionCount: expressions.length,
-              getStringCallsCount: getStringCalls.length
+              getStringCallsCount: getStringCalls.length,
             });
           }
 
           // GET /component-files - List Vue component files
-          if (req.method === 'GET' && endpoint === '/component-files') {
-            const srcDir = path.join(process.cwd(), 'src');
+          if (req.method === "GET" && endpoint === "/component-files") {
+            const srcDir = path.join(process.cwd(), "src");
             const files = [];
 
-            function scanDir(dir, relativePath = '') {
+            function scanDir(dir, relativePath = "") {
               if (!fs.existsSync(dir)) return;
 
               const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -705,8 +847,8 @@ export function gxpInspectorPlugin() {
                 const entryPath = path.join(relativePath, entry.name);
                 if (entry.isDirectory()) {
                   scanDir(path.join(dir, entry.name), entryPath);
-                } else if (entry.name.endsWith('.vue')) {
-                  files.push('src/' + entryPath);
+                } else if (entry.name.endsWith(".vue")) {
+                  files.push("src/" + entryPath);
                 }
               }
             }
@@ -715,27 +857,36 @@ export function gxpInspectorPlugin() {
 
             return sendJson(res, {
               success: true,
-              files
+              files,
             });
           }
 
           // Unknown endpoint
-          return sendJson(res, {
-            success: false,
-            error: 'Unknown endpoint'
-          }, 404);
-
+          return sendJson(
+            res,
+            {
+              success: false,
+              error: "Unknown endpoint",
+            },
+            404,
+          );
         } catch (error) {
-          console.error('[GxP Inspector] Error:', error);
-          return sendJson(res, {
-            success: false,
-            error: error.message
-          }, 500);
+          console.error("[GxP Inspector] Error:", error);
+          return sendJson(
+            res,
+            {
+              success: false,
+              error: error.message,
+            },
+            500,
+          );
         }
       });
 
-      console.log('[GxP Inspector] API endpoints available at /__gxp-inspector/*');
-    }
+      console.log(
+        "[GxP Inspector] API endpoints available at /__gxp-inspector/*",
+      );
+    },
   };
 }
 
@@ -743,7 +894,7 @@ export function gxpInspectorPlugin() {
  * Escape special regex characters
  */
 function escapeRegex(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export default gxpInspectorPlugin;

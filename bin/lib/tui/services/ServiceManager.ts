@@ -1,7 +1,7 @@
-import { spawn, ChildProcess, execSync } from 'child_process';
-import { EventEmitter } from 'events';
+import { spawn, ChildProcess, execSync } from "child_process";
+import { EventEmitter } from "events";
 
-export type ServiceStatus = 'stopped' | 'starting' | 'running' | 'error';
+export type ServiceStatus = "stopped" | "starting" | "running" | "error";
 
 export interface ServiceConfig {
   id: string;
@@ -45,15 +45,15 @@ export class ServiceManager extends EventEmitter {
     };
 
     // Handle various exit scenarios
-    process.on('exit', cleanup);
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
-    process.on('SIGHUP', cleanup);
-    process.on('beforeExit', cleanup);
+    process.on("exit", cleanup);
+    process.on("SIGINT", cleanup);
+    process.on("SIGTERM", cleanup);
+    process.on("SIGHUP", cleanup);
+    process.on("beforeExit", cleanup);
 
     // Handle uncaught exceptions
-    process.on('uncaughtException', (err) => {
-      console.error('Uncaught exception:', err);
+    process.on("uncaughtException", (err) => {
+      console.error("Uncaught exception:", err);
       cleanup();
       process.exit(1);
     });
@@ -69,7 +69,7 @@ export class ServiceManager extends EventEmitter {
 
   isRunning(id: string): boolean {
     const service = this.services.get(id);
-    return service?.status === 'running' || service?.status === 'starting';
+    return service?.status === "running" || service?.status === "starting";
   }
 
   start(config: ServiceConfig): ServiceState {
@@ -78,7 +78,10 @@ export class ServiceManager extends EventEmitter {
 
     // Check if already running
     const existing = this.services.get(config.id);
-    if (existing && (existing.status === 'running' || existing.status === 'starting')) {
+    if (
+      existing &&
+      (existing.status === "running" || existing.status === "starting")
+    ) {
       this.addLog(config.id, `[${config.name}] Already running`);
       return existing;
     }
@@ -87,13 +90,13 @@ export class ServiceManager extends EventEmitter {
     const state: ServiceState = {
       id: config.id,
       name: config.name,
-      status: 'starting',
+      status: "starting",
       logs: existing?.logs || [],
     };
     this.services.set(config.id, state);
 
     this.addLog(config.id, `[${config.name}] Starting...`);
-    this.emit('statusChange', config.id, 'starting');
+    this.emit("statusChange", config.id, "starting");
 
     try {
       // Spawn the process with environment variables to prevent stdin access
@@ -105,11 +108,11 @@ export class ServiceManager extends EventEmitter {
         env: {
           ...process.env,
           ...config.env,
-          FORCE_COLOR: '1',
-          CI: 'true',
+          FORCE_COLOR: "1",
+          CI: "true",
         },
         shell: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ["ignore", "pipe", "pipe"],
         detached: true,
       });
 
@@ -117,72 +120,90 @@ export class ServiceManager extends EventEmitter {
       state.pid = proc.pid;
 
       // Handle stdout
-      proc.stdout?.on('data', (data: Buffer) => {
-        const lines = data.toString().split('\n').filter(line => line.trim());
-        lines.forEach(line => {
+      proc.stdout?.on("data", (data: Buffer) => {
+        const lines = data
+          .toString()
+          .split("\n")
+          .filter((line) => line.trim());
+        lines.forEach((line) => {
           this.addLog(config.id, line);
         });
 
         // Detect when service is ready
         const output = data.toString();
-        if (state.status === 'starting') {
+        if (state.status === "starting") {
           // Vite ready indicators
-          if (output.includes('ready in') || output.includes('Local:') || output.includes('VITE')) {
-            state.status = 'running';
-            this.emit('statusChange', config.id, 'running');
+          if (
+            output.includes("ready in") ||
+            output.includes("Local:") ||
+            output.includes("VITE")
+          ) {
+            state.status = "running";
+            this.emit("statusChange", config.id, "running");
           }
           // Socket.IO ready indicator
-          if (output.includes('Socket.IO server') || output.includes('listening on port')) {
-            state.status = 'running';
-            this.emit('statusChange', config.id, 'running');
+          if (
+            output.includes("Socket.IO server") ||
+            output.includes("listening on port")
+          ) {
+            state.status = "running";
+            this.emit("statusChange", config.id, "running");
           }
         }
       });
 
       // Handle stderr
-      proc.stderr?.on('data', (data: Buffer) => {
-        const lines = data.toString().split('\n').filter(line => line.trim());
-        lines.forEach(line => {
+      proc.stderr?.on("data", (data: Buffer) => {
+        const lines = data
+          .toString()
+          .split("\n")
+          .filter((line) => line.trim());
+        lines.forEach((line) => {
           this.addLog(config.id, `[stderr] ${line}`);
         });
       });
 
       // Handle process exit
-      proc.on('close', (code) => {
+      proc.on("close", (code) => {
         state.process = undefined;
         if (code === 0 || code === null) {
-          state.status = 'stopped';
+          state.status = "stopped";
           this.addLog(config.id, `[${config.name}] Stopped`);
         } else {
-          state.status = 'error';
+          state.status = "error";
           state.error = `Process exited with code ${code}`;
-          this.addLog(config.id, `[${config.name}] Error: exited with code ${code}`);
+          this.addLog(
+            config.id,
+            `[${config.name}] Error: exited with code ${code}`,
+          );
         }
-        this.emit('statusChange', config.id, state.status);
+        this.emit("statusChange", config.id, state.status);
       });
 
       // Handle spawn errors
-      proc.on('error', (err) => {
-        state.status = 'error';
+      proc.on("error", (err) => {
+        state.status = "error";
         state.error = err.message;
         state.process = undefined;
         this.addLog(config.id, `[${config.name}] Error: ${err.message}`);
-        this.emit('statusChange', config.id, 'error');
+        this.emit("statusChange", config.id, "error");
       });
 
       // Set running after a short delay if no ready message detected
       setTimeout(() => {
-        if (state.status === 'starting' && state.process) {
-          state.status = 'running';
-          this.emit('statusChange', config.id, 'running');
+        if (state.status === "starting" && state.process) {
+          state.status = "running";
+          this.emit("statusChange", config.id, "running");
         }
       }, 3000);
-
     } catch (err) {
-      state.status = 'error';
-      state.error = err instanceof Error ? err.message : 'Unknown error';
-      this.addLog(config.id, `[${config.name}] Failed to start: ${state.error}`);
-      this.emit('statusChange', config.id, 'error');
+      state.status = "error";
+      state.error = err instanceof Error ? err.message : "Unknown error";
+      this.addLog(
+        config.id,
+        `[${config.name}] Failed to start: ${state.error}`,
+      );
+      this.emit("statusChange", config.id, "error");
     }
 
     return state;
@@ -198,19 +219,19 @@ export class ServiceManager extends EventEmitter {
 
     // Kill the process tree
     try {
-      process.kill(-service.process.pid!, 'SIGTERM');
+      process.kill(-service.process.pid!, "SIGTERM");
     } catch {
       // Process group kill failed, try direct kill
-      service.process.kill('SIGTERM');
+      service.process.kill("SIGTERM");
     }
 
     // Force kill after timeout
     setTimeout(() => {
       if (service.process && !service.process.killed) {
         try {
-          process.kill(-service.process.pid!, 'SIGKILL');
+          process.kill(-service.process.pid!, "SIGKILL");
         } catch {
-          service.process.kill('SIGKILL');
+          service.process.kill("SIGKILL");
         }
       }
     }, 2000);
@@ -230,11 +251,11 @@ export class ServiceManager extends EventEmitter {
       if (service.pid) {
         try {
           // Try to kill the process group first
-          process.kill(-service.pid, 'SIGKILL');
+          process.kill(-service.pid, "SIGKILL");
         } catch {
           // Process group kill failed, try direct kill
           try {
-            process.kill(service.pid, 'SIGKILL');
+            process.kill(service.pid, "SIGKILL");
           } catch {
             // Process may already be dead
           }
@@ -242,7 +263,7 @@ export class ServiceManager extends EventEmitter {
       }
       if (service.process && !service.process.killed) {
         try {
-          service.process.kill('SIGKILL');
+          service.process.kill("SIGKILL");
         } catch {
           // Ignore errors
         }
@@ -252,8 +273,12 @@ export class ServiceManager extends EventEmitter {
     // Also try to kill any orphaned vite/nodemon processes using lsof on common ports
     try {
       // Kill processes on typical dev ports synchronously
-      execSync('lsof -ti :3060 | xargs kill -9 2>/dev/null || true', { stdio: 'ignore' });
-      execSync('lsof -ti :3069 | xargs kill -9 2>/dev/null || true', { stdio: 'ignore' });
+      execSync("lsof -ti :3060 | xargs kill -9 2>/dev/null || true", {
+        stdio: "ignore",
+      });
+      execSync("lsof -ti :3069 | xargs kill -9 2>/dev/null || true", {
+        stdio: "ignore",
+      });
     } catch {
       // Ignore errors - best effort cleanup
     }
@@ -278,22 +303,22 @@ export class ServiceManager extends EventEmitter {
       };
 
       // Listen for process exit once
-      service.process.once('close', onExit);
+      service.process.once("close", onExit);
 
       // Kill the process
       try {
-        process.kill(-service.process.pid!, 'SIGTERM');
+        process.kill(-service.process.pid!, "SIGTERM");
       } catch {
-        service.process.kill('SIGTERM');
+        service.process.kill("SIGTERM");
       }
 
       // Force kill after timeout
       setTimeout(() => {
         if (service.process && !service.process.killed) {
           try {
-            process.kill(-service.process.pid!, 'SIGKILL');
+            process.kill(-service.process.pid!, "SIGKILL");
           } catch {
-            service.process.kill('SIGKILL');
+            service.process.kill("SIGKILL");
           }
         }
       }, 2000);
@@ -313,7 +338,7 @@ export class ServiceManager extends EventEmitter {
     const service = this.services.get(id);
     if (service) {
       service.logs = [];
-      this.emit('logsCleared', id);
+      this.emit("logsCleared", id);
     }
   }
 
@@ -328,7 +353,7 @@ export class ServiceManager extends EventEmitter {
       service.logs = service.logs.slice(-this.maxLogLines);
     }
 
-    this.emit('log', id, message);
+    this.emit("log", id, message);
   }
 }
 

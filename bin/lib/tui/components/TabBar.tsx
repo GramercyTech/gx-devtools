@@ -1,6 +1,6 @@
-import React from 'react';
-import { Box, Text } from 'ink';
-import type { Service } from '../App.js';
+import React from "react";
+import { Box, Text } from "ink";
+import type { Service } from "../App.js";
 
 interface TabBarProps {
   services: Service[];
@@ -8,21 +8,25 @@ interface TabBarProps {
   onTabChange: (index: number) => void;
 }
 
-const STATUS_COLORS: Record<Service['status'], string> = {
-  stopped: 'gray',
-  starting: 'yellow',
-  running: 'green',
-  error: 'red',
+const STATUS_COLORS: Record<Service["status"], string> = {
+  stopped: "gray",
+  starting: "yellow",
+  running: "green",
+  error: "red",
 };
 
-const STATUS_ICONS: Record<Service['status'], string> = {
-  stopped: '○',
-  starting: '◐',
-  running: '●',
-  error: '✖',
+const STATUS_ICONS: Record<Service["status"], string> = {
+  stopped: "○",
+  starting: "◐",
+  running: "●",
+  error: "✖",
 };
 
-export default function TabBar({ services, activeTab, onTabChange }: TabBarProps) {
+export default function TabBar({
+  services,
+  activeTab,
+  onTabChange,
+}: TabBarProps) {
   return (
     <Box paddingX={1} gap={2} justifyContent="space-between">
       <Box gap={2}>
@@ -34,15 +38,13 @@ export default function TabBar({ services, activeTab, onTabChange }: TabBarProps
           return (
             <Box key={service.id}>
               <Text
-                color={isActive ? 'white' : 'gray'}
-                backgroundColor={isActive ? 'blue' : undefined}
+                color={isActive ? "white" : "gray"}
+                backgroundColor={isActive ? "blue" : undefined}
                 bold={isActive}
               >
-                {' '}
-                <Text color={statusColor}>{statusIcon}</Text>
-                {' '}
-                {service.name}
-                {' '}
+                {" "}
+                <Text color={statusColor}>{statusIcon}</Text>{" "}
+                {service.name}{" "}
               </Text>
             </Box>
           );

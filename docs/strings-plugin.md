@@ -12,10 +12,10 @@ The GxP Strings Plugin provides Vue directives for automatically replacing text 
 
 The plugin provides two main directives:
 
-| Directive | Purpose | Default Source |
-|-----------|---------|----------------|
-| `gxp-string` | Replace text content | `stringsList` |
-| `gxp-src` | Replace `src` attribute | `assetList` |
+| Directive    | Purpose                 | Default Source |
+| ------------ | ----------------------- | -------------- |
+| `gxp-string` | Replace text content    | `stringsList`  |
+| `gxp-src`    | Replace `src` attribute | `assetList`    |
 
 Both directives support modifiers to pull from different store sections.
 
@@ -25,8 +25,8 @@ The plugin is automatically included when you use the GxP Toolkit. It's register
 
 ```javascript
 // main.js (from runtime)
-import { createGxpStringsPlugin } from '@gx-runtime/gxpStringsPlugin';
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { createGxpStringsPlugin } from "@gx-runtime/gxpStringsPlugin";
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
 app.use(createGxpStringsPlugin(store));
@@ -44,6 +44,7 @@ Replace element text with a value from the store:
 ```
 
 **How it works:**
+
 1. The original text "Default Welcome Text" is stored as the fallback
 2. The plugin looks up `stringsList.welcome_title` in the store
 3. If found, the text is replaced; otherwise, the fallback is shown
@@ -55,10 +56,11 @@ Replace image `src` with a value from the store:
 
 ```html
 <!-- Default: pulls from assetList -->
-<img gxp-src="hero_image" src="/dev-assets/placeholder.jpg" alt="Hero">
+<img gxp-src="hero_image" src="/dev-assets/placeholder.jpg" alt="Hero" />
 ```
 
 **How it works:**
+
 1. The original `src` is stored as the fallback
 2. The plugin looks up `assetList.hero_image` in the store
 3. If found, the `src` is replaced; otherwise, the fallback is used
@@ -125,8 +127,8 @@ For image and media URLs. Default for `gxp-src`:
 ```
 
 ```html
-<img gxp-src="logo" src="/placeholder.png" alt="Logo">
-<img gxp-src="hero_image" src="/placeholder.jpg" alt="Hero">
+<img gxp-src="logo" src="/placeholder.png" alt="Logo" />
+<img gxp-src="hero_image" src="/placeholder.jpg" alt="Hero" />
 ```
 
 For text output of asset URLs, use `gxp-assets` modifier:
@@ -152,7 +154,7 @@ For dynamic runtime values. Use the `gxp-state` modifier:
 ```html
 <span gxp-string="current_step" gxp-state>1</span>
 <span gxp-string="current_status" gxp-state>loading</span>
-<img gxp-src="dynamic_badge" gxp-state src="/placeholder.jpg">
+<img gxp-src="dynamic_badge" gxp-state src="/placeholder.jpg" />
 ```
 
 ## Directive Reference
@@ -161,20 +163,20 @@ For dynamic runtime values. Use the `gxp-state` modifier:
 
 Replace text content of an element.
 
-| Modifier | Source | Example |
-|----------|--------|---------|
-| (none) | `stringsList` | `<h1 gxp-string="title">Default</h1>` |
-| `gxp-settings` | `pluginVars` | `<span gxp-string="company" gxp-settings>Acme</span>` |
-| `gxp-assets` | `assetList` | `<span gxp-string="logo_url" gxp-assets>/logo.png</span>` |
-| `gxp-state` | `triggerState` | `<span gxp-string="status" gxp-state>idle</span>` |
+| Modifier       | Source         | Example                                                   |
+| -------------- | -------------- | --------------------------------------------------------- |
+| (none)         | `stringsList`  | `<h1 gxp-string="title">Default</h1>`                     |
+| `gxp-settings` | `pluginVars`   | `<span gxp-string="company" gxp-settings>Acme</span>`     |
+| `gxp-assets`   | `assetList`    | `<span gxp-string="logo_url" gxp-assets>/logo.png</span>` |
+| `gxp-state`    | `triggerState` | `<span gxp-string="status" gxp-state>idle</span>`         |
 
 ### gxp-src
 
 Replace `src` attribute of an element (typically `<img>`).
 
-| Modifier | Source | Example |
-|----------|--------|---------|
-| (none) | `assetList` | `<img gxp-src="hero" src="/fallback.jpg">` |
+| Modifier    | Source         | Example                                                   |
+| ----------- | -------------- | --------------------------------------------------------- |
+| (none)      | `assetList`    | `<img gxp-src="hero" src="/fallback.jpg">`                |
 | `gxp-state` | `triggerState` | `<img gxp-src="badge_url" gxp-state src="/fallback.jpg">` |
 
 ## Dynamic Updates
@@ -187,21 +189,22 @@ The plugin automatically watches for store changes and updates elements reactive
 const store = useGxpStore();
 
 // Update a string - all gxp-string="welcome_title" elements update
-store.updateString('welcome_title', 'Welcome Back!');
+store.updateString("welcome_title", "Welcome Back!");
 
 // Update a setting - all gxp-string="company" gxp-settings elements update
-store.updateSetting('company_name', 'NewTech 2024');
+store.updateSetting("company_name", "NewTech 2024");
 
 // Update an asset - all gxp-src="logo" elements update
-store.updateAsset('logo', '/new-logo.png');
+store.updateAsset("logo", "/new-logo.png");
 
 // Update state - all gxp-state elements for this key update
-store.updateState('current_step', 2);
+store.updateState("current_step", 2);
 ```
 
 ### From Dev Tools
 
 Use the in-browser Dev Tools (`Ctrl+Shift+D`) to:
+
 1. Open the **Store Inspector** tab
 2. Find the key you want to change
 3. Double-click to edit the value
@@ -215,7 +218,7 @@ Edit `app-manifest.json` during development - changes hot-reload automatically:
 {
   "strings": {
     "default": {
-      "welcome_title": "New Welcome Message"  // Change this
+      "welcome_title": "New Welcome Message" // Change this
     }
   }
 }
@@ -231,14 +234,15 @@ The plugin maintains the original content as a fallback:
 <h1 gxp-string="welcome_title">This is the fallback</h1>
 ```
 
-| Scenario | Displayed Text |
-|----------|---------------|
-| `stringsList.welcome_title` exists | Value from store |
-| `stringsList.welcome_title` is empty string | Empty string |
-| `stringsList.welcome_title` is undefined | "This is the fallback" |
-| Manifest hasn't loaded yet | "This is the fallback" |
+| Scenario                                    | Displayed Text         |
+| ------------------------------------------- | ---------------------- |
+| `stringsList.welcome_title` exists          | Value from store       |
+| `stringsList.welcome_title` is empty string | Empty string           |
+| `stringsList.welcome_title` is undefined    | "This is the fallback" |
+| Manifest hasn't loaded yet                  | "This is the fallback" |
 
 This ensures:
+
 - No broken UI during initial load
 - Graceful degradation if store keys are missing
 - Clear default values visible in source code
@@ -292,7 +296,7 @@ Combine with Vue's reactive bindings:
   gxp-src="avatar"
   :alt="store.getString('avatar_alt', 'User Avatar')"
   class="user-avatar"
->
+/>
 ```
 
 ## Programmatic Processing
@@ -300,13 +304,16 @@ Combine with Vue's reactive bindings:
 For advanced use cases, process elements manually:
 
 ```javascript
-import { processGxpStrings, processGxpSrcs } from '@gx-runtime/gxpStringsPlugin';
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import {
+  processGxpStrings,
+  processGxpSrcs,
+} from "@gx-runtime/gxpStringsPlugin";
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
 
 // Process all gxp-string elements in a container
-const container = document.querySelector('.my-container');
+const container = document.querySelector(".my-container");
 processGxpStrings(container, store);
 
 // Process all gxp-src elements
@@ -316,7 +323,7 @@ processGxpSrcs(container, store);
 ### Utility Functions
 
 ```javascript
-import { getGxpStringKey, hasGxpString } from '@gx-runtime/gxpStringsPlugin';
+import { getGxpStringKey, hasGxpString } from "@gx-runtime/gxpStringsPlugin";
 
 // Check if element has gxp-string
 if (hasGxpString(element)) {
@@ -346,6 +353,7 @@ Each element with a directive creates a Vue watcher. For large lists, consider:
 ### Initial Load
 
 The plugin handles async manifest loading gracefully:
+
 1. Elements show fallback values immediately
 2. When manifest loads, all elements update
 3. No flash of incorrect content
@@ -397,10 +405,10 @@ In your manifest:
 
 ```html
 <!-- Good: fallback to dev asset -->
-<img gxp-src="hero" src="/dev-assets/images/placeholder.jpg" alt="Hero">
+<img gxp-src="hero" src="/dev-assets/images/placeholder.jpg" alt="Hero" />
 
 <!-- Avoid: no fallback -->
-<img gxp-src="hero" alt="Hero">
+<img gxp-src="hero" alt="Hero" />
 ```
 
 ### 5. Scan for Hardcoded Strings

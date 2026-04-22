@@ -58,8 +58,8 @@
     "@faker-js/faker": "^9.9.0",
     "@fal-works/esbuild-plugin-global-externals": "^2.1.2",
     "@gramercytech/gx-componentkit": "^1.0.23",
-    "@vitejs/plugin-vue": "^5.2.4",
-    "archiver": "^7.0.1",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "adm-zip": "^0.5.17",
     "chrome-launcher": "^1.2.1",
     "concurrently": "^9.2.1",
     "cors": "^2.8.6",
@@ -67,31 +67,44 @@
     "express": "^4.22.1",
     "ink": "^5.2.1",
     "ink-text-input": "^6.0.0",
-    "json-schema-faker": "^0.5.9",
+    "json-schema-faker": "^0.6.1",
     "mkcert": "^3.2.0",
     "nodemon": "^3.1.11",
     "open": "^10.2.0",
     "pinia": "^3.0.4",
+    "prettier": "3.8.3",
     "react": "^18.3.1",
-    "rollup-plugin-external-globals": "^0.12.1",
-    "shelljs": "^0.8.5",
+    "rollup-plugin-external-globals": "^0.13.0",
+    "shelljs": "^0.10.0",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "vite": "^5.4.21",
+    "vite": "^8.0.9",
     "vue": "^3.5.27",
-    "web-ext": "^8.10.0",
-    "yargs": "^17.7.2",
-    "prettier": "3.8.3"
+    "web-ext": "^10.1.0",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@eslint/css": "^1.1.0",
+    "@eslint/js": "^10.0.1",
+    "@eslint/json": "^1.2.0",
+    "@eslint/markdown": "^8.0.1",
     "@types/react": "^18.3.28",
-    "@vitest/coverage-v8": "^2.1.9",
-    "prettier": "3.8.3",
+    "@vitest/coverage-v8": "^4.1.5",
+    "eslint": "^10.2.1",
+    "eslint-plugin-vue": "^10.9.0",
+    "globals": "^17.5.0",
     "memfs": "^4.56.10",
     "mkcert": "^3.2.0",
     "nodemon": "^3.1.7",
+    "prettier": "3.8.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vitest": "^2.1.9"
+    "typescript-eslint": "^8.59.0",
+    "vitest": "^4.1.5"
+  },
+  "overrides": {
+    "cheerio": {
+      "encoding-sniffer": "1.0.2"
+    }
   }
 }

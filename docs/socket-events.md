@@ -44,13 +44,13 @@ gxdev socket send --event AiSessionMessageCreated
 ### Listen in Your Plugin
 
 ```javascript
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
 
 // Listen for events on the primary socket
-store.listenSocket('primary', 'AiSessionMessageCreated', (data) => {
-  console.log('Message received:', data);
+store.listenSocket("primary", "AiSessionMessageCreated", (data) => {
+  console.log("Message received:", data);
 });
 ```
 
@@ -78,12 +78,12 @@ node server.js  # (if published to project)
 
 Environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SOCKET_IO_PORT` | `3069` | Socket server port |
-| `USE_HTTPS` | `true` | Use secure WebSocket |
-| `CERT_PATH` | | SSL certificate path |
-| `KEY_PATH` | | SSL private key path |
+| Variable         | Default | Description          |
+| ---------------- | ------- | -------------------- |
+| `SOCKET_IO_PORT` | `3069`  | Socket server port   |
+| `USE_HTTPS`      | `true`  | Use secure WebSocket |
+| `CERT_PATH`      |         | SSL certificate path |
+| `KEY_PATH`       |         | SSL private key path |
 
 ### Server Features
 
@@ -120,20 +120,22 @@ socket-events/
 }
 ```
 
-| Field | Description |
-|-------|-------------|
-| `event` | Event name (must match what your code listens for) |
-| `channel` | Broadcasting channel (follows pattern) |
-| `data` | Event payload (any JSON structure) |
+| Field     | Description                                        |
+| --------- | -------------------------------------------------- |
+| `event`   | Event name (must match what your code listens for) |
+| `channel` | Broadcasting channel (follows pattern)             |
+| `data`    | Event payload (any JSON structure)                 |
 
 ### Channel Format
 
 Channels follow the pattern:
+
 ```
 private.{Model}.{identifier}
 ```
 
 Examples:
+
 - `private.AiInterface.ai_interface_background_remover`
 - `private.SocialStream.social_stream_main`
 - `private.CheckIn.checkin_kiosk_1`
@@ -218,7 +220,7 @@ gxdev socket send --event AttendeeCheckedIn
 The GxP store automatically connects to the Socket.IO server:
 
 ```javascript
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 
 const store = useGxpStore();
 ```
@@ -229,8 +231,8 @@ const store = useGxpStore();
 
 ```javascript
 // Listen on primary socket
-store.listenSocket('primary', 'EventName', (data) => {
-  console.log('Event received:', data);
+store.listenSocket("primary", "EventName", (data) => {
+  console.log("Event received:", data);
 });
 ```
 
@@ -240,9 +242,9 @@ For events tied to specific dependencies:
 
 ```javascript
 // Listen for dependency-specific events
-store.useSocketListener('badge-printer', 'print-complete', (result) => {
+store.useSocketListener("badge-printer", "print-complete", (result) => {
   if (result.success) {
-    console.log('Badge printed!');
+    console.log("Badge printed!");
   }
 });
 ```
@@ -253,10 +255,10 @@ Send events from your plugin:
 
 ```javascript
 // Emit on primary socket
-store.emitSocket('primary', 'user-action', {
-  action: 'button_click',
-  button_id: 'checkin-submit',
-  timestamp: new Date().toISOString()
+store.emitSocket("primary", "user-action", {
+  action: "button_click",
+  button_id: "checkin-submit",
+  timestamp: new Date().toISOString(),
 });
 ```
 
@@ -267,8 +269,8 @@ Listen for state change broadcasts:
 ```javascript
 const socket = store.sockets.primary;
 socket.listenForStateChange((newState) => {
-  console.log('State changed:', newState);
-  store.updateState('remote_value', newState.value);
+  console.log("State changed:", newState);
+  store.updateState("remote_value", newState.value);
 });
 ```
 
@@ -296,12 +298,12 @@ The store automatically sets up listeners:
 
 ```javascript
 // Listeners are created automatically
-store.sockets['badge_printer_1'].created.listen((data) => {
-  console.log('Print job created:', data);
+store.sockets["badge_printer_1"].created.listen((data) => {
+  console.log("Print job created:", data);
 });
 
-store.sockets['badge_printer_1'].completed.listen((data) => {
-  console.log('Print job done:', data);
+store.sockets["badge_printer_1"].completed.listen((data) => {
+  console.log("Print job done:", data);
 });
 ```
 
@@ -314,6 +316,7 @@ gxdev socket list
 ```
 
 Output:
+
 ```
 📡 Available socket events:
 
@@ -341,6 +344,7 @@ gxdev socket send --event AttendeeCheckedIn --identifier kiosk_2
 ```
 
 The `--identifier` flag updates the channel:
+
 - Original: `private.CheckIn.checkin_kiosk_lobby`
 - With `--identifier kiosk_2`: `private.CheckIn.kiosk_2`
 
@@ -375,6 +379,7 @@ The Dev Tools (`Ctrl+Shift+D`) include a Socket Simulator:
 4. Click **Send** to emit the event
 
 The simulator:
+
 - Shows all available events
 - Allows payload editing
 - Shows send confirmation
@@ -391,6 +396,7 @@ gxdev dev --with-socket --with-mock
 ```
 
 The mock API provides:
+
 - `/mock-api/*` endpoints
 - Automatic response generation
 - Request logging
@@ -402,17 +408,17 @@ The mock API provides:
 ```javascript
 // Setup: Listen for check-in events
 onMounted(() => {
-  store.listenSocket('primary', 'AttendeeCheckedIn', handleCheckIn);
+  store.listenSocket("primary", "AttendeeCheckedIn", handleCheckIn);
 });
 
 function handleCheckIn(data) {
   // Update UI with check-in data
-  store.updateState('last_checkin', data);
+  store.updateState("last_checkin", data);
 
   // Trigger badge print
-  store.emitSocket('primary', 'PrintBadge', {
+  store.emitSocket("primary", "PrintBadge", {
     attendee_id: data.attendee_id,
-    badge_number: data.badge_number
+    badge_number: data.badge_number,
   });
 }
 ```
@@ -424,13 +430,13 @@ const posts = ref([]);
 
 onMounted(() => {
   // Listen for new posts
-  store.listenSocket('primary', 'SocialStreamPostCreated', (post) => {
+  store.listenSocket("primary", "SocialStreamPostCreated", (post) => {
     posts.value.unshift(post);
   });
 
   // Listen for post updates (likes, shares)
-  store.listenSocket('primary', 'SocialStreamPostUpdated', (update) => {
-    const idx = posts.value.findIndex(p => p.id === update.id);
+  store.listenSocket("primary", "SocialStreamPostUpdated", (update) => {
+    const idx = posts.value.findIndex((p) => p.id === update.id);
     if (idx >= 0) {
       posts.value[idx] = { ...posts.value[idx], ...update };
     }
@@ -448,11 +454,11 @@ async function startAiProcessing(imageUrl) {
   processing.value = true;
 
   // Request processing
-  await store.apiPost('/ai/process', { image: imageUrl });
+  await store.apiPost("/ai/process", { image: imageUrl });
 
   // Listen for completion
-  store.listenSocket('primary', 'AiSessionMessageCreated', (data) => {
-    if (data.type === 'completion') {
+  store.listenSocket("primary", "AiSessionMessageCreated", (data) => {
+    if (data.type === "completion") {
       processing.value = false;
       result.value = data;
     }
@@ -469,6 +475,7 @@ Error: Cannot connect to Socket.IO server
 ```
 
 Solutions:
+
 1. Ensure server is running (`gxdev dev --with-socket`)
 2. Check port isn't blocked (`SOCKET_IO_PORT`)
 3. Verify HTTPS certificates are valid
@@ -486,6 +493,7 @@ Error: Event file not found: MyEvent.json
 ```
 
 Solutions:
+
 1. Check file exists in `socket-events/`
 2. Verify filename matches event name
 3. Check JSON syntax is valid
@@ -493,6 +501,7 @@ Solutions:
 ### CORS errors
 
 If you see CORS errors:
+
 1. Ensure dev server and socket server use same protocol (both HTTP or both HTTPS)
 2. Check socket server port is correct in environment
 
@@ -505,6 +514,7 @@ gxdev publish server.js
 ```
 
 Then modify `server.js` in your project root to:
+
 - Add custom endpoints
 - Modify CORS settings
 - Add authentication
@@ -512,7 +522,7 @@ Then modify `server.js` in your project root to:
 
 ```javascript
 // Example: Add custom endpoint
-app.post('/custom-emit', (req, res) => {
+app.post("/custom-emit", (req, res) => {
   const { event, data } = req.body;
   io.emit(event, data);
   res.json({ success: true });

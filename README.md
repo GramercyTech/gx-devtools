@@ -52,6 +52,7 @@ npm run dev-http
 ```
 
 When run in a directory with an existing `package.json` (no name argument), `gxdev init` will:
+
 - Add missing required dependencies and devDependencies
 - Update mismatched dependency versions
 - Add missing npm scripts (`dev`, `build`, `dev-http`, etc.)
@@ -62,26 +63,26 @@ It will **not** overwrite your source files (`src/`, `theme-layouts/`, etc.).
 
 ## CLI Commands
 
-| Command | Description |
-|---------|-------------|
-| `gxdev` | Launch interactive TUI |
-| `gxdev init [name]` | Create a new project or update an existing one |
-| `gxdev dev` | Start development server (HTTPS + TUI) |
-| `gxdev dev --no-https` | Start with HTTP only |
-| `gxdev dev --with-socket` | Start with Socket.IO server |
-| `gxdev dev --chrome` | Start and launch Chrome with extension |
-| `gxdev dev --firefox` | Start and launch Firefox with extension |
-| `gxdev build` | Build plugin for production |
-| `gxdev setup-ssl` | Generate SSL certificates for HTTPS development |
-| `gxdev publish <file>` | Copy runtime files to your project for customization |
+| Command                    | Description                                            |
+| -------------------------- | ------------------------------------------------------ |
+| `gxdev`                    | Launch interactive TUI                                 |
+| `gxdev init [name]`        | Create a new project or update an existing one         |
+| `gxdev dev`                | Start development server (HTTPS + TUI)                 |
+| `gxdev dev --no-https`     | Start with HTTP only                                   |
+| `gxdev dev --with-socket`  | Start with Socket.IO server                            |
+| `gxdev dev --chrome`       | Start and launch Chrome with extension                 |
+| `gxdev dev --firefox`      | Start and launch Firefox with extension                |
+| `gxdev build`              | Build plugin for production                            |
+| `gxdev setup-ssl`          | Generate SSL certificates for HTTPS development        |
+| `gxdev publish <file>`     | Copy runtime files to your project for customization   |
 | `gxdev datastore <action>` | Manage GxP datastore (list, add, scan-strings, config) |
-| `gxdev socket <action>` | Simulate socket events (list, send) |
-| `gxdev assets <action>` | Manage development assets (list, init, generate) |
-| `gxdev add-dependency` | Add API dependency via interactive wizard |
-| `gxdev extract-config` | Extract GxP config from source files |
-| `gxdev ext:chrome` | Launch Chrome with browser extension |
-| `gxdev ext:firefox` | Launch Firefox with browser extension |
-| `gxdev ext:build` | Build browser extensions for distribution |
+| `gxdev socket <action>`    | Simulate socket events (list, send)                    |
+| `gxdev assets <action>`    | Manage development assets (list, init, generate)       |
+| `gxdev add-dependency`     | Add API dependency via interactive wizard              |
+| `gxdev extract-config`     | Extract GxP config from source files                   |
+| `gxdev ext:chrome`         | Launch Chrome with browser extension                   |
+| `gxdev ext:firefox`        | Launch Firefox with browser extension                  |
+| `gxdev ext:build`          | Build browser extensions for distribution              |
 
 ## Features
 
@@ -121,18 +122,18 @@ The dev server automatically serves `index.html` and `main.js` from the toolkit 
 
 Key variables (set in `.env`):
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NODE_PORT` | `3060` | Development server port |
-| `SOCKET_IO_PORT` | `3061` | Socket.IO server port |
-| `COMPONENT_PATH` | `./src/Plugin.vue` | Main component path |
-| `USE_HTTPS` | `true` | Enable HTTPS |
-| `CERT_PATH` | | SSL certificate path |
-| `KEY_PATH` | | SSL private key path |
-| `USE_LOCAL_INDEX` | | Set to `true` to use a local `index.html` instead of the runtime version |
-| `USE_LOCAL_MAIN` | | Set to `true` to use a local `main.js` instead of the runtime version |
-| `SOCKET_IO_ENABLED` | `false` | Auto-start Socket.IO |
-| `API_ENV` | `mock` | API environment (mock, local, development, staging, production) |
+| Variable            | Default            | Description                                                              |
+| ------------------- | ------------------ | ------------------------------------------------------------------------ |
+| `NODE_PORT`         | `3060`             | Development server port                                                  |
+| `SOCKET_IO_PORT`    | `3061`             | Socket.IO server port                                                    |
+| `COMPONENT_PATH`    | `./src/Plugin.vue` | Main component path                                                      |
+| `USE_HTTPS`         | `true`             | Enable HTTPS                                                             |
+| `CERT_PATH`         |                    | SSL certificate path                                                     |
+| `KEY_PATH`          |                    | SSL private key path                                                     |
+| `USE_LOCAL_INDEX`   |                    | Set to `true` to use a local `index.html` instead of the runtime version |
+| `USE_LOCAL_MAIN`    |                    | Set to `true` to use a local `main.js` instead of the runtime version    |
+| `SOCKET_IO_ENABLED` | `false`            | Auto-start Socket.IO                                                     |
+| `API_ENV`           | `mock`             | API environment (mock, local, development, staging, production)          |
 
 ## Runtime vs Template
 

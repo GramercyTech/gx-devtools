@@ -24,6 +24,7 @@ View and edit all store state in real-time:
 - **triggerState** - Runtime state
 
 **Interactive features:**
+
 - Hover over keys to highlight matching elements on the page
 - Double-click values to edit them in real-time
 - Changes are reflected immediately in your plugin
@@ -63,23 +64,23 @@ Access dev tools programmatically from the browser console:
 
 ```javascript
 // Open/close dev tools
-window.gxDevTools.open()
-window.gxDevTools.close()
-window.gxDevTools.toggle()
+window.gxDevTools.open();
+window.gxDevTools.close();
+window.gxDevTools.toggle();
 
 // Access the store directly
-const store = window.gxDevTools.store()
-console.log(store.stringsList)
-store.updateState('test_value', 123)
+const store = window.gxDevTools.store();
+console.log(store.stringsList);
+store.updateState("test_value", 123);
 
 // Change layout
-window.gxDevTools.setLayout('private')
-window.gxDevTools.setLayout('public')
-window.gxDevTools.setLayout('system')
+window.gxDevTools.setLayout("private");
+window.gxDevTools.setLayout("public");
+window.gxDevTools.setLayout("system");
 
 // Get current layout
-const layout = window.gxDevTools.getLayout()
-console.log(layout) // 'private'
+const layout = window.gxDevTools.getLayout();
+console.log(layout); // 'private'
 ```
 
 ## Browser Extensions
@@ -134,6 +135,7 @@ ComponentName::element::gxp-string-key
 ```
 
 Examples:
+
 - `DemoPage::h1::welcome_title`
 - `CheckInForm::button::btn_submit`
 - `Header::img::logo`
@@ -161,11 +163,13 @@ View Vue component details:
 After modifying extension code in `browser-extensions/`:
 
 **Chrome:**
+
 1. Go to `chrome://extensions`
 2. Find "GxP Inspector"
 3. Click the refresh icon
 
 **Firefox:**
+
 1. Go to `about:debugging`
 2. Find "GxP Inspector"
 3. Click "Reload"
@@ -252,9 +256,9 @@ Use the store's console helpers:
 const store = useGxpStore();
 
 // Log current state
-console.log('Settings:', store.pluginVars);
-console.log('Strings:', store.stringsList);
-console.log('State:', store.triggerState);
+console.log("Settings:", store.pluginVars);
+console.log("Strings:", store.stringsList);
+console.log("State:", store.triggerState);
 ```
 
 ### 4. Network Tab

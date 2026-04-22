@@ -82,6 +82,7 @@ Projects use these aliases (defined in `runtime/vite.config.js`):
 ### PortalContainer.vue
 
 The platform emulator that wraps user plugins during development. It:
+
 - Provides mock router, theme, and navigation
 - Injects props that the real platform provides
 - Includes the dev tools modal (Ctrl+Shift+D)
@@ -90,22 +91,26 @@ The platform emulator that wraps user plugins during development. It:
 ## Setting Up for Development
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/GramercyTech/gx-devtools.git
    cd gx-devtools
    ```
 
 2. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 3. **Build the TUI** (required for the CLI to work):
+
    ```bash
    npm run build:tui
    ```
 
 4. **Link for local testing**:
+
    ```bash
    npm link
    ```
@@ -137,10 +142,11 @@ npm run ext:build
 ### Adding a New CLI Command
 
 1. Create a new file in `bin/lib/commands/`:
+
    ```javascript
    // bin/lib/commands/mycommand.js
    function myCommand(argv) {
-       console.log("My command running!");
+     console.log("My command running!");
    }
    module.exports = { myCommand };
    ```
@@ -196,6 +202,7 @@ npm run build
 ## Dependencies
 
 The devtools uses:
+
 - **Vite** - Build tool and dev server
 - **Vue 3** - UI framework
 - **Pinia** - State management

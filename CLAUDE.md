@@ -38,6 +38,7 @@ gxdev init
 ```
 
 When run in a directory with an existing `package.json` (and no project name argument), `gxdev init` will:
+
 - Add missing required dependencies and devDependencies to `package.json`
 - Update mismatched dependency versions to the toolkit's expected versions
 - Add missing npm scripts (`dev`, `build`, `dev-http`, etc.)
@@ -47,15 +48,18 @@ When run in a directory with an existing `package.json` (and no project name arg
 It will **not** overwrite your source files (`src/Plugin.vue`, `src/DemoPage.vue`, `theme-layouts/`, etc.).
 
 By default, the dev server uses `index.html` and `main.js` from the toolkit runtime. If your project needs custom versions of these files, set the env vars in `.env`:
+
 ```env
 USE_LOCAL_INDEX=true
 USE_LOCAL_MAIN=true
 ```
+
 Both the env var and the corresponding local file must exist for the override to take effect.
 
 ## Features
 
 GxP Dev Devtools provides:
+
 - CLI tool (`gxdev`) for project scaffolding and development
 - Interactive TUI (Terminal UI) for managing dev services
 - Vite-based development server with HTTPS support
@@ -111,6 +115,7 @@ gxdev ext:build           # Build extensions for distribution
 ## Architecture
 
 ### Directory Structure
+
 ```
 gx-devtools/
 ├── bin/                    # CLI tool
@@ -165,18 +170,23 @@ gx-devtools/
 ### Key Concepts
 
 **Runtime vs Template:**
+
 - `/runtime/` - Files that stay in node_modules and are imported at runtime. Includes `index.html` and `main.js` which are served by the Vite dev server by default (no local copy needed). Set `USE_LOCAL_INDEX`/`USE_LOCAL_MAIN` env vars to override with local copies.
 - `/template/` - Files copied to user projects during `gxdev init` (new projects get all files; existing projects only get bundle/config files)
 
 **Plugin Architecture:**
+
 1. **PortalContainer.vue** (runtime) - Platform emulator with mock router, theme, data
 2. **Plugin.vue** (template) - User's app entry point, compiled for production
 3. Props injected by platform: `pluginVars`, `dependencyList`, `assetUrls`, `stringsList`, `permissionFlags`, `theme`, `router`
 
-**Vite Aliases (in template/vite.config.js):**
+**Vite Aliases (defined in `runtime/vite.config.js`):**
+
 - `@` → Project's `src/` directory
 - `@layouts` → Project's `theme-layouts/` directory (falls back to `runtime/fallback-layouts/` if missing)
 - `@gx-runtime` → Devtools's `runtime/` directory (from node_modules)
+
+**Extending the Vite config:** Projects no longer ship their own `vite.config.js`. To customize aliases, add plugins, or expose extra `define` keys, create `vite.extend.js` (or `vite.extend.mjs`) at the project root. The runtime config deep-merges it in via `mergeConfig` — arrays are concatenated, objects are merged key-by-key, primitives overwrite. Export either an object or a function `({ mode, command, env, runtimeConfig }) => config`.
 
 ## App Manifest Configuration
 
@@ -241,6 +251,7 @@ The devtools provides Vue directives for reactive string and asset replacement f
 ```
 
 ### How It Works
+
 1. Elements store their original content as the default fallback
 2. The plugin looks up the key in the appropriate store section
 3. Content/attribute is replaced if a value exists
@@ -252,6 +263,7 @@ The devtools provides Vue directives for reactive string and asset replacement f
 The Pinia store provides reactive state management:
 
 ### Store Sections
+
 - `pluginVars` - Plugin settings/configuration
 - `stringsList` - Translatable strings
 - `assetList` - Asset URLs
@@ -260,42 +272,47 @@ The Pinia store provides reactive state management:
 - `permissionFlags` - Feature permissions
 
 ### Getter Methods
+
 ```javascript
 const store = useGxpStore();
-store.getString('welcome_title', 'Default');
-store.getSetting('primary_color', '#000');
-store.getAsset('hero_image', '/fallback.jpg');
-store.getState('is_active', false);
-store.hasPermission('admin');
+store.getString("welcome_title", "Default");
+store.getSetting("primary_color", "#000");
+store.getAsset("hero_image", "/fallback.jpg");
+store.getState("is_active", false);
+store.hasPermission("admin");
 ```
 
 ### Update Methods (for programmatic updates)
+
 ```javascript
-store.updateString('welcome_title', 'New Title');
-store.updateSetting('primary_color', '#FF0000');
-store.updateAsset('hero_image', '/new-image.jpg');
-store.updateState('is_active', true);
-store.addDevAsset('logo', 'logo.png'); // Adds with dev server URL prefix
+store.updateString("welcome_title", "New Title");
+store.updateSetting("primary_color", "#FF0000");
+store.updateAsset("hero_image", "/new-image.jpg");
+store.updateState("is_active", true);
+store.addDevAsset("logo", "logo.png"); // Adds with dev server URL prefix
 ```
 
 ### API Client
+
 ```javascript
-await store.apiGet('/endpoint', { params });
-await store.apiPost('/endpoint', data);
-await store.apiPut('/endpoint', data);
-await store.apiDelete('/endpoint');
+await store.apiGet("/endpoint", { params });
+await store.apiPost("/endpoint", data);
+await store.apiPut("/endpoint", data);
+await store.apiDelete("/endpoint");
 ```
 
 ### Socket Methods
+
 ```javascript
-store.emitSocket('primary', 'event-name', data);
-store.listenSocket('primary', 'event-name', callback);
-store.useSocketListener('dependency-id', 'updated', callback);
+store.emitSocket("primary", "event-name", data);
+store.listenSocket("primary", "event-name", callback);
+store.useSocketListener("dependency-id", "updated", callback);
 ```
 
 ## Dev Tools
 
 ### In-Browser Dev Tools (Ctrl+Shift+D)
+
 - **Store Inspector** - View/edit store state with element highlighting
   - Hover over keys to highlight matching elements on the page
   - Double-click values to edit them in real-time
@@ -304,13 +321,14 @@ store.useSocketListener('dependency-id', 'updated', callback);
 - **Mock Data Editor** - Edit theme colors, navigation, permissions
 
 ### Console API
+
 ```javascript
-window.gxDevTools.open()       // Open dev tools
-window.gxDevTools.close()      // Close dev tools
-window.gxDevTools.toggle()     // Toggle dev tools
-window.gxDevTools.store()      // Access the GxP store
-window.gxDevTools.setLayout('private')  // Change layout
-window.gxDevTools.getLayout()  // Get current layout name
+window.gxDevTools.open(); // Open dev tools
+window.gxDevTools.close(); // Close dev tools
+window.gxDevTools.toggle(); // Toggle dev tools
+window.gxDevTools.store(); // Access the GxP store
+window.gxDevTools.setLayout("private"); // Change layout
+window.gxDevTools.getLayout(); // Get current layout name
 ```
 
 ## Browser Extensions
@@ -318,6 +336,7 @@ window.gxDevTools.getLayout()  // Get current layout name
 The browser extensions provide a DevTools panel for inspecting Vue components and GxP elements.
 
 ### Features
+
 - **Element Selection** - Click to select elements on the page
 - **Visual Highlighting** - Hover shows orange dashed border, selected shows cyan pulsing glow
 - **Smart Labels** - Format: `ComponentName::element::gxp-string-key`
@@ -326,7 +345,9 @@ The browser extensions provide a DevTools panel for inspecting Vue components an
 - **Component Inspector** - View Vue component props and data
 
 ### Extension Launch
+
 Extensions automatically open to the dev server URL when launched:
+
 ```bash
 gxdev dev --chrome    # Launches Chrome to https://localhost:3060
 gxdev dev --firefox   # Launches Firefox to https://localhost:3060
@@ -334,7 +355,9 @@ gxdev dev --no-https --chrome  # Launches to http://localhost:3060
 ```
 
 ### Reloading Extensions
+
 After modifying extension code in `browser-extensions/`:
+
 - Chrome: Go to `chrome://extensions`, click refresh on GxP Inspector
 - Firefox: Go to `about:debugging`, reload the extension
 
@@ -343,6 +366,7 @@ After modifying extension code in `browser-extensions/`:
 The `gxdev` command launches an interactive terminal UI:
 
 ### TUI Slash Commands
+
 - `/dev` - Start Vite + Socket.IO servers
 - `/dev --no-socket` - Start Vite only (no Socket.IO)
 - `/dev --no-https` - Start without SSL
@@ -355,6 +379,7 @@ The `gxdev` command launches an interactive terminal UI:
 - `/quit` - Exit application
 
 ### Keyboard Shortcuts
+
 - `Ctrl+1/2/3...` - Switch between service tabs
 - `Ctrl+L` - Clear current log
 - `Ctrl+K` - Stop current service
@@ -367,6 +392,7 @@ The `gxdev` command launches an interactive terminal UI:
 ## Environment Configuration
 
 Key environment variables (set in `.env`):
+
 - `NODE_PORT` - Development server port (default: 3060)
 - `SOCKET_IO_PORT` - Socket.IO server port (default: 3069)
 - `COMPONENT_PATH` - Main component path (default: `./src/Plugin.vue`)
@@ -376,6 +402,7 @@ Key environment variables (set in `.env`):
 - `USE_LOCAL_MAIN` - Use local `main.js` instead of the toolkit runtime version (default: unset/false)
 
 ## Key Dependencies
+
 - Vue 3 with Composition API
 - Pinia for state management
 - Vite for building
@@ -402,10 +429,12 @@ npm run build
 ## Customizing Runtime Files
 
 If you need to customize files from the runtime directory:
+
 ```bash
 gxdev publish server.js              # Copy server.js to project root
 gxdev publish gxpPortalConfigStore.js  # Copy store to src/stores/
 ```
+
 The CLI will automatically update imports when publishing.
 
 ## Testing Plugins
@@ -419,20 +448,24 @@ The CLI will automatically update imports when publishing.
 ## Troubleshooting
 
 ### Strings not updating from manifest
+
 - Ensure `app-manifest.json` exists in project root
 - Check that string keys match between manifest and gxp-string attributes
 - The manifest is loaded asynchronously - first render may show defaults
 
 ### Browser extension not highlighting elements
+
 - Reload the extension after code changes
 - Ensure the inspector is injected (check console for `[GxP Inspector] Loaded`)
 - The page must be the dev server URL for the inspector to work
 
 ### SSL certificate errors
+
 - Run `npm run setup-ssl` to generate certificates with mkcert
 - Accept the certificate in your browser when prompted
 
 ### Hot reload not working
+
 - Check that Vite is running (look for `VITE ready` in logs)
 - Ensure file is within the watched directories
 - Try a full page refresh if HMR fails

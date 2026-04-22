@@ -108,27 +108,19 @@
     {
       "model": "SocialStreamPost",
       "identifier": "social_stream_posts",
-      "permissions": [
-        "view_social_stream_posts:viewAny"
-      ]
+      "permissions": ["view_social_stream_posts:viewAny"]
     },
     {
       "key": "slug",
       "model": "Group",
       "events": [],
       "identifier": "groups",
-      "permissions": [
-        "view_groups",
-        "view_attendees"
-      ]
+      "permissions": ["view_groups", "view_attendees"]
     },
     {
       "model": "Attendee",
       "identifier": "attendees",
-      "permissions": [
-        "create_attendees:viewAny",
-        "view_attendees:viewAny"
-      ]
+      "permissions": ["create_attendees:viewAny", "view_attendees:viewAny"]
     }
   ],
   "permissionFlags": [
@@ -170,4 +162,4 @@
       "max_file_size": "10MB"
     }
   }
-} 
+}

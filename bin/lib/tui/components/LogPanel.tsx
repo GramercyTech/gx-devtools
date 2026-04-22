@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
-import { Box, Text, useStdout, useInput } from 'ink';
+import React, { useState, useEffect, useMemo, useRef, memo } from "react";
+import { Box, Text, useStdout, useInput } from "ink";
 
 interface LogPanelProps {
   logs: string[];
@@ -13,7 +13,7 @@ const LogLine = memo(({ log, index }: { log: string; index: number }) => (
     {formatLog(log)}
   </Text>
 ));
-LogLine.displayName = 'LogLine';
+LogLine.displayName = "LogLine";
 
 function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
   const { stdout } = useStdout();
@@ -53,12 +53,12 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
   // Scroll helper functions
   const scrollUp = (lines: number) => {
     const maxOffset = Math.max(0, logs.length - maxLines);
-    setScrollOffset(prev => Math.min(prev + lines, maxOffset));
+    setScrollOffset((prev) => Math.min(prev + lines, maxOffset));
     setAutoScroll(false);
   };
 
   const scrollDown = (lines: number) => {
-    setScrollOffset(prev => {
+    setScrollOffset((prev) => {
       const newOffset = Math.max(prev - lines, 0);
       if (newOffset === 0) setAutoScroll(true);
       return newOffset;
@@ -76,10 +76,14 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
 
     // Patch emit to intercept mouse data before Ink sees it
     const stdin = process.stdin;
-    stdin.emit = function (this: typeof stdin, event: string, ...args: any[]): boolean {
-      if (event === 'data') {
+    stdin.emit = function (
+      this: typeof stdin,
+      event: string,
+      ...args: any[]
+    ): boolean {
+      if (event === "data") {
         const data = args[0];
-        const str = typeof data === 'string' ? data : data.toString();
+        const str = typeof data === "string" ? data : data.toString();
 
         // Check for mouse sequences
         let hasMouseEvent = false;
@@ -89,12 +93,15 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
           const button = parseInt(match[1], 10);
           if (button === 64) {
             // Scroll up
-            const maxOffset = Math.max(0, logsLengthRef.current - maxLinesRef.current);
-            setScrollOffset(prev => Math.min(prev + 3, maxOffset));
+            const maxOffset = Math.max(
+              0,
+              logsLengthRef.current - maxLinesRef.current,
+            );
+            setScrollOffset((prev) => Math.min(prev + 3, maxOffset));
             setAutoScroll(false);
           } else if (button === 65) {
             // Scroll down
-            setScrollOffset(prev => {
+            setScrollOffset((prev) => {
               const newOffset = Math.max(prev - 3, 0);
               if (newOffset === 0) setAutoScroll(true);
               return newOffset;
@@ -105,7 +112,7 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
 
         if (hasMouseEvent) {
           // Strip mouse sequences, forward any remaining non-mouse data to Ink
-          const remaining = str.replace(mouseRegex, '');
+          const remaining = str.replace(mouseRegex, "");
           if (remaining.length > 0) {
             return originalEmit.call(stdin, event, remaining);
           }
@@ -118,28 +125,28 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
     // Disable mouse mode helper - used on unmount and process exit
     const disableMouse = () => {
       if (mouseEnabledRef.current) {
-        process.stdout.write('\x1b[?1000l\x1b[?1006l');
+        process.stdout.write("\x1b[?1000l\x1b[?1006l");
         mouseEnabledRef.current = false;
       }
     };
 
     // Ensure mouse mode is disabled on process exit/signals
     const onExit = () => disableMouse();
-    process.on('exit', onExit);
-    process.on('SIGINT', onExit);
-    process.on('SIGTERM', onExit);
+    process.on("exit", onExit);
+    process.on("SIGINT", onExit);
+    process.on("SIGTERM", onExit);
 
     // Enable SGR mouse mode for wheel events
-    process.stdout.write('\x1b[?1000h\x1b[?1006h');
+    process.stdout.write("\x1b[?1000h\x1b[?1006h");
     mouseEnabledRef.current = true;
 
     return () => {
       // Restore original emit and disable mouse mode
       process.stdin.emit = originalEmit;
       disableMouse();
-      process.off('exit', onExit);
-      process.off('SIGINT', onExit);
-      process.off('SIGTERM', onExit);
+      process.off("exit", onExit);
+      process.off("SIGINT", onExit);
+      process.off("SIGTERM", onExit);
     };
   }, [isActive]);
 
@@ -176,35 +183,48 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
   });
 
   // Calculate visible logs with scroll offset - memoized
-  const { visibleLogs, startIndex, canScrollUp, canScrollDown } = useMemo(() => {
-    const totalLogs = logs.length;
-    const start = Math.max(0, totalLogs - maxLines - scrollOffset);
-    const end = Math.max(0, totalLogs - scrollOffset);
-    return {
-      visibleLogs: logs.slice(start, end),
-      startIndex: start,
-      canScrollUp: start > 0,
-      canScrollDown: scrollOffset > 0,
-    };
-  }, [logs, maxLines, scrollOffset]);
+  const { visibleLogs, startIndex, canScrollUp, canScrollDown } =
+    useMemo(() => {
+      const totalLogs = logs.length;
+      const start = Math.max(0, totalLogs - maxLines - scrollOffset);
+      const end = Math.max(0, totalLogs - scrollOffset);
+      return {
+        visibleLogs: logs.slice(start, end),
+        startIndex: start,
+        canScrollUp: start > 0,
+        canScrollDown: scrollOffset > 0,
+      };
+    }, [logs, maxLines, scrollOffset]);
 
   return (
     <Box flexDirection="column" padding={1} flexGrow={1} overflow="hidden">
       <Box justifyContent="flex-end">
-        <Text color="gray" dimColor>Shift+↑↓ scroll  Ctrl+↑↓ jump  mouse wheel</Text>
+        <Text color="gray" dimColor>
+          Shift+↑↓ scroll Ctrl+↑↓ jump mouse wheel
+        </Text>
       </Box>
       {canScrollUp && (
-        <Text color="gray" dimColor>↑ {startIndex} more lines</Text>
+        <Text color="gray" dimColor>
+          ↑ {startIndex} more lines
+        </Text>
       )}
       {visibleLogs.length === 0 ? (
-        <Text color="gray" dimColor>No logs yet...</Text>
+        <Text color="gray" dimColor>
+          No logs yet...
+        </Text>
       ) : (
         visibleLogs.map((log, index) => (
-          <LogLine key={startIndex + index} log={log} index={startIndex + index} />
+          <LogLine
+            key={startIndex + index}
+            log={log}
+            index={startIndex + index}
+          />
         ))
       )}
       {canScrollDown && (
-        <Text color="gray" dimColor>↓ {scrollOffset} more lines</Text>
+        <Text color="gray" dimColor>
+          ↓ {scrollOffset} more lines
+        </Text>
       )}
     </Box>
   );
@@ -212,19 +232,23 @@ function LogPanel({ logs, isActive = true, maxHeight }: LogPanelProps) {
 
 function formatLog(log: string): React.ReactNode {
   // Color code different log types
-  if (log.startsWith('[VITE]') || log.includes('VITE')) {
+  if (log.startsWith("[VITE]") || log.includes("VITE")) {
     return <Text color="cyan">{log}</Text>;
   }
-  if (log.startsWith('[SOCKET]') || log.includes('Socket')) {
+  if (log.startsWith("[SOCKET]") || log.includes("Socket")) {
     return <Text color="green">{log}</Text>;
   }
-  if (log.includes('error') || log.includes('Error') || log.includes('ERROR')) {
+  if (log.includes("error") || log.includes("Error") || log.includes("ERROR")) {
     return <Text color="red">{log}</Text>;
   }
-  if (log.includes('warning') || log.includes('Warning') || log.includes('WARN')) {
+  if (
+    log.includes("warning") ||
+    log.includes("Warning") ||
+    log.includes("WARN")
+  ) {
     return <Text color="yellow">{log}</Text>;
   }
-  if (log.includes('Starting') || log.includes('started')) {
+  if (log.includes("Starting") || log.includes("started")) {
     return <Text color="blue">{log}</Text>;
   }
   return <Text>{log}</Text>;

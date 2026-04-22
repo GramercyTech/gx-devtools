@@ -13,27 +13,27 @@ const { datastoreCommand } = require("./datastore");
 const { socketCommand } = require("./socket");
 const { assetsCommand } = require("./assets");
 const {
-	extensionFirefoxCommand,
-	extensionChromeCommand,
-	extensionBuildCommand,
-	extensionInstallCommand,
+  extensionFirefoxCommand,
+  extensionChromeCommand,
+  extensionBuildCommand,
+  extensionInstallCommand,
 } = require("./extensions");
 const { extractConfigCommand } = require("./extract-config");
 const { addDependencyCommand } = require("./add-dependency");
 
 module.exports = {
-	initCommand,
-	devCommand,
-	buildCommand,
-	publishCommand,
-	setupSSLCommand,
-	datastoreCommand,
-	socketCommand,
-	assetsCommand,
-	extensionFirefoxCommand,
-	extensionChromeCommand,
-	extensionBuildCommand,
-	extensionInstallCommand,
-	extractConfigCommand,
-	addDependencyCommand,
+  initCommand,
+  devCommand,
+  buildCommand,
+  publishCommand,
+  setupSSLCommand,
+  datastoreCommand,
+  socketCommand,
+  assetsCommand,
+  extensionFirefoxCommand,
+  extensionChromeCommand,
+  extensionBuildCommand,
+  extensionInstallCommand,
+  extractConfigCommand,
+  addDependencyCommand,
 };

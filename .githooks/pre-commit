@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# Run prettier on staged files, re-stage the formatted output.
+
+files=$(git diff --cached --name-only --diff-filter=ACMR |
+  grep -Ei '\.(js|jsx|ts|tsx|vue|css|scss|json|md|yml|yaml|html)$' || true)
+
+[ -z "$files" ] && exit 0
+
+echo "$files" | xargs ./node_modules/.bin/prettier --write --ignore-unknown
+echo "$files" | xargs git add

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, Text } from 'ink';
+import React from "react";
+import { Box, Text } from "ink";
 
 interface HeaderProps {
   projectName: string;
@@ -14,7 +14,9 @@ export default function Header({ projectName }: HeaderProps) {
       justifyContent="space-between"
     >
       <Box>
-        <Text color="blue" bold>GxP</Text>
+        <Text color="blue" bold>
+          GxP
+        </Text>
         <Text color="white"> DevStudio</Text>
         <Text color="gray"> - </Text>
         <Text color="cyan">{projectName}</Text>

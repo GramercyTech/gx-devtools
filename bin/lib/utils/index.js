@@ -12,10 +12,10 @@ const aiScaffold = require("./ai-scaffold");
 const extractConfig = require("./extract-config");
 
 module.exports = {
-	...paths,
-	...ssl,
-	...files,
-	...prompts,
-	...aiScaffold,
-	...extractConfig,
+  ...paths,
+  ...ssl,
+  ...files,
+  ...prompts,
+  ...aiScaffold,
+  ...extractConfig,
 };

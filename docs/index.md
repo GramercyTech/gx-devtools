@@ -20,16 +20,16 @@ With the GxP Toolkit, you can create custom plugins that run on GxP kiosks, incl
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **CLI Tool (`gxdev`)** | Project scaffolding, dev server, and build commands |
-| **Interactive TUI** | Terminal UI for managing dev services |
-| **Hot Reload** | Vite-based dev server with instant updates |
+| Feature                | Description                                          |
+| ---------------------- | ---------------------------------------------------- |
+| **CLI Tool (`gxdev`)** | Project scaffolding, dev server, and build commands  |
+| **Interactive TUI**    | Terminal UI for managing dev services                |
+| **Hot Reload**         | Vite-based dev server with instant updates           |
 | **GxP Strings Plugin** | Vue directives for reactive string/asset replacement |
-| **Socket.IO** | Real-time event simulation |
-| **Browser Extensions** | Chrome/Firefox DevTools for plugin inspection |
-| **Vue 3 + Pinia** | Modern reactive framework with state management |
-| **Component Kit** | Pre-built UI components for kiosk development |
+| **Socket.IO**          | Real-time event simulation                           |
+| **Browser Extensions** | Chrome/Firefox DevTools for plugin inspection        |
+| **Vue 3 + Pinia**      | Modern reactive framework with state management      |
+| **Component Kit**      | Pre-built UI components for kiosk development        |
 
 ## Quick Start
 
@@ -165,6 +165,7 @@ my-plugin/
 ### GxP Store
 
 Central Pinia store providing:
+
 - Settings (`pluginVars`)
 - Translatable strings (`stringsList`)
 - Asset URLs (`assetList`)
@@ -179,12 +180,13 @@ Central Pinia store providing:
 <h1 gxp-string="welcome_title">Default Text</h1>
 
 <!-- Replace image source from assets -->
-<img gxp-src="hero_image" src="/placeholder.jpg" alt="Hero">
+<img gxp-src="hero_image" src="/placeholder.jpg" alt="Hero" />
 ```
 
 ### Dev Tools
 
 Press `Ctrl+Shift+D` to open in-browser Dev Tools:
+
 - Store Inspector (edit values in real-time)
 - Layout Switcher
 - Socket Simulator

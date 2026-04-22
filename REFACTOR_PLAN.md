@@ -9,9 +9,11 @@ All major refactoring phases have been completed. This document is kept for refe
 ## Phase 1: CLI Refactoring ✅ COMPLETED
 
 ### Goal
+
 Break `bin/gx-devtools.js` (2407 lines) into focused modules while maintaining backward compatibility.
 
 ### Final Structure
+
 ```
 bin/
 ├── gx-devtools.js          # Entry point (~25 lines) - delegates to lib/cli.js
@@ -38,6 +40,7 @@ bin/
 ```
 
 ### Completed Tasks
+
 - [x] Create `bin/lib/` directory structure
 - [x] Extract path resolution utilities to `utils/paths.js`
 - [x] Extract SSL management to `utils/ssl.js`
@@ -54,9 +57,11 @@ bin/
 ## Phase 2: Folder Structure Cleanup ✅ COMPLETED
 
 ### Goal
+
 Clean up the template system and establish clear boundaries.
 
 ### Final Structure
+
 ```
 gx-devtools/
 ├── bin/                    # CLI (refactored)
@@ -92,6 +97,7 @@ gx-devtools/
 ```
 
 ### Completed Tasks
+
 - [x] Create `/runtime/` directory
 - [x] Move PortalContainer.vue to /runtime/
 - [x] Move server.js to /runtime/
@@ -107,14 +113,17 @@ gx-devtools/
 ## Phase 3: PortalContainer Immutability ✅ COMPLETED
 
 ### Goal
+
 Make PortalContainer.vue truly hidden from client projects while still functional for development.
 
 ### Implementation
+
 - PortalContainer.vue is in `/runtime/` (NOT copied during init)
 - Client's main.js imports via Vite alias: `import App from "@gx-runtime/PortalContainer.vue"`
 - Vite config defines `@gx-runtime` alias pointing to toolkit's runtime directory
 
 ### Completed Tasks
+
 - [x] Move PortalContainer.vue to /runtime/
 - [x] Update template/main.js import path
 - [x] Update template/vite.config.js with @gx-runtime alias
@@ -126,20 +135,24 @@ Make PortalContainer.vue truly hidden from client projects while still functiona
 ## Phase 4: Dev Tools Configuration Modal ✅ COMPLETED
 
 ### Goal
+
 Create an in-browser development tools modal.
 
 ### Features Implemented
+
 1. **Store Inspector** - View/edit pluginVars, stringsList, assetList, triggerState, dependencyList
 2. **Layout Switcher** - Toggle between System/Private/Public layouts
 3. **Socket Simulator** - Send test socket events with JSON editor
 4. **Mock Data Editor** - Edit theme colors, navigation items, user session, permissions
 
 ### Triggers
+
 - **Keyboard shortcut:** `Ctrl+Shift+D` (or `Cmd+Shift+D` on Mac)
 - **Floating button:** Gear icon in bottom-right corner
 - **Console API:** `window.gxDevTools.open()` / `.close()` / `.toggle()`
 
 ### Files Created
+
 ```
 runtime/dev-tools/
 ├── DevToolsModal.vue      # Main modal with tabs
@@ -151,6 +164,7 @@ runtime/dev-tools/
 ```
 
 ### Completed Tasks
+
 - [x] Create DevToolsModal.vue with tabbed interface
 - [x] Implement StoreInspector with collapsible sections
 - [x] Implement LayoutSwitcher
@@ -167,6 +181,7 @@ runtime/dev-tools/
 ## Phase 5: Cleanup & Polish ✅ COMPLETED
 
 ### Completed Tasks
+
 - [x] Update CLAUDE.md with new structure and dev tools docs
 - [x] Update template/README.md with gxdev commands
 - [x] Rename CLI from `gxto` to `gxdev`
@@ -179,16 +194,19 @@ runtime/dev-tools/
 ## Summary of Changes
 
 ### CLI Command Rename
+
 - Old: `gxto`
 - New: `gxdev`
 
 ### Key Architecture Changes
+
 1. **Monolithic CLI** → **Modular structure** in `bin/lib/`
 2. **Mixed config/** → **Separate template/ and runtime/ directories**
 3. **Exposed PortalContainer** → **Hidden in runtime/, accessed via @gx-runtime alias**
 4. **No dev tools** → **Full dev tools modal with 4 panels**
 
 ### Vite Aliases (in projects)
+
 - `@` → Project's `src/` directory
 - `@layouts` → Project's `theme-layouts/` directory
 - `@gx-runtime` → Toolkit's `runtime/` directory (from node_modules)

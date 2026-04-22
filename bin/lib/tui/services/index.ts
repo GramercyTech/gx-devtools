@@ -1,7 +1,32 @@
-export { serviceManager, ServiceManager, ServiceStatus, ServiceConfig, ServiceState } from './ServiceManager.js';
-export { startVite, stopVite, isViteRunning, ViteOptions } from './ViteService.js';
-export { startSocket, stopSocket, isSocketRunning, listSocketEvents, sendSocketEvent, SocketOptions, SocketEvent } from './SocketService.js';
-export { startExtension, stopExtension, isExtensionRunning, BrowserType, ExtensionOptions } from './ExtensionService.js';
+export {
+  serviceManager,
+  ServiceManager,
+  ServiceStatus,
+  ServiceConfig,
+  ServiceState,
+} from "./ServiceManager.js";
+export {
+  startVite,
+  stopVite,
+  isViteRunning,
+  ViteOptions,
+} from "./ViteService.js";
+export {
+  startSocket,
+  stopSocket,
+  isSocketRunning,
+  listSocketEvents,
+  sendSocketEvent,
+  SocketOptions,
+  SocketEvent,
+} from "./SocketService.js";
+export {
+  startExtension,
+  stopExtension,
+  isExtensionRunning,
+  BrowserType,
+  ExtensionOptions,
+} from "./ExtensionService.js";
 export {
   geminiService,
   GeminiService,
@@ -9,8 +34,8 @@ export {
   isAuthenticated,
   loadGeminiConfig,
   saveGeminiConfig,
-  clearAuthTokens
-} from './GeminiService.js';
+  clearAuthTokens,
+} from "./GeminiService.js";
 export {
   aiService,
   AIService,
@@ -20,5 +45,5 @@ export {
   loadAIConfig,
   saveAIConfig,
   getAvailableProviders,
-  getProviderStatus
-} from './AIService.js';
+  getProviderStatus,
+} from "./AIService.js";

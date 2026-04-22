@@ -58,11 +58,11 @@ Alternatively, use an online SVG to PNG converter for the files in `icons/`.
 
 ### Example Rules
 
-| Pattern | Redirect To | Description |
-|---------|-------------|-------------|
-| `api\.example\.com` | `api.alternative.com` | Redirect all API calls from example.com to alternative.com |
-| `.*\.googleapis\.com` | `api.myproxy.com` | Redirect all Google API calls to your proxy server |
-| `cdn\.jsdelivr\.net` | `my-cdn.example.com` | Redirect CDN requests to your own server |
+| Pattern               | Redirect To           | Description                                                |
+| --------------------- | --------------------- | ---------------------------------------------------------- |
+| `api\.example\.com`   | `api.alternative.com` | Redirect all API calls from example.com to alternative.com |
+| `.*\.googleapis\.com` | `api.myproxy.com`     | Redirect all Google API calls to your proxy server         |
+| `cdn\.jsdelivr\.net`  | `my-cdn.example.com`  | Redirect CDN requests to your own server                   |
 
 ## How It Works
 
@@ -115,20 +115,23 @@ The extension requires the following permissions:
 ## Troubleshooting
 
 ### Extension Not Working
+
 - Check that the extension is enabled in `about:addons`
 - Verify permissions are granted
 - Check browser console for errors
 
 ### Icons Not Showing
+
 - Ensure PNG icon files exist in the `icons/` directory
 - Convert SVG files to PNG if needed
 - Check file permissions
 
 ### Rules Not Matching
+
 - Test regex patterns using online regex testers
 - Ensure domains are properly escaped (use `\.` for literal dots)
 - Check that the proxy is enabled (green button)
 
 ## License
 
-This extension is provided as-is for educational and development purposes. 
+This extension is provided as-is for educational and development purposes.

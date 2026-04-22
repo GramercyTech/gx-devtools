@@ -1,9 +1,9 @@
-import { serviceManager, ServiceConfig } from './ServiceManager.js';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import { serviceManager, ServiceConfig } from "./ServiceManager.js";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 
-export type BrowserType = 'chrome' | 'firefox';
+export type BrowserType = "chrome" | "firefox";
 
 export interface ExtensionOptions {
   browser: BrowserType;
@@ -17,15 +17,19 @@ function getToolkitRoot(): string {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   // Navigate from dist/tui/services to project root (3 levels up)
   // dist/tui/services -> dist/tui -> dist -> gx-devtools
-  return path.resolve(__dirname, '..', '..', '..');
+  return path.resolve(__dirname, "..", "..", "..");
 }
 
 /**
  * Generate extension defaults based on environment variables
  * This creates a defaults.json file that the popup.js reads on load
  */
-function generateExtensionDefaults(extensionPath: string, useHttps: boolean, port: number | string): void {
-  const protocol = useHttps ? 'https' : 'http';
+function generateExtensionDefaults(
+  extensionPath: string,
+  useHttps: boolean,
+  port: number | string,
+): void {
+  const protocol = useHttps ? "https" : "http";
   const baseUrl = `${protocol}://localhost:${port}`;
 
   const defaults = {
@@ -34,7 +38,7 @@ function generateExtensionDefaults(extensionPath: string, useHttps: boolean, por
     // JS redirect URL based on env
     jsRedirectUrl: `${baseUrl}/src/Plugin.vue`,
     // CSS redirect URL (empty by default, uses blank CSS)
-    cssRedirectUrl: '',
+    cssRedirectUrl: "",
     // CSS override should be enabled by default
     cssRuleEnabled: true,
     // Return blank CSS by default
@@ -47,20 +51,24 @@ function generateExtensionDefaults(extensionPath: string, useHttps: boolean, por
     disableCacheForRedirects: true,
   };
 
-  const defaultsPath = path.join(extensionPath, 'defaults.json');
+  const defaultsPath = path.join(extensionPath, "defaults.json");
   fs.writeFileSync(defaultsPath, JSON.stringify(defaults, null, 2));
 }
 
 // Find the extension path (project-local or toolkit built-in)
 function findExtensionPath(browser: BrowserType, cwd: string): string | null {
   // Check local project first
-  const localPath = path.join(cwd, 'browser-extensions', browser);
+  const localPath = path.join(cwd, "browser-extensions", browser);
   if (fs.existsSync(localPath)) {
     return localPath;
   }
 
   // Fall back to toolkit's built-in extension
-  const toolkitPath = path.join(getToolkitRoot(), 'browser-extensions', browser);
+  const toolkitPath = path.join(
+    getToolkitRoot(),
+    "browser-extensions",
+    browser,
+  );
   if (fs.existsSync(toolkitPath)) {
     return toolkitPath;
   }
@@ -74,7 +82,7 @@ export function startExtension(options: ExtensionOptions): void {
   const serviceId = `ext-${browser}`;
 
   // Compute the start URL based on options
-  const protocol = useHttps ? 'https' : 'http';
+  const protocol = useHttps ? "https" : "http";
   const startUrl = `${protocol}://localhost:${port}`;
 
   // Check if already running
@@ -88,7 +96,7 @@ export function startExtension(options: ExtensionOptions): void {
     const errorState = serviceManager.start({
       id: serviceId,
       name: `${browser.charAt(0).toUpperCase() + browser.slice(1)} Extension`,
-      command: 'echo',
+      command: "echo",
       args: [`Extension not found for ${browser}`],
       cwd,
     });
@@ -98,33 +106,40 @@ export function startExtension(options: ExtensionOptions): void {
   // Generate defaults.json for the extension based on environment
   generateExtensionDefaults(extensionPath, useHttps, port);
 
-  if (browser === 'firefox') {
+  if (browser === "firefox") {
     const config: ServiceConfig = {
       id: serviceId,
-      name: 'Firefox Extension',
-      command: 'npx',
-      args: ['web-ext', 'run', '--source-dir', extensionPath, '--start-url', startUrl],
+      name: "Firefox Extension",
+      command: "npx",
+      args: [
+        "web-ext",
+        "run",
+        "--source-dir",
+        extensionPath,
+        "--start-url",
+        startUrl,
+      ],
       cwd,
       env: {
-        FORCE_COLOR: '1',
+        FORCE_COLOR: "1",
       },
     };
     serviceManager.start(config);
-  } else if (browser === 'chrome') {
+  } else if (browser === "chrome") {
     // For Chrome, we need to use the launch script
     const toolkitRoot = getToolkitRoot();
-    let scriptPath = path.join(cwd, 'scripts', 'launch-chrome.js');
+    let scriptPath = path.join(cwd, "scripts", "launch-chrome.js");
 
     if (!fs.existsSync(scriptPath)) {
-      scriptPath = path.join(toolkitRoot, 'scripts', 'launch-chrome.js');
+      scriptPath = path.join(toolkitRoot, "scripts", "launch-chrome.js");
     }
 
     if (!fs.existsSync(scriptPath)) {
       const errorState = serviceManager.start({
         id: serviceId,
-        name: 'Chrome Extension',
-        command: 'echo',
-        args: ['Chrome launcher script not found'],
+        name: "Chrome Extension",
+        command: "echo",
+        args: ["Chrome launcher script not found"],
         cwd,
       });
       return;
@@ -132,12 +147,12 @@ export function startExtension(options: ExtensionOptions): void {
 
     const config: ServiceConfig = {
       id: serviceId,
-      name: 'Chrome Extension',
-      command: 'node',
+      name: "Chrome Extension",
+      command: "node",
       args: [scriptPath],
       cwd,
       env: {
-        FORCE_COLOR: '1',
+        FORCE_COLOR: "1",
         CHROME_EXTENSION_PATH: extensionPath,
         USE_HTTPS: String(useHttps),
         NODE_PORT: String(port),

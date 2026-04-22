@@ -36,144 +36,158 @@ import { watch } from "vue";
  * @returns {Object} Vue plugin
  */
 export function createGxpStringsPlugin(store, options = {}) {
-	const devServerBaseUrl = (options.devServerBaseUrl || "").replace(/\/+$/, "");
+  const devServerBaseUrl = (options.devServerBaseUrl || "").replace(/\/+$/, "");
 
-	return {
-		install(app) {
-			// Register the v-gxp-string directive
-			app.directive("gxp-string", {
-				// Called when the element is mounted
-				mounted(el, binding) {
-					const key = binding.value || el.getAttribute("gxp-string");
-					if (!key) return;
+  return {
+    install(app) {
+      // Register the v-gxp-string directive
+      app.directive("gxp-string", {
+        // Called when the element is mounted
+        mounted(el, binding) {
+          const key = binding.value || el.getAttribute("gxp-string");
+          if (!key) return;
 
-					// Store the original text content as default
-					const defaultValue = el.textContent || "";
-					el._gxpStringDefault = defaultValue;
-					el._gxpStringKey = key;
+          // Store the original text content as default
+          const defaultValue = el.textContent || "";
+          el._gxpStringDefault = defaultValue;
+          el._gxpStringKey = key;
 
-					// Initial update
-					updateElementText(el, key, defaultValue, store);
+          // Initial update
+          updateElementText(el, key, defaultValue, store);
 
-					// Watch for changes in the appropriate store based on attributes
-					// Using deep: true to catch when entire object is replaced (async manifest load)
-					if (store) {
-						const watchSource = getWatchSource(el, key, store);
-						if (watchSource) {
-							el._gxpUnwatch = watch(watchSource, () => {
-								updateElementText(el, key, defaultValue, store);
-							}, { deep: true });
-						}
-					}
-				},
+          // Watch for changes in the appropriate store based on attributes
+          // Using deep: true to catch when entire object is replaced (async manifest load)
+          if (store) {
+            const watchSource = getWatchSource(el, key, store);
+            if (watchSource) {
+              el._gxpUnwatch = watch(
+                watchSource,
+                () => {
+                  updateElementText(el, key, defaultValue, store);
+                },
+                { deep: true },
+              );
+            }
+          }
+        },
 
-				// Called when binding value changes
-				updated(el, binding) {
-					const key = binding.value || el.getAttribute("gxp-string");
-					if (!key) return;
+        // Called when binding value changes
+        updated(el, binding) {
+          const key = binding.value || el.getAttribute("gxp-string");
+          if (!key) return;
 
-					const defaultValue = el._gxpStringDefault || el.textContent || "";
-					updateElementText(el, key, defaultValue, store);
-				},
+          const defaultValue = el._gxpStringDefault || el.textContent || "";
+          updateElementText(el, key, defaultValue, store);
+        },
 
-				// Cleanup when element is unmounted
-				unmounted(el) {
-					if (el._gxpUnwatch) {
-						el._gxpUnwatch();
-					}
-					delete el._gxpStringDefault;
-					delete el._gxpStringKey;
-					delete el._gxpUnwatch;
-				},
-			});
+        // Cleanup when element is unmounted
+        unmounted(el) {
+          if (el._gxpUnwatch) {
+            el._gxpUnwatch();
+          }
+          delete el._gxpStringDefault;
+          delete el._gxpStringKey;
+          delete el._gxpUnwatch;
+        },
+      });
 
-			// Register the v-gxp-src directive for replacing src attributes
-			app.directive("gxp-src", {
-				// Called when the element is mounted
-				mounted(el, binding) {
-					const key = binding.value || el.getAttribute("gxp-src");
-					if (!key) return;
+      // Register the v-gxp-src directive for replacing src attributes
+      app.directive("gxp-src", {
+        // Called when the element is mounted
+        mounted(el, binding) {
+          const key = binding.value || el.getAttribute("gxp-src");
+          if (!key) return;
 
-					// Store the original src as default
-					const defaultSrc = el.getAttribute("src") || "";
-					el._gxpSrcDefault = defaultSrc;
-					el._gxpSrcKey = key;
+          // Store the original src as default
+          const defaultSrc = el.getAttribute("src") || "";
+          el._gxpSrcDefault = defaultSrc;
+          el._gxpSrcKey = key;
 
-					// Initial update
-					updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
+          // Initial update
+          updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
 
-					// Watch for changes in the appropriate store based on attributes
-					// Using deep: true to catch when entire object is replaced (async manifest load)
-					if (store) {
-						const watchSource = getSrcWatchSource(el, key, store);
-						if (watchSource) {
-							el._gxpSrcUnwatch = watch(watchSource, () => {
-								updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
-							}, { deep: true });
-						}
-					}
-				},
+          // Watch for changes in the appropriate store based on attributes
+          // Using deep: true to catch when entire object is replaced (async manifest load)
+          if (store) {
+            const watchSource = getSrcWatchSource(el, key, store);
+            if (watchSource) {
+              el._gxpSrcUnwatch = watch(
+                watchSource,
+                () => {
+                  updateElementSrc(
+                    el,
+                    key,
+                    defaultSrc,
+                    store,
+                    devServerBaseUrl,
+                  );
+                },
+                { deep: true },
+              );
+            }
+          }
+        },
 
-				// Called when binding value changes
-				updated(el, binding) {
-					const key = binding.value || el.getAttribute("gxp-src");
-					if (!key) return;
+        // Called when binding value changes
+        updated(el, binding) {
+          const key = binding.value || el.getAttribute("gxp-src");
+          if (!key) return;
 
-					const defaultSrc = el._gxpSrcDefault || el.getAttribute("src") || "";
-					updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
-				},
+          const defaultSrc = el._gxpSrcDefault || el.getAttribute("src") || "";
+          updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
+        },
 
-				// Cleanup when element is unmounted
-				unmounted(el) {
-					if (el._gxpSrcUnwatch) {
-						el._gxpSrcUnwatch();
-					}
-					delete el._gxpSrcDefault;
-					delete el._gxpSrcKey;
-					delete el._gxpSrcUnwatch;
-				},
-			});
+        // Cleanup when element is unmounted
+        unmounted(el) {
+          if (el._gxpSrcUnwatch) {
+            el._gxpSrcUnwatch();
+          }
+          delete el._gxpSrcDefault;
+          delete el._gxpSrcKey;
+          delete el._gxpSrcUnwatch;
+        },
+      });
 
-			// Also handle raw gxp-string and gxp-src attributes (without v- prefix)
-			// This runs after mount to catch all elements with the attribute
-			// We also set up a watcher for manifestLoaded to re-process when manifest loads
-			app.mixin({
-				mounted() {
-					this.$nextTick(() => {
-						processGxpStringAttributes(this.$el, store);
-						processGxpSrcAttributes(this.$el, store, devServerBaseUrl);
-					});
+      // Also handle raw gxp-string and gxp-src attributes (without v- prefix)
+      // This runs after mount to catch all elements with the attribute
+      // We also set up a watcher for manifestLoaded to re-process when manifest loads
+      app.mixin({
+        mounted() {
+          this.$nextTick(() => {
+            processGxpStringAttributes(this.$el, store);
+            processGxpSrcAttributes(this.$el, store, devServerBaseUrl);
+          });
 
-					// Watch for manifest loading to re-process attributes
-					if (store && store.manifestLoaded !== undefined) {
-						const rootEl = this.$el;
-						this._gxpManifestUnwatch = watch(
-							() => store.manifestLoaded,
-							(loaded) => {
-								if (loaded) {
-									this.$nextTick(() => {
-										reprocessGxpStringAttributes(rootEl, store);
-										reprocessGxpSrcAttributes(rootEl, store, devServerBaseUrl);
-									});
-								}
-							}
-						);
-					}
-				},
-				updated() {
-					this.$nextTick(() => {
-						processGxpStringAttributes(this.$el, store);
-						processGxpSrcAttributes(this.$el, store, devServerBaseUrl);
-					});
-				},
-				unmounted() {
-					if (this._gxpManifestUnwatch) {
-						this._gxpManifestUnwatch();
-					}
-				},
-			});
-		},
-	};
+          // Watch for manifest loading to re-process attributes
+          if (store && store.manifestLoaded !== undefined) {
+            const rootEl = this.$el;
+            this._gxpManifestUnwatch = watch(
+              () => store.manifestLoaded,
+              (loaded) => {
+                if (loaded) {
+                  this.$nextTick(() => {
+                    reprocessGxpStringAttributes(rootEl, store);
+                    reprocessGxpSrcAttributes(rootEl, store, devServerBaseUrl);
+                  });
+                }
+              },
+            );
+          }
+        },
+        updated() {
+          this.$nextTick(() => {
+            processGxpStringAttributes(this.$el, store);
+            processGxpSrcAttributes(this.$el, store, devServerBaseUrl);
+          });
+        },
+        unmounted() {
+          if (this._gxpManifestUnwatch) {
+            this._gxpManifestUnwatch();
+          }
+        },
+      });
+    },
+  };
 }
 
 /**
@@ -186,33 +200,36 @@ export function createGxpStringsPlugin(store, options = {}) {
  * Vue's watch will trigger when either changes.
  */
 function getWatchSource(el, key, store) {
-	if (el.hasAttribute("gxp-state") && store.triggerState !== undefined) {
-		// Watch specific key AND entire object to catch both types of updates
-		return () => ({
-			value: store.triggerState?.[key],
-			obj: store.triggerState,
-			loaded: store.manifestLoaded
-		});
-	} else if (el.hasAttribute("gxp-settings") && store.pluginVars !== undefined) {
-		return () => ({
-			value: store.pluginVars?.[key],
-			obj: store.pluginVars,
-			loaded: store.manifestLoaded
-		});
-	} else if (el.hasAttribute("gxp-assets") && store.assetList !== undefined) {
-		return () => ({
-			value: store.assetList?.[key],
-			obj: store.assetList,
-			loaded: store.manifestLoaded
-		});
-	} else if (store.stringsList !== undefined) {
-		return () => ({
-			value: store.stringsList?.[key],
-			obj: store.stringsList,
-			loaded: store.manifestLoaded
-		});
-	}
-	return null;
+  if (el.hasAttribute("gxp-state") && store.triggerState !== undefined) {
+    // Watch specific key AND entire object to catch both types of updates
+    return () => ({
+      value: store.triggerState?.[key],
+      obj: store.triggerState,
+      loaded: store.manifestLoaded,
+    });
+  } else if (
+    el.hasAttribute("gxp-settings") &&
+    store.pluginVars !== undefined
+  ) {
+    return () => ({
+      value: store.pluginVars?.[key],
+      obj: store.pluginVars,
+      loaded: store.manifestLoaded,
+    });
+  } else if (el.hasAttribute("gxp-assets") && store.assetList !== undefined) {
+    return () => ({
+      value: store.assetList?.[key],
+      obj: store.assetList,
+      loaded: store.manifestLoaded,
+    });
+  } else if (store.stringsList !== undefined) {
+    return () => ({
+      value: store.stringsList?.[key],
+      obj: store.stringsList,
+      loaded: store.manifestLoaded,
+    });
+  }
+  return null;
 }
 
 /**
@@ -220,46 +237,46 @@ function getWatchSource(el, key, store) {
  * We watch for both the specific key and the entire object.
  */
 function getSrcWatchSource(el, key, store) {
-	if (el.hasAttribute("gxp-state") && store.triggerState !== undefined) {
-		return () => ({
-			value: store.triggerState?.[key],
-			obj: store.triggerState,
-			loaded: store.manifestLoaded
-		});
-	} else if (store.assetList !== undefined) {
-		return () => ({
-			value: store.assetList?.[key],
-			obj: store.assetList,
-			loaded: store.manifestLoaded
-		});
-	}
-	return null;
+  if (el.hasAttribute("gxp-state") && store.triggerState !== undefined) {
+    return () => ({
+      value: store.triggerState?.[key],
+      obj: store.triggerState,
+      loaded: store.manifestLoaded,
+    });
+  } else if (store.assetList !== undefined) {
+    return () => ({
+      value: store.assetList?.[key],
+      obj: store.assetList,
+      loaded: store.manifestLoaded,
+    });
+  }
+  return null;
 }
 
 /**
  * Update element text content based on store value
  */
 function updateElementText(el, key, defaultValue, store) {
-	if (!store) {
-		return;
-	}
+  if (!store) {
+    return;
+  }
 
-	let translatedValue;
-	if (el.hasAttribute("gxp-state")) {
-		translatedValue = store.getState?.(key);
-	} else if (el.hasAttribute("gxp-settings")) {
-		translatedValue = store.getSetting?.(key);
-	} else if (el.hasAttribute("gxp-assets")) {
-		translatedValue = store.getAsset?.(key);
-	} else {
-		translatedValue = store.getString?.(key);
-	}
+  let translatedValue;
+  if (el.hasAttribute("gxp-state")) {
+    translatedValue = store.getState?.(key);
+  } else if (el.hasAttribute("gxp-settings")) {
+    translatedValue = store.getSetting?.(key);
+  } else if (el.hasAttribute("gxp-assets")) {
+    translatedValue = store.getAsset?.(key);
+  } else {
+    translatedValue = store.getString?.(key);
+  }
 
-	if (translatedValue && translatedValue !== defaultValue) {
-		el.textContent = translatedValue;
-	} else {
-		el.textContent = defaultValue;
-	}
+  if (translatedValue && translatedValue !== defaultValue) {
+    el.textContent = translatedValue;
+  } else {
+    el.textContent = defaultValue;
+  }
 }
 
 /**
@@ -268,12 +285,12 @@ function updateElementText(el, key, defaultValue, store) {
  * Store-returned values are never prefixed — they are already absolute.
  */
 function resolveDefaultSrc(defaultSrc, devServerBaseUrl) {
-	if (!devServerBaseUrl || !defaultSrc) return defaultSrc;
-	// Only prefix relative paths, not already-absolute URLs
-	if (defaultSrc.startsWith("/") && !defaultSrc.startsWith("//")) {
-		return devServerBaseUrl + defaultSrc;
-	}
-	return defaultSrc;
+  if (!devServerBaseUrl || !defaultSrc) return defaultSrc;
+  // Only prefix relative paths, not already-absolute URLs
+  if (defaultSrc.startsWith("/") && !defaultSrc.startsWith("//")) {
+    return devServerBaseUrl + defaultSrc;
+  }
+  return defaultSrc;
 }
 
 /**
@@ -281,22 +298,22 @@ function resolveDefaultSrc(defaultSrc, devServerBaseUrl) {
  * Uses triggerState if gxp-state attribute is present, otherwise assetList
  */
 function updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl) {
-	if (!store) {
-		return;
-	}
+  if (!store) {
+    return;
+  }
 
-	let srcUrl;
-	if (el.hasAttribute("gxp-state")) {
-		srcUrl = store.getState?.(key);
-	} else {
-		srcUrl = store.getAsset?.(key);
-	}
+  let srcUrl;
+  if (el.hasAttribute("gxp-state")) {
+    srcUrl = store.getState?.(key);
+  } else {
+    srcUrl = store.getAsset?.(key);
+  }
 
-	if (srcUrl && srcUrl !== defaultSrc) {
-		el.setAttribute("src", srcUrl);
-	} else if (defaultSrc) {
-		el.setAttribute("src", resolveDefaultSrc(defaultSrc, devServerBaseUrl));
-	}
+  if (srcUrl && srcUrl !== defaultSrc) {
+    el.setAttribute("src", srcUrl);
+  } else if (defaultSrc) {
+    el.setAttribute("src", resolveDefaultSrc(defaultSrc, devServerBaseUrl));
+  }
 }
 
 /**
@@ -304,36 +321,40 @@ function updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl) {
  * This handles elements that use the raw attribute without the v- directive
  */
 function processGxpStringAttributes(rootEl, store) {
-	if (!rootEl || !store) return;
+  if (!rootEl || !store) return;
 
-	// Handle case where rootEl is a text node or comment
-	if (!rootEl.querySelectorAll) return;
+  // Handle case where rootEl is a text node or comment
+  if (!rootEl.querySelectorAll) return;
 
-	const elements = rootEl.querySelectorAll("[gxp-string]");
+  const elements = rootEl.querySelectorAll("[gxp-string]");
 
-	elements.forEach((el) => {
-		const key = el.getAttribute("gxp-string");
-		if (!key) return;
+  elements.forEach((el) => {
+    const key = el.getAttribute("gxp-string");
+    if (!key) return;
 
-		// Store default value only on first processing
-		if (!el._gxpStringDefault) {
-			el._gxpStringDefault = el.textContent || "";
-		}
-		el._gxpStringKey = key;
+    // Store default value only on first processing
+    if (!el._gxpStringDefault) {
+      el._gxpStringDefault = el.textContent || "";
+    }
+    el._gxpStringKey = key;
 
-		// Update text
-		updateElementText(el, key, el._gxpStringDefault, store);
+    // Update text
+    updateElementText(el, key, el._gxpStringDefault, store);
 
-		// Set up watcher for this element (if not already watching)
-		if (!el._gxpUnwatch) {
-			const watchSource = getWatchSource(el, key, store);
-			if (watchSource) {
-				el._gxpUnwatch = watch(watchSource, () => {
-					updateElementText(el, key, el._gxpStringDefault, store);
-				}, { deep: true });
-			}
-		}
-	});
+    // Set up watcher for this element (if not already watching)
+    if (!el._gxpUnwatch) {
+      const watchSource = getWatchSource(el, key, store);
+      if (watchSource) {
+        el._gxpUnwatch = watch(
+          watchSource,
+          () => {
+            updateElementText(el, key, el._gxpStringDefault, store);
+          },
+          { deep: true },
+        );
+      }
+    }
+  });
 }
 
 /**
@@ -341,18 +362,18 @@ function processGxpStringAttributes(rootEl, store) {
  * This is called when manifest loads to update elements that were already processed
  */
 function reprocessGxpStringAttributes(rootEl, store) {
-	if (!rootEl || !store) return;
-	if (!rootEl.querySelectorAll) return;
+  if (!rootEl || !store) return;
+  if (!rootEl.querySelectorAll) return;
 
-	const elements = rootEl.querySelectorAll("[gxp-string]");
+  const elements = rootEl.querySelectorAll("[gxp-string]");
 
-	elements.forEach((el) => {
-		const key = el.getAttribute("gxp-string");
-		if (!key) return;
+  elements.forEach((el) => {
+    const key = el.getAttribute("gxp-string");
+    if (!key) return;
 
-		const defaultValue = el._gxpStringDefault || el.textContent || "";
-		updateElementText(el, key, defaultValue, store);
-	});
+    const defaultValue = el._gxpStringDefault || el.textContent || "";
+    updateElementText(el, key, defaultValue, store);
+  });
 }
 
 /**
@@ -360,36 +381,46 @@ function reprocessGxpStringAttributes(rootEl, store) {
  * This handles elements that use the raw attribute without the v- directive
  */
 function processGxpSrcAttributes(rootEl, store, devServerBaseUrl) {
-	if (!rootEl || !store) return;
+  if (!rootEl || !store) return;
 
-	// Handle case where rootEl is a text node or comment
-	if (!rootEl.querySelectorAll) return;
+  // Handle case where rootEl is a text node or comment
+  if (!rootEl.querySelectorAll) return;
 
-	const elements = rootEl.querySelectorAll("[gxp-src]");
+  const elements = rootEl.querySelectorAll("[gxp-src]");
 
-	elements.forEach((el) => {
-		const key = el.getAttribute("gxp-src");
-		if (!key) return;
+  elements.forEach((el) => {
+    const key = el.getAttribute("gxp-src");
+    if (!key) return;
 
-		// Store default value only on first processing
-		if (!el._gxpSrcDefault) {
-			el._gxpSrcDefault = el.getAttribute("src") || "";
-		}
-		el._gxpSrcKey = key;
+    // Store default value only on first processing
+    if (!el._gxpSrcDefault) {
+      el._gxpSrcDefault = el.getAttribute("src") || "";
+    }
+    el._gxpSrcKey = key;
 
-		// Update src
-		updateElementSrc(el, key, el._gxpSrcDefault, store, devServerBaseUrl);
+    // Update src
+    updateElementSrc(el, key, el._gxpSrcDefault, store, devServerBaseUrl);
 
-		// Set up watcher for this element (if not already watching)
-		if (!el._gxpSrcUnwatch) {
-			const watchSource = getSrcWatchSource(el, key, store);
-			if (watchSource) {
-				el._gxpSrcUnwatch = watch(watchSource, () => {
-					updateElementSrc(el, key, el._gxpSrcDefault, store, devServerBaseUrl);
-				}, { deep: true });
-			}
-		}
-	});
+    // Set up watcher for this element (if not already watching)
+    if (!el._gxpSrcUnwatch) {
+      const watchSource = getSrcWatchSource(el, key, store);
+      if (watchSource) {
+        el._gxpSrcUnwatch = watch(
+          watchSource,
+          () => {
+            updateElementSrc(
+              el,
+              key,
+              el._gxpSrcDefault,
+              store,
+              devServerBaseUrl,
+            );
+          },
+          { deep: true },
+        );
+      }
+    }
+  });
 }
 
 /**
@@ -397,18 +428,18 @@ function processGxpSrcAttributes(rootEl, store, devServerBaseUrl) {
  * This is called when manifest loads to update elements that were already processed
  */
 function reprocessGxpSrcAttributes(rootEl, store, devServerBaseUrl) {
-	if (!rootEl || !store) return;
-	if (!rootEl.querySelectorAll) return;
+  if (!rootEl || !store) return;
+  if (!rootEl.querySelectorAll) return;
 
-	const elements = rootEl.querySelectorAll("[gxp-src]");
+  const elements = rootEl.querySelectorAll("[gxp-src]");
 
-	elements.forEach((el) => {
-		const key = el.getAttribute("gxp-src");
-		if (!key) return;
+  elements.forEach((el) => {
+    const key = el.getAttribute("gxp-src");
+    if (!key) return;
 
-		const defaultSrc = el._gxpSrcDefault || el.getAttribute("src") || "";
-		updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
-	});
+    const defaultSrc = el._gxpSrcDefault || el.getAttribute("src") || "";
+    updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl);
+  });
 }
 
 /**
@@ -416,7 +447,7 @@ function reprocessGxpSrcAttributes(rootEl, store, devServerBaseUrl) {
  * Can be called manually if needed
  */
 export function processGxpStrings(rootElement, store) {
-	processGxpStringAttributes(rootElement, store);
+  processGxpStringAttributes(rootElement, store);
 }
 
 /**
@@ -424,21 +455,21 @@ export function processGxpStrings(rootElement, store) {
  * Can be called manually if needed
  */
 export function processGxpSrcs(rootElement, store, devServerBaseUrl) {
-	processGxpSrcAttributes(rootElement, store, devServerBaseUrl);
+  processGxpSrcAttributes(rootElement, store, devServerBaseUrl);
 }
 
 /**
  * Get the string key from an element if it has gxp-string attribute
  */
 export function getGxpStringKey(element) {
-	return element?.getAttribute?.("gxp-string") || null;
+  return element?.getAttribute?.("gxp-string") || null;
 }
 
 /**
  * Check if an element has a gxp-string attribute
  */
 export function hasGxpString(element) {
-	return element?.hasAttribute?.("gxp-string") || false;
+  return element?.hasAttribute?.("gxp-string") || false;
 }
 
 export default createGxpStringsPlugin;

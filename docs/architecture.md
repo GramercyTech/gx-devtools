@@ -158,17 +158,18 @@ my-plugin/
 
 The toolkit configures these path aliases in `vite.config.js`:
 
-| Alias | Points To | Usage |
-|-------|-----------|-------|
-| `@` | `./src/` | Your components |
-| `@layouts` | `./theme-layouts/` | Layout components |
-| `@gx-runtime` | `node_modules/.../runtime/` | Toolkit runtime |
+| Alias         | Points To                   | Usage             |
+| ------------- | --------------------------- | ----------------- |
+| `@`           | `./src/`                    | Your components   |
+| `@layouts`    | `./theme-layouts/`          | Layout components |
+| `@gx-runtime` | `node_modules/.../runtime/` | Toolkit runtime   |
 
 Example imports:
+
 ```javascript
-import MyComponent from '@/components/MyComponent.vue';
-import PublicLayout from '@layouts/PublicLayout.vue';
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import MyComponent from "@/components/MyComponent.vue";
+import PublicLayout from "@layouts/PublicLayout.vue";
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 ```
 
 ## Plugin Architecture
@@ -205,16 +206,16 @@ import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
 
 The platform injects these props into your Plugin component:
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `pluginVars` | Object | Settings from manifest |
-| `stringsList` | Object | Translatable strings |
-| `assetUrls` | Object | Asset URLs |
-| `dependencyList` | Array | External dependencies |
-| `permissionFlags` | Array | Granted permissions |
-| `theme` | Object | Platform theme colors |
-| `router` | Object | Navigation methods |
-| `triggerState` | Object | Dynamic runtime state |
+| Prop              | Type   | Description            |
+| ----------------- | ------ | ---------------------- |
+| `pluginVars`      | Object | Settings from manifest |
+| `stringsList`     | Object | Translatable strings   |
+| `assetUrls`       | Object | Asset URLs             |
+| `dependencyList`  | Array  | External dependencies  |
+| `permissionFlags` | Array  | Granted permissions    |
+| `theme`           | Object | Platform theme colors  |
+| `router`          | Object | Navigation methods     |
+| `triggerState`    | Object | Dynamic runtime state  |
 
 In development, these come from `app-manifest.json`. In production, the platform provides them.
 
@@ -327,6 +328,7 @@ dist/
 ### Socket Channels
 
 Events are sent on channels following the pattern:
+
 ```
 private.{Model}.{identifier}
 ```
@@ -375,19 +377,19 @@ Once published, the local copy takes precedence over the runtime version.
 
 ## File Ownership Summary
 
-| File/Directory | Owner | Customizable |
-|----------------|-------|--------------|
-| `src/` | You | Yes |
-| `theme-layouts/` | You | Yes |
-| `app-manifest.json` | You | Yes |
-| `.env` | You | Yes |
-| `socket-events/` | You | Yes |
-| `dev-assets/` | You | Yes |
-| `PortalContainer.vue` | Toolkit | Via publish |
-| `gxpPortalConfigStore.js` | Toolkit | Via publish |
-| `vite.config.js` | Toolkit | Via publish |
-| `server.js` | Toolkit | Via publish |
-| Browser extensions | Toolkit | No |
+| File/Directory            | Owner   | Customizable |
+| ------------------------- | ------- | ------------ |
+| `src/`                    | You     | Yes          |
+| `theme-layouts/`          | You     | Yes          |
+| `app-manifest.json`       | You     | Yes          |
+| `.env`                    | You     | Yes          |
+| `socket-events/`          | You     | Yes          |
+| `dev-assets/`             | You     | Yes          |
+| `PortalContainer.vue`     | Toolkit | Via publish  |
+| `gxpPortalConfigStore.js` | Toolkit | Via publish  |
+| `vite.config.js`          | Toolkit | Via publish  |
+| `server.js`               | Toolkit | Via publish  |
+| Browser extensions        | Toolkit | No           |
 
 ## Best Practices
 
@@ -405,9 +407,9 @@ Use Plugin.vue as a thin wrapper that imports your actual components:
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import WelcomeView from '@/views/WelcomeView.vue';
-import CheckInView from '@/views/CheckInView.vue';
+import { ref } from "vue";
+import WelcomeView from "@/views/WelcomeView.vue";
+import CheckInView from "@/views/CheckInView.vue";
 
 const currentView = ref(WelcomeView);
 </script>
@@ -419,7 +421,7 @@ Don't pass props through multiple components. Use the store directly:
 
 ```vue
 <script setup>
-import { useGxpStore } from '@gx-runtime/stores/gxpPortalConfigStore';
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
 const store = useGxpStore();
 </script>
 ```

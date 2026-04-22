@@ -50,7 +50,7 @@ your-project/
 ```vue
 <template>
   <div class="my-plugin">
-    <h1>{{ stringsList?.welcome_text || 'Welcome!' }}</h1>
+    <h1>{{ stringsList?.welcome_text || "Welcome!" }}</h1>
     <!-- Your custom content here -->
   </div>
 </template>
@@ -58,13 +58,13 @@ your-project/
 <script setup>
 // Props injected by the platform
 const props = defineProps({
-  pluginVars: Object,      // Custom variables from admin panel
-  dependencyList: Object,  // Selected dependencies
-  assetUrls: Object,       // Asset URLs (signed URLs for images, etc.)
-  stringsList: Object,     // Localized strings
-  permissionFlags: Array,  // Permission flags
-  theme: Object,           // Theme configuration
-  router: Object           // Platform router for navigation
+  pluginVars: Object, // Custom variables from admin panel
+  dependencyList: Object, // Selected dependencies
+  assetUrls: Object, // Asset URLs (signed URLs for images, etc.)
+  stringsList: Object, // Localized strings
+  permissionFlags: Array, // Permission flags
+  theme: Object, // Theme configuration
+  router: Object, // Platform router for navigation
 });
 </script>
 ```
@@ -83,18 +83,18 @@ You can customize these layouts to match your kiosk's design.
 
 ### Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start HTTPS dev server with Socket.IO |
-| `npm run dev-app` | Start HTTPS dev server only |
-| `npm run dev-http` | Start HTTP dev server (no SSL) |
-| `npm run build` | Build for production |
-| `npm run setup-ssl` | Generate SSL certificates |
-| `npm run socket:list` | List available socket events |
-| `npm run socket:send` | Send test socket events |
-| `npm run assets:list` | List development assets |
-| `npm run assets:init` | Initialize asset directories |
-| `npm run assets:generate` | Generate placeholder images |
+| Script                    | Description                           |
+| ------------------------- | ------------------------------------- |
+| `npm run dev`             | Start HTTPS dev server with Socket.IO |
+| `npm run dev-app`         | Start HTTPS dev server only           |
+| `npm run dev-http`        | Start HTTP dev server (no SSL)        |
+| `npm run build`           | Build for production                  |
+| `npm run setup-ssl`       | Generate SSL certificates             |
+| `npm run socket:list`     | List available socket events          |
+| `npm run socket:send`     | Send test socket events               |
+| `npm run assets:list`     | List development assets               |
+| `npm run assets:init`     | Initialize asset directories          |
+| `npm run assets:generate` | Generate placeholder images           |
 
 ### Dev Tools Modal
 
@@ -116,10 +116,11 @@ The Dev Tools Modal provides:
 4. **Mock Data Editor** - Edit theme colors, navigation items, user session, and permissions
 
 You can also control dev tools from the browser console:
+
 ```javascript
-window.gxDevTools.open()   // Open modal
-window.gxDevTools.close()  // Close modal
-window.gxDevTools.toggle() // Toggle modal
+window.gxDevTools.open(); // Open modal
+window.gxDevTools.close(); // Close modal
+window.gxDevTools.toggle(); // Toggle modal
 ```
 
 ### Environment Variables
@@ -143,29 +144,37 @@ VITE_SSL_KEY=.certs/localhost-key.pem
 Your Plugin.vue component receives these props from the platform:
 
 ### pluginVars
+
 Custom variables configured in the admin panel:
+
 ```javascript
 const { pluginVars } = props;
-console.log(pluginVars.primary_color);  // "#FFD600"
-console.log(pluginVars.projectId);       // 39
+console.log(pluginVars.primary_color); // "#FFD600"
+console.log(pluginVars.projectId); // 39
 ```
 
 ### assetUrls
+
 URLs for configured assets:
+
 ```vue
 <img :src="assetUrls.main_logo" alt="Logo" />
 <img :src="assetUrls.background_image" alt="Background" />
 ```
 
 ### stringsList
+
 Localized strings:
+
 ```vue
 <h1>{{ stringsList.welcome_text }}</h1>
 <p>{{ stringsList.instruction_text }}</p>
 ```
 
 ### theme
+
 Theme configuration (colors, fonts, etc.):
+
 ```vue
 <GxThemeWrapper :theme="theme">
   <!-- Your content inherits theme variables -->
@@ -173,25 +182,27 @@ Theme configuration (colors, fonts, etc.):
 ```
 
 ### router
+
 Platform router for navigation (Inertia.js-style):
+
 ```javascript
 // Basic navigation
-router.visit('/camera');
+router.visit("/camera");
 
 // POST data to a route
-router.visit('/share', {
-  method: 'post',
-  data: { image: photoUrl, caption: 'My photo!' }
+router.visit("/share", {
+  method: "post",
+  data: { image: photoUrl, caption: "My photo!" },
 });
 
 // Navigation with options
-router.visit('/results', {
+router.visit("/results", {
   preserveScroll: true,
   preserveState: true,
   replace: true,
   onStart: () => {},
   onFinish: () => {},
-  onError: (errors) => {}
+  onError: (errors) => {},
 });
 ```
 
@@ -200,6 +211,7 @@ router.visit('/results', {
 This project includes `@gramercytech/gx-componentkit` with pre-built components:
 
 ### Page Components
+
 - `GxPageStart` - Welcome/start screen with idle timeout
 - `GxPageInstructions` - Instruction display page
 - `GxPageCamera` - Camera capture interface
@@ -209,26 +221,29 @@ This project includes `@gramercytech/gx-componentkit` with pre-built components:
 - `GxPageLoading` - Loading overlay
 
 ### UI Components
+
 - `GxModal` - Customizable modal dialogs
 - `GxCountdown` - Timer/countdown component
 - `GxVideoPlayer` - Video player with custom controls
 - `GxThemeWrapper` - Theme provider component
 
 ### Composables
+
 - `useMedia()` - Camera, video, and audio utilities
 - `useAnimations()` - Animation helpers
 - `useScanning()` - Barcode/QR scanning
 - `useErrors()` - Error state management
 
 ### Usage Example
+
 ```vue
 <script setup>
 import {
   GxModal,
   GxCountdown,
   GxVideoPlayer,
-  useMedia
-} from '@gramercytech/gx-componentkit';
+  useMedia,
+} from "@gramercytech/gx-componentkit";
 
 const { startCamera, takePhoto } = useMedia();
 </script>
@@ -284,6 +299,7 @@ gxdev assets generate --name logo --size 200x200 --color "#FF5722" --text "My Lo
 ```
 
 ### ImageMagick Installation
+
 ```bash
 # macOS
 brew install imagemagick
@@ -301,6 +317,7 @@ npm run build
 ```
 
 This creates a `dist/` folder with:
+
 - `plugin.es.js` - Your compiled plugin (ES module)
 - `style.css` - Compiled styles
 

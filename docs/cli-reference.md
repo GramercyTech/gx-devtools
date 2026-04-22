@@ -20,23 +20,23 @@ npm install --save-dev @gxp-dev/tools
 
 ## Quick Reference
 
-| Command | Description |
-|---------|-------------|
-| `gxdev` | Launch interactive TUI |
-| `gxdev init [name]` | Create or update a project |
-| `gxdev dev` | Start development server |
-| `gxdev build` | Build for production |
-| `gxdev datastore <action>` | Manage store data |
-| `gxdev socket <action>` | Socket event simulation |
-| `gxdev assets <action>` | Asset management |
-| `gxdev ext:chrome` | Launch Chrome with extension |
-| `gxdev ext:firefox` | Launch Firefox with extension |
-| `gxdev ext:build` | Build extensions for distribution |
+| Command                       | Description                       |
+| ----------------------------- | --------------------------------- |
+| `gxdev`                       | Launch interactive TUI            |
+| `gxdev init [name]`           | Create or update a project        |
+| `gxdev dev`                   | Start development server          |
+| `gxdev build`                 | Build for production              |
+| `gxdev datastore <action>`    | Manage store data                 |
+| `gxdev socket <action>`       | Socket event simulation           |
+| `gxdev assets <action>`       | Asset management                  |
+| `gxdev ext:chrome`            | Launch Chrome with extension      |
+| `gxdev ext:firefox`           | Launch Firefox with extension     |
+| `gxdev ext:build`             | Build extensions for distribution |
 | `gxdev ext:install <browser>` | Permanent extension install guide |
-| `gxdev setup-ssl` | Generate SSL certificates |
-| `gxdev publish <file>` | Copy runtime files to project |
-| `gxdev add-dependency` | Add API dependency via wizard |
-| `gxdev extract-config` | Extract GxP config from source |
+| `gxdev setup-ssl`             | Generate SSL certificates         |
+| `gxdev publish <file>`        | Copy runtime files to project     |
+| `gxdev add-dependency`        | Add API dependency via wizard     |
+| `gxdev extract-config`        | Extract GxP config from source    |
 
 ---
 
@@ -50,23 +50,24 @@ gxdev init [name] [options]
 
 ### Arguments
 
-| Argument | Description |
-|----------|-------------|
-| `name` | Project name (optional - will prompt if not provided) |
+| Argument | Description                                           |
+| -------- | ----------------------------------------------------- |
+| `name`   | Project name (optional - will prompt if not provided) |
 
 ### Options
 
-| Option | Alias | Description |
-|--------|-------|-------------|
-| `--description` | `-d` | Project description (skips interactive prompt) |
-| `--build` | `-b` | AI build prompt for auto-scaffolding (skips interactive mode) |
-| `--provider` | `-p` | AI provider: `claude`, `codex`, or `gemini` (default: gemini) |
+| Option          | Alias | Description                                                   |
+| --------------- | ----- | ------------------------------------------------------------- |
+| `--description` | `-d`  | Project description (skips interactive prompt)                |
+| `--build`       | `-b`  | AI build prompt for auto-scaffolding (skips interactive mode) |
+| `--provider`    | `-p`  | AI provider: `claude`, `codex`, or `gemini` (default: gemini) |
 
 ### Interactive Flow
 
 After providing a project name, the init command runs an interactive configuration wizard:
 
 #### Step 1: App Name
+
 ```
 ──────────────────────────────────────────────────
 📝 Configure Your Plugin
@@ -78,10 +79,12 @@ After providing a project name, the init command runs an interactive configurati
 ```
 
 Use arrow keys to:
+
 - Select the prepopulated name (from package.json)
 - Or select "Enter custom name" and type a new value
 
 #### Step 2: Description
+
 ```
 ? Description
 ❯ A GxP kiosk plugin - From package.json
@@ -89,6 +92,7 @@ Use arrow keys to:
 ```
 
 #### Step 3: AI Scaffolding
+
 ```
 ──────────────────────────────────────────────────
 🤖 AI-Powered Scaffolding
@@ -104,6 +108,7 @@ Use arrow keys to:
 ```
 
 The wizard auto-detects available AI providers. If you select one:
+
 ```
 📝 Describe your plugin (what it does, key features, UI elements):
   (Press Enter twice when done)
@@ -115,6 +120,7 @@ The wizard auto-detects available AI providers. If you select one:
 ```
 
 #### Step 4: SSL Configuration
+
 ```
 ──────────────────────────────────────────────────
 🔒 SSL Configuration
@@ -126,6 +132,7 @@ The wizard auto-detects available AI providers. If you select one:
 ```
 
 #### Step 5: Start Development
+
 ```
 ──────────────────────────────────────────────────
 🚀 Start Development
@@ -138,6 +145,7 @@ The wizard auto-detects available AI providers. If you select one:
 ```
 
 #### Step 6: Browser Extension (if starting app)
+
 ```
 ? Launch browser with GxP extension?
 ❯ Chrome - Launch Chrome with DevTools panel
@@ -148,19 +156,20 @@ The wizard auto-detects available AI providers. If you select one:
 ### AI Scaffolding
 
 When you provide a build description, the AI will generate:
+
 - Vue component files in `src/`
 - Updates to `app-manifest.json` with strings and assets
 - A brief explanation of what was created
 
 #### Supported AI Providers
 
-| Provider | Authentication | Setup |
-|----------|----------------|-------|
-| **Claude** | CLI login | `npm i -g @anthropic-ai/claude-code && claude login` |
-| **Codex** | CLI login | `npm i -g @openai/codex && codex auth` |
-| **Gemini** | CLI login | `npm i -g @google/gemini-cli && gemini` |
-| **Gemini** | API key | `export GEMINI_API_KEY=your_key` |
-| **Gemini** | gcloud | `gcloud auth login` |
+| Provider   | Authentication | Setup                                                |
+| ---------- | -------------- | ---------------------------------------------------- |
+| **Claude** | CLI login      | `npm i -g @anthropic-ai/claude-code && claude login` |
+| **Codex**  | CLI login      | `npm i -g @openai/codex && codex auth`               |
+| **Gemini** | CLI login      | `npm i -g @google/gemini-cli && gemini`              |
+| **Gemini** | API key        | `export GEMINI_API_KEY=your_key`                     |
+| **Gemini** | gcloud         | `gcloud auth login`                                  |
 
 The init wizard auto-detects which providers are available and shows only those options. You can also specify a provider directly:
 
@@ -178,6 +187,7 @@ gxdev init my-plugin -b "Build description" -p gemini
 ### Behavior
 
 **New Project:**
+
 1. Prompts for project name (if not provided)
 2. Creates project directory
 3. Generates `package.json` with required dependencies
@@ -192,6 +202,7 @@ gxdev init my-plugin -b "Build description" -p gemini
    - Browser extension (optional)
 
 **Existing Project (has package.json):**
+
 1. Updates dependencies to latest versions
 2. Copies any missing template files (won't overwrite existing)
 3. Updates package scripts
@@ -265,16 +276,16 @@ gxdev dev [options]
 
 ### Options
 
-| Option | Alias | Default | Description |
-|--------|-------|---------|-------------|
-| `--port` | | `3060` | Development server port |
-| `--no-https` | | `false` | Disable HTTPS, use HTTP |
-| `--with-socket` | `-s` | `false` | Start Socket.IO server |
-| `--with-mock` | `-m` | `false` | Enable Mock API server (requires socket) |
-| `--chrome` | | `false` | Launch Chrome with extension |
-| `--firefox` | | `false` | Launch Firefox with extension |
-| `--component-path` | | `./src/Plugin.vue` | Path to main component |
-| `--node-log-level` | | `info` | Node log level |
+| Option             | Alias | Default            | Description                              |
+| ------------------ | ----- | ------------------ | ---------------------------------------- |
+| `--port`           |       | `3060`             | Development server port                  |
+| `--no-https`       |       | `false`            | Disable HTTPS, use HTTP                  |
+| `--with-socket`    | `-s`  | `false`            | Start Socket.IO server                   |
+| `--with-mock`      | `-m`  | `false`            | Enable Mock API server (requires socket) |
+| `--chrome`         |       | `false`            | Launch Chrome with extension             |
+| `--firefox`        |       | `false`            | Launch Firefox with extension            |
+| `--component-path` |       | `./src/Plugin.vue` | Path to main component                   |
+| `--node-log-level` |       | `info`             | Node log level                           |
 
 ### Examples
 
@@ -323,10 +334,10 @@ gxdev build [options]
 
 ### Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
+| Option             | Default            | Description            |
+| ------------------ | ------------------ | ---------------------- |
 | `--component-path` | `./src/Plugin.vue` | Path to main component |
-| `--node-log-level` | `error` | Node log level |
+| `--node-log-level` | `error`            | Node log level         |
 
 ### Build Output
 
@@ -356,6 +367,7 @@ dist/
 ### Package Contents (.gxpapp)
 
 The `.gxpapp` file is a ZIP archive containing:
+
 - `plugin.es.js` - Main plugin code
 - `plugin.es.css` - Plugin styles
 - `app-manifest.json` - Plugin configuration
@@ -386,13 +398,13 @@ gxdev datastore <action> [options]
 
 ### Actions
 
-| Action | Description |
-|--------|-------------|
-| `list` | List all store variables |
-| `add` | Add a new variable |
+| Action         | Description                           |
+| -------------- | ------------------------------------- |
+| `list`         | List all store variables              |
+| `add`          | Add a new variable                    |
 | `scan-strings` | Scan components for hardcoded strings |
-| `config` | Switch between test configurations |
-| `init` | Add datastore to existing project |
+| `config`       | Switch between test configurations    |
+| `init`         | Add datastore to existing project     |
 
 ### datastore list
 
@@ -403,6 +415,7 @@ gxdev datastore list
 ```
 
 Output shows:
+
 - 🔧 Plugin Variables (pluginVars)
 - 📝 Strings (stringsList)
 - 🖼️ Assets (assetList)
@@ -424,11 +437,11 @@ gxdev datastore add --type asset --key logo --value "/dev-assets/images/logo.png
 
 Options:
 
-| Option | Description |
-|--------|-------------|
-| `--type` | Variable type: `string`, `setting`, or `asset` |
-| `--key` | Variable key/name |
-| `--value` | Variable value |
+| Option    | Description                                    |
+| --------- | ---------------------------------------------- |
+| `--type`  | Variable type: `string`, `setting`, or `asset` |
+| `--key`   | Variable key/name                              |
+| `--value` | Variable value                                 |
 
 ### datastore scan-strings
 
@@ -443,6 +456,7 @@ gxdev datastore scan-strings
 ```
 
 The scanner:
+
 1. Parses the `<template>` section
 2. Finds text content within HTML elements
 3. Suggests key names based on the text
@@ -461,6 +475,7 @@ gxdev datastore config --config production
 ```
 
 Create configurations by copying `test-data.json`:
+
 ```bash
 cp src/stores/test-data.json src/stores/test-data-production.json
 ```
@@ -474,6 +489,7 @@ gxdev datastore init
 ```
 
 This will:
+
 1. Add Pinia and Axios dependencies
 2. Create store files in `src/stores/`
 3. Add datastore scripts to `package.json`
@@ -491,10 +507,10 @@ gxdev socket <action> [options]
 
 ### Actions
 
-| Action | Description |
-|--------|-------------|
+| Action | Description                  |
+| ------ | ---------------------------- |
 | `list` | List available socket events |
-| `send` | Send a socket event |
+| `send` | Send a socket event          |
 
 ### socket list
 
@@ -505,6 +521,7 @@ gxdev socket list
 ```
 
 Shows for each event:
+
 - Event name
 - Channel
 - Data ID (if applicable)
@@ -519,10 +536,10 @@ gxdev socket send --event <EventName> [--identifier <id>]
 
 Options:
 
-| Option | Description |
-|--------|-------------|
-| `--event` | Event name (matches JSON file in socket-events/) |
-| `--identifier` | Override the channel identifier |
+| Option         | Description                                      |
+| -------------- | ------------------------------------------------ |
+| `--event`      | Event name (matches JSON file in socket-events/) |
+| `--identifier` | Override the channel identifier                  |
 
 Examples:
 
@@ -561,11 +578,11 @@ gxdev assets <action> [options]
 
 ### Actions
 
-| Action | Description |
-|--------|-------------|
-| `list` | List development assets |
-| `generate` | Generate placeholder images |
-| `init` | Initialize asset directories |
+| Action     | Description                  |
+| ---------- | ---------------------------- |
+| `list`     | List development assets      |
+| `generate` | Generate placeholder images  |
+| `init`     | Initialize asset directories |
 
 ### assets list
 
@@ -587,14 +604,14 @@ gxdev assets generate [options]
 
 Options:
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--size` | `400x300` | Image dimensions (WxH) |
-| `--name` | `placeholder` | Base filename |
-| `--format` | `png` | Image format: png, jpg, jpeg, gif |
-| `--color` | random | Background color (hex) |
-| `--text` | auto | Text overlay |
-| `--count` | `1` | Number of variants to generate |
+| Option     | Default       | Description                       |
+| ---------- | ------------- | --------------------------------- |
+| `--size`   | `400x300`     | Image dimensions (WxH)            |
+| `--name`   | `placeholder` | Base filename                     |
+| `--format` | `png`         | Image format: png, jpg, jpeg, gif |
+| `--color`  | random        | Background color (hex)            |
+| `--text`   | auto          | Text overlay                      |
+| `--count`  | `1`           | Number of variants to generate    |
 
 Examples:
 
@@ -623,6 +640,7 @@ gxdev assets init
 ```
 
 Creates:
+
 ```
 dev-assets/
 ├── images/    # Image placeholders
@@ -708,8 +726,8 @@ gxdev ext:install <browser>
 
 ### Arguments
 
-| Argument | Description |
-|----------|-------------|
+| Argument  | Description                               |
+| --------- | ----------------------------------------- |
 | `browser` | Browser to install: `chrome` or `firefox` |
 
 ### Chrome Installation
@@ -719,6 +737,7 @@ gxdev ext:install chrome
 ```
 
 Instructions provided:
+
 1. Navigate to `chrome://extensions/`
 2. Enable "Developer mode"
 3. Click "Load unpacked"
@@ -731,6 +750,7 @@ gxdev ext:install firefox
 ```
 
 Two options provided:
+
 1. **Temporary Add-on** - Easy but removed on restart
 2. **Persistent Installation** - Requires Firefox Developer Edition
 
@@ -758,6 +778,7 @@ gxdev setup-ssl
 ### Certificate Location
 
 Certificates are generated in the project root:
+
 - `localhost.pem` - Certificate
 - `localhost-key.pem` - Private key
 
@@ -773,13 +794,13 @@ gxdev publish <file>
 
 ### Available Files
 
-| File | Destination | Description |
-|------|-------------|-------------|
-| `server.js` | `./server.js` | Socket.IO server |
-| `gxpPortalConfigStore.js` | `./src/stores/` | GxP Pinia store |
-| `main.js` | `./main.js` | Development entry point |
-| `vite.config.js` | `./vite.config.js` | Vite configuration |
-| `index.html` | `./index.html` | Development HTML |
+| File                      | Destination        | Description             |
+| ------------------------- | ------------------ | ----------------------- |
+| `server.js`               | `./server.js`      | Socket.IO server        |
+| `gxpPortalConfigStore.js` | `./src/stores/`    | GxP Pinia store         |
+| `main.js`                 | `./main.js`        | Development entry point |
+| `vite.config.js`          | `./vite.config.js` | Vite configuration      |
+| `index.html`              | `./index.html`     | Development HTML        |
 
 ### When to Use
 
@@ -804,28 +825,28 @@ gxdev publish vite.config.js
 
 Key environment variables recognized by gxdev:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NODE_PORT` | `3060` | Development server port |
-| `SOCKET_IO_PORT` | `3069` | Socket.IO server port |
-| `USE_HTTPS` | `true` | Enable HTTPS |
-| `CERT_PATH` | | SSL certificate path |
-| `KEY_PATH` | | SSL private key path |
-| `COMPONENT_PATH` | `./src/Plugin.vue` | Main component path |
-| `SOCKET_IO_ENABLED` | `false` | Auto-start Socket.IO |
-| `VITE_API_ENV` | `mock` | API environment: mock, local, develop, staging, production |
-| `VITE_API_KEY` | | API authentication key |
-| `VITE_API_PROJECT_ID` | | Project ID for API calls |
+| Variable              | Default            | Description                                                |
+| --------------------- | ------------------ | ---------------------------------------------------------- |
+| `NODE_PORT`           | `3060`             | Development server port                                    |
+| `SOCKET_IO_PORT`      | `3069`             | Socket.IO server port                                      |
+| `USE_HTTPS`           | `true`             | Enable HTTPS                                               |
+| `CERT_PATH`           |                    | SSL certificate path                                       |
+| `KEY_PATH`            |                    | SSL private key path                                       |
+| `COMPONENT_PATH`      | `./src/Plugin.vue` | Main component path                                        |
+| `SOCKET_IO_ENABLED`   | `false`            | Auto-start Socket.IO                                       |
+| `VITE_API_ENV`        | `mock`             | API environment: mock, local, develop, staging, production |
+| `VITE_API_KEY`        |                    | API authentication key                                     |
+| `VITE_API_PROJECT_ID` |                    | Project ID for API calls                                   |
 
 ### API Environments
 
-| Environment | API Base URL |
-|-------------|--------------|
-| `mock` | `https://localhost:3060/mock-api` |
-| `local` | `https://dashboard.eventfinity.test` |
-| `develop` | `https://api.zenith-develop.env.eventfinity.app` |
-| `staging` | `https://api.efz-staging.env.eventfinity.app` |
-| `production` | `https://api.gramercy.cloud` |
+| Environment  | API Base URL                                     |
+| ------------ | ------------------------------------------------ |
+| `mock`       | `https://localhost:3060/mock-api`                |
+| `local`      | `https://dashboard.eventfinity.test`             |
+| `develop`    | `https://api.zenith-develop.env.eventfinity.app` |
+| `staging`    | `https://api.efz-staging.env.eventfinity.app`    |
+| `production` | `https://api.gramercy.cloud`                     |
 
 ---
 
@@ -855,13 +876,14 @@ gxdev add-dependency [options]
 
 ### Options
 
-| Option | Alias | Default | Description |
-|--------|-------|---------|-------------|
-| `--env` | `-e` | `develop` | API environment: `develop` or `local` |
+| Option  | Alias | Default   | Description                           |
+| ------- | ----- | --------- | ------------------------------------- |
+| `--env` | `-e`  | `develop` | API environment: `develop` or `local` |
 
 ### What It Does
 
 The wizard:
+
 1. Loads OpenAPI and AsyncAPI specifications from the selected environment
 2. Groups API endpoints by tags/models
 3. Displays a type-ahead selection for choosing a model
@@ -925,14 +947,14 @@ Generated Dependency Configuration:
 
 ### Generated Dependency Structure
 
-| Field | Description |
-|-------|-------------|
-| `identifier` | Unique ID used when calling `store.callApi()` |
-| `model` | The API model/resource name |
-| `permissionKey` | Permission key for access control |
-| `permissions` | Required permissions extracted from API spec |
-| `operations` | Map of operationId → `method:path` |
-| `events` | Map of socket events for this resource |
+| Field           | Description                                   |
+| --------------- | --------------------------------------------- |
+| `identifier`    | Unique ID used when calling `store.callApi()` |
+| `model`         | The API model/resource name                   |
+| `permissionKey` | Permission key for access control             |
+| `permissions`   | Required permissions extracted from API spec  |
+| `operations`    | Map of operationId → `method:path`            |
+| `events`        | Map of socket events for this resource        |
 
 ### Using the Dependency
 
@@ -942,10 +964,10 @@ Once added, call any operation using `gxpStore.callApi()`:
 const store = useGxpStore();
 
 // Use the operationId and identifier
-const items = await store.callApi('access-points.index', 'access_points');
+const items = await store.callApi("access-points.index", "access_points");
 
-const item = await store.callApi('access-points.show', 'access_points', {
-  access_point: 123
+const item = await store.callApi("access-points.show", "access_points", {
+  access_point: 123,
 });
 ```
 
@@ -983,10 +1005,10 @@ gxdev extract-config [options]
 
 ### Options
 
-| Option | Alias | Description |
-|--------|-------|-------------|
-| `--dry-run` | `-d` | Preview changes without modifying files |
-| `--overwrite` | `-o` | Overwrite existing values in manifest |
+| Option        | Alias | Description                             |
+| ------------- | ----- | --------------------------------------- |
+| `--dry-run`   | `-d`  | Preview changes without modifying files |
+| `--overwrite` | `-o`  | Overwrite existing values in manifest   |
 
 ### What It Extracts
 
