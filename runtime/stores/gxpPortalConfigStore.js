@@ -778,10 +778,6 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		findDependency,
 
 		// Update methods (for DevTools and programmatic updates)
-		updateString,
-		updateSetting,
-		updateAsset,
-		updateState,
 		addDevAsset,
 
 		// Socket methods
