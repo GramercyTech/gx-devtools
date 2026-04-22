@@ -24,10 +24,10 @@ function getToolkitRoot(): string {
 	return path.resolve(__dirname, "..", "..", "..")
 }
 
-// Get the path to the runtime server.js
+// Get the path to the runtime server.cjs
 function getServerPath(): string {
 	const toolkitRoot = getToolkitRoot()
-	return path.join(toolkitRoot, "runtime", "server.js")
+	return path.join(toolkitRoot, "runtime", "server.cjs")
 }
 
 // Get the socket events directory

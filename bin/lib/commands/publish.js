@@ -30,12 +30,12 @@ async function publishCommand(argv) {
 		console.log("  • index.html         - HTML template")
 		console.log("")
 		console.log("  Runtime files (advanced customization):")
-		console.log("  • server.js          - Socket.IO server file")
+		console.log("  • server.cjs         - Socket.IO server file")
 		console.log("  • gxpPortalConfigStore.js - GxP datastore")
 		console.log("")
 		console.log("💡 Usage:")
 		console.log("  gxdev publish main.js")
-		console.log("  gxdev publish server.js")
+		console.log("  gxdev publish server.cjs")
 		console.log("")
 		console.log("💡 To customize the Vite config, create vite.extend.js at")
 		console.log(
@@ -57,9 +57,9 @@ async function publishCommand(argv) {
 			desc: "HTML template",
 			location: "runtime",
 		},
-		"server.js": {
-			src: "server.js",
-			dest: "server.js",
+		"server.cjs": {
+			src: "server.cjs",
+			dest: "server.cjs",
 			desc: "Socket.IO server file",
 			location: "runtime",
 		},

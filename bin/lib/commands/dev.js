@@ -157,7 +157,7 @@ function devCommand(argv) {
 	let serverJsPath = ""
 	if (!noSocket) {
 		// Check for local server.js first, then runtime directory
-		const serverJs = resolveFilePath("server.js", "", "runtime")
+		const serverJs = resolveFilePath("server.cjs", "", "runtime")
 		if (!fs.existsSync(serverJs.path)) {
 			console.warn("⚠ server.js not found. Skipping Socket.IO server.")
 		} else {
