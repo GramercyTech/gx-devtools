@@ -87,7 +87,7 @@ Use arrow keys to:
 
 ```
 ? Description
-❯ A GxP kiosk plugin - From package.json
+❯ A GxP plugin - From package.json
   Enter custom description
 ```
 

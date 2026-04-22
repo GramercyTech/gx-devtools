@@ -64,7 +64,7 @@ After the project files are created and dependencies installed, you'll enter an 
   Enter custom name
 
 ? Description
-❯ A GxP kiosk plugin - From package.json
+❯ A GxP plugin - From package.json
   Enter custom description
 ```
 

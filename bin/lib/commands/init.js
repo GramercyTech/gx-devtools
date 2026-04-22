@@ -331,7 +331,7 @@ async function runInteractiveConfig(projectPath, initialName, isLocal = false) {
 	const projectInfo = readProjectInfo(projectPath)
 	const defaultName =
 		projectInfo.name || initialName || path.basename(projectPath)
-	const defaultDescription = projectInfo.description || "A GxP kiosk plugin"
+	const defaultDescription = projectInfo.description || "A GxP plugin"
 
 	// 1. App Name - with prepopulated value and custom option
 	const appName = await arrowSelectPrompt("App name", [
@@ -692,7 +692,7 @@ async function initCommand(argv) {
 	}
 
 	// Create package.json (only if it doesn't exist or overwrite is enabled)
-	const initialDescription = argv.description || "A GxP kiosk plugin"
+	const initialDescription = argv.description || "A GxP plugin"
 	const packageJsonPath = path.join(projectPath, "package.json")
 	if (!fs.existsSync(packageJsonPath) || overwrite) {
 		createPackageJson(projectPath, projectName, initialDescription)

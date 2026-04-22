@@ -325,7 +325,9 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		// Operations are built from OpenAPI spec paths
 		// Structure: { [operationId]: { method, path, parameters } }
 		try {
-			const specUrl = `${apiBaseUrl.value}/api-specs/openapi.json`
+			const apiDocsBaseUrl =
+				apiEnv === "mock" ? "https://api.gramercy.cloud" : apiBaseUrl.value
+			const specUrl = `${apiDocsBaseUrl}/api-specs/openapi.json`
 			const response = await axios.get(specUrl)
 			const spec = response.data
 

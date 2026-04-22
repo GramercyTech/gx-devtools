@@ -748,7 +748,7 @@ async function generateWithGeminiGcloud(fullPrompt) {
 function buildFullPrompt(userPrompt, projectName, description) {
 	return `
 Project Name: ${projectName}
-Project Description: ${description || "A GxP kiosk plugin"}
+Project Description: ${description || "A GxP plugin"}
 
 User Request:
 ${userPrompt}

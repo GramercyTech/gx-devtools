@@ -89,16 +89,16 @@ describe("init command", () => {
 	describe("description handling", () => {
 		it("should use provided description", () => {
 			const argv = { description: "My custom description" }
-			const description = argv.description || "A GxP kiosk plugin"
+			const description = argv.description || "A GxP plugin"
 
 			expect(description).toBe("My custom description")
 		})
 
 		it("should use default description when not provided", () => {
 			const argv = {}
-			const description = argv.description || "A GxP kiosk plugin"
+			const description = argv.description || "A GxP plugin"
 
-			expect(description).toBe("A GxP kiosk plugin")
+			expect(description).toBe("A GxP plugin")
 		})
 	})
 
