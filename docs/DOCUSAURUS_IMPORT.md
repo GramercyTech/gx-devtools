@@ -18,45 +18,45 @@ Add to your `docusaurus.config.js`:
 
 ```javascript
 module.exports = {
-  // ... other config
+	// ... other config
 
-  plugins: [
-    [
-      "docusaurus-plugin-remote-content",
-      {
-        // Unique name for this remote source
-        name: "gx-devtools-docs",
+	plugins: [
+		[
+			"docusaurus-plugin-remote-content",
+			{
+				// Unique name for this remote source
+				name: "gx-devtools-docs",
 
-        // GitHub raw content URL for the docs folder
-        sourceBaseUrl:
-          "https://raw.githubusercontent.com/gramercytech/gx-devtools/develop/docs/",
+				// GitHub raw content URL for the docs folder
+				sourceBaseUrl:
+					"https://raw.githubusercontent.com/gramercytech/gx-devtools/develop/docs/",
 
-        // Where to output the fetched docs
-        outDir: "docs/gx-devtools",
+				// Where to output the fetched docs
+				outDir: "docs/gx-devtools",
 
-        // List of documents to fetch
-        documents: [
-          "index.md",
-          "getting-started.md",
-          "app-manifest.md",
-          "gxp-store.md",
-          "dev-tools.md",
-          "building-for-platform.md",
-          "cli-reference.md",
-          "browser-extensions.md",
-          "strings-plugin.md",
-          "interactive-tui.md",
-          "architecture.md",
-          "socket-events.md",
-          "troubleshooting.md",
-        ],
+				// List of documents to fetch
+				documents: [
+					"index.md",
+					"getting-started.md",
+					"app-manifest.md",
+					"gxp-store.md",
+					"dev-tools.md",
+					"building-for-platform.md",
+					"cli-reference.md",
+					"browser-extensions.md",
+					"strings-plugin.md",
+					"interactive-tui.md",
+					"architecture.md",
+					"socket-events.md",
+					"troubleshooting.md",
+				],
 
-        // Fetch category config too
-        // Note: _category_.json needs special handling (see below)
-      },
-    ],
-  ],
-};
+				// Fetch category config too
+				// Note: _category_.json needs special handling (see below)
+			},
+		],
+	],
+}
 ```
 
 ### Fetching _category_.json
@@ -65,60 +65,60 @@ The category file needs to be fetched separately since it's not markdown:
 
 ```javascript
 module.exports = {
-  plugins: [
-    // Markdown docs
-    [
-      "docusaurus-plugin-remote-content",
-      {
-        name: "gx-devtools-docs",
-        sourceBaseUrl:
-          "https://raw.githubusercontent.com/gramercytech/gx-devtools/main/docs/",
-        outDir: "docs/gx-devtools",
-        documents: [
-          "index.md",
-          "getting-started.md",
-          "app-manifest.md",
-          "gxp-store.md",
-          "dev-tools.md",
-          "building-for-platform.md",
-          "cli-reference.md",
-          "browser-extensions.md",
-          "strings-plugin.md",
-          "interactive-tui.md",
-          "architecture.md",
-          "socket-events.md",
-          "troubleshooting.md",
-        ],
-        // Ensure content is returned as string (plugin expects {content: string} object)
-        modifyContent: (filename, content) => {
-          return {
-            content: typeof content === "string" ? content : String(content),
-          };
-        },
-      },
-    ],
-    // Category config (JSON)
-    [
-      "docusaurus-plugin-remote-content",
-      {
-        name: "gx-devtools-category",
-        sourceBaseUrl:
-          "https://raw.githubusercontent.com/gramercytech/gx-devtools/main/docs/",
-        outDir: "docs/gx-devtools",
-        documents: ["_category_.json"],
-        // JSON files need to be stringified before writing (plugin expects {content: string} object)
-        modifyContent: (filename, content) => {
-          return {
-            content:
-              typeof content === "string"
-                ? content
-                : JSON.stringify(content, null, 2),
-          };
-        },
-      },
-    ],
-  ],
-};
+	plugins: [
+		// Markdown docs
+		[
+			"docusaurus-plugin-remote-content",
+			{
+				name: "gx-devtools-docs",
+				sourceBaseUrl:
+					"https://raw.githubusercontent.com/gramercytech/gx-devtools/main/docs/",
+				outDir: "docs/gx-devtools",
+				documents: [
+					"index.md",
+					"getting-started.md",
+					"app-manifest.md",
+					"gxp-store.md",
+					"dev-tools.md",
+					"building-for-platform.md",
+					"cli-reference.md",
+					"browser-extensions.md",
+					"strings-plugin.md",
+					"interactive-tui.md",
+					"architecture.md",
+					"socket-events.md",
+					"troubleshooting.md",
+				],
+				// Ensure content is returned as string (plugin expects {content: string} object)
+				modifyContent: (filename, content) => {
+					return {
+						content: typeof content === "string" ? content : String(content),
+					}
+				},
+			},
+		],
+		// Category config (JSON)
+		[
+			"docusaurus-plugin-remote-content",
+			{
+				name: "gx-devtools-category",
+				sourceBaseUrl:
+					"https://raw.githubusercontent.com/gramercytech/gx-devtools/main/docs/",
+				outDir: "docs/gx-devtools",
+				documents: ["_category_.json"],
+				// JSON files need to be stringified before writing (plugin expects {content: string} object)
+				modifyContent: (filename, content) => {
+					return {
+						content:
+							typeof content === "string"
+								? content
+								: JSON.stringify(content, null, 2),
+					}
+				},
+			},
+		],
+	],
+}
 ```
 
 ### Dynamic Document List (Advanced)
@@ -126,35 +126,35 @@ module.exports = {
 Fetch the document list dynamically from GitHub API:
 
 ```javascript
-const { Octokit } = require("@octokit/rest");
+const { Octokit } = require("@octokit/rest")
 
 module.exports = {
-  plugins: [
-    [
-      "docusaurus-plugin-remote-content",
-      {
-        name: "gx-devtools-docs",
-        sourceBaseUrl:
-          "https://raw.githubusercontent.com/gramercytech/gx-devtools/main/docs/",
-        outDir: "docs/gx-devtools",
+	plugins: [
+		[
+			"docusaurus-plugin-remote-content",
+			{
+				name: "gx-devtools-docs",
+				sourceBaseUrl:
+					"https://raw.githubusercontent.com/gramercytech/gx-devtools/main/docs/",
+				outDir: "docs/gx-devtools",
 
-        // Dynamically fetch file list
-        documents: async () => {
-          const octokit = new Octokit();
-          const { data } = await octokit.repos.getContent({
-            owner: "gramercytech",
-            repo: "gx-devtools",
-            path: "docs",
-          });
+				// Dynamically fetch file list
+				documents: async () => {
+					const octokit = new Octokit()
+					const { data } = await octokit.repos.getContent({
+						owner: "gramercytech",
+						repo: "gx-devtools",
+						path: "docs",
+					})
 
-          return data
-            .filter((file) => file.name.endsWith(".md"))
-            .map((file) => file.name);
-        },
-      },
-    ],
-  ],
-};
+					return data
+						.filter((file) => file.name.endsWith(".md"))
+						.map((file) => file.name)
+				},
+			},
+		],
+	],
+}
 ```
 
 ## Option 2: Git Submodule
@@ -176,18 +176,18 @@ git submodule update --init --recursive
 ```javascript
 // docusaurus.config.js
 module.exports = {
-  presets: [
-    [
-      "@docusaurus/preset-classic",
-      {
-        docs: {
-          // Include gx-devtools docs
-          include: ["**/*.md", "../packages/gx-devtools/docs/**/*.md"],
-        },
-      },
-    ],
-  ],
-};
+	presets: [
+		[
+			"@docusaurus/preset-classic",
+			{
+				docs: {
+					// Include gx-devtools docs
+					include: ["**/*.md", "../packages/gx-devtools/docs/**/*.md"],
+				},
+			},
+		],
+	],
+}
 ```
 
 ### CI/CD Update
@@ -206,21 +206,21 @@ Since gx-devtools is an npm package, reference docs from node_modules.
 
 ```javascript
 // docusaurus.config.js
-const path = require("path");
+const path = require("path")
 
 module.exports = {
-  plugins: [
-    [
-      "@docusaurus/plugin-content-docs",
-      {
-        id: "gx-devtools",
-        path: path.resolve(__dirname, "node_modules/@gxp-dev/tools/docs"),
-        routeBasePath: "gx-devtools",
-        sidebarPath: require.resolve("./sidebars-gx-devtools.js"),
-      },
-    ],
-  ],
-};
+	plugins: [
+		[
+			"@docusaurus/plugin-content-docs",
+			{
+				id: "gx-devtools",
+				path: path.resolve(__dirname, "node_modules/@gxp-dev/tools/docs"),
+				routeBasePath: "gx-devtools",
+				sidebarPath: require.resolve("./sidebars-gx-devtools.js"),
+			},
+		],
+	],
+}
 ```
 
 ### Sidebar Config
@@ -229,22 +229,22 @@ Create `sidebars-gx-devtools.js`:
 
 ```javascript
 module.exports = {
-  gxToolkitSidebar: [
-    "index",
-    "getting-started",
-    "architecture",
-    "app-manifest",
-    "gxp-store",
-    "strings-plugin",
-    "dev-tools",
-    "interactive-tui",
-    "browser-extensions",
-    "socket-events",
-    "cli-reference",
-    "building-for-platform",
-    "troubleshooting",
-  ],
-};
+	gxToolkitSidebar: [
+		"index",
+		"getting-started",
+		"architecture",
+		"app-manifest",
+		"gxp-store",
+		"strings-plugin",
+		"dev-tools",
+		"interactive-tui",
+		"browser-extensions",
+		"socket-events",
+		"cli-reference",
+		"building-for-platform",
+		"troubleshooting",
+	],
+}
 ```
 
 ## Sidebar Integration
@@ -254,36 +254,36 @@ To include gx-devtools docs in your main sidebar:
 ```javascript
 // sidebars.js
 module.exports = {
-  docs: [
-    "intro",
-    "quickstart",
-    // ... your other docs
+	docs: [
+		"intro",
+		"quickstart",
+		// ... your other docs
 
-    // Link to gx-devtools section
-    {
-      type: "category",
-      label: "GxP Toolkit",
-      link: {
-        type: "doc",
-        id: "gx-devtools/index",
-      },
-      items: [
-        "gx-devtools/getting-started",
-        "gx-devtools/architecture",
-        "gx-devtools/app-manifest",
-        "gx-devtools/gxp-store",
-        "gx-devtools/strings-plugin",
-        "gx-devtools/dev-tools",
-        "gx-devtools/interactive-tui",
-        "gx-devtools/browser-extensions",
-        "gx-devtools/socket-events",
-        "gx-devtools/cli-reference",
-        "gx-devtools/building-for-platform",
-        "gx-devtools/troubleshooting",
-      ],
-    },
-  ],
-};
+		// Link to gx-devtools section
+		{
+			type: "category",
+			label: "GxP Toolkit",
+			link: {
+				type: "doc",
+				id: "gx-devtools/index",
+			},
+			items: [
+				"gx-devtools/getting-started",
+				"gx-devtools/architecture",
+				"gx-devtools/app-manifest",
+				"gx-devtools/gxp-store",
+				"gx-devtools/strings-plugin",
+				"gx-devtools/dev-tools",
+				"gx-devtools/interactive-tui",
+				"gx-devtools/browser-extensions",
+				"gx-devtools/socket-events",
+				"gx-devtools/cli-reference",
+				"gx-devtools/building-for-platform",
+				"gx-devtools/troubleshooting",
+			],
+		},
+	],
+}
 ```
 
 ## Customizing Imported Docs
@@ -291,30 +291,30 @@ module.exports = {
 ### Modify Content During Fetch
 
 ```javascript
-[
-  "docusaurus-plugin-remote-content",
-  {
-    name: "gx-devtools-docs",
-    sourceBaseUrl: "...",
-    outDir: "docs/gx-devtools",
-    documents: ["getting-started.md"],
+;[
+	"docusaurus-plugin-remote-content",
+	{
+		name: "gx-devtools-docs",
+		sourceBaseUrl: "...",
+		outDir: "docs/gx-devtools",
+		documents: ["getting-started.md"],
 
-    // Modify content before writing
-    modifyContent: (filename, content) => {
-      // Add custom header
-      if (filename === "index.md") {
-        return {
-          filename,
-          content: content.replace(
-            "---",
-            "---\ncustom_edit_url: https://github.com/gramercytech/gx-devtools/edit/main/docs/index.md",
-          ),
-        };
-      }
-      return undefined; // No modification
-    },
-  },
-];
+		// Modify content before writing
+		modifyContent: (filename, content) => {
+			// Add custom header
+			if (filename === "index.md") {
+				return {
+					filename,
+					content: content.replace(
+						"---",
+						"---\ncustom_edit_url: https://github.com/gramercytech/gx-devtools/edit/main/docs/index.md",
+					),
+				}
+			}
+			return undefined // No modification
+		},
+	},
+]
 ```
 
 ### Override Specific Pages
@@ -390,14 +390,14 @@ npm run build
 If you need versioned docs:
 
 ```javascript
-[
-  "docusaurus-plugin-remote-content",
-  {
-    name: "gx-devtools-docs-v1",
-    sourceBaseUrl:
-      "https://raw.githubusercontent.com/gramercytech/gx-devtools/v1.0.0/docs/",
-    outDir: "versioned_docs/version-1.0/gx-devtools",
-    documents: ["index.md", "..."],
-  },
-];
+;[
+	"docusaurus-plugin-remote-content",
+	{
+		name: "gx-devtools-docs-v1",
+		sourceBaseUrl:
+			"https://raw.githubusercontent.com/gramercytech/gx-devtools/v1.0.0/docs/",
+		outDir: "versioned_docs/version-1.0/gx-devtools",
+		documents: ["index.md", "..."],
+	},
+]
 ```

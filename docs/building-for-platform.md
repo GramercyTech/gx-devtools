@@ -48,39 +48,39 @@ The build process:
 Your project's `vite.config.js` controls the build:
 
 ```javascript
-import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
-import path from "path";
+import { defineConfig } from "vite"
+import vue from "@vitejs/plugin-vue"
+import path from "path"
 
 export default defineConfig({
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@layouts": path.resolve(__dirname, "./theme-layouts"),
-      "@gx-runtime": path.resolve(
-        __dirname,
-        "./node_modules/@gxp-dev/tools/runtime",
-      ),
-    },
-  },
-  build: {
-    lib: {
-      entry: path.resolve(__dirname, "src/Plugin.vue"),
-      name: "GxpPlugin",
-      fileName: (format) => `plugin.${format}.js`,
-    },
-    rollupOptions: {
-      external: ["vue", "pinia"],
-      output: {
-        globals: {
-          vue: "Vue",
-          pinia: "Pinia",
-        },
-      },
-    },
-  },
-});
+	plugins: [vue()],
+	resolve: {
+		alias: {
+			"@": path.resolve(__dirname, "./src"),
+			"@layouts": path.resolve(__dirname, "./theme-layouts"),
+			"@gx-runtime": path.resolve(
+				__dirname,
+				"./node_modules/@gxp-dev/tools/runtime",
+			),
+		},
+	},
+	build: {
+		lib: {
+			entry: path.resolve(__dirname, "src/Plugin.vue"),
+			name: "GxpPlugin",
+			fileName: (format) => `plugin.${format}.js`,
+		},
+		rollupOptions: {
+			external: ["vue", "pinia"],
+			output: {
+				globals: {
+					vue: "Vue",
+					pinia: "Pinia",
+				},
+			},
+		},
+	},
+})
 ```
 
 ### Environment Variables
@@ -96,7 +96,7 @@ VITE_ENVIRONMENT=production
 Access in code:
 
 ```javascript
-const apiUrl = import.meta.env.VITE_API_URL;
+const apiUrl = import.meta.env.VITE_API_URL
 ```
 
 ## Pre-Build Checklist
@@ -108,7 +108,7 @@ Before building for production:
 ```javascript
 // Remove or wrap in dev checks
 if (import.meta.env.DEV) {
-  console.log("Debug info:", data);
+	console.log("Debug info:", data)
 }
 ```
 
@@ -145,9 +145,9 @@ Test your plugin in all layout contexts:
 Use the Dev Tools layout switcher or:
 
 ```javascript
-window.gxDevTools.setLayout("public");
-window.gxDevTools.setLayout("private");
-window.gxDevTools.setLayout("system");
+window.gxDevTools.setLayout("public")
+window.gxDevTools.setLayout("private")
+window.gxDevTools.setLayout("system")
 ```
 
 ### 5. Validate Manifest
@@ -170,8 +170,8 @@ cat app-manifest.json | python -m json.tool
 ```javascript
 // Lazy load heavy components
 const HeavyChart = defineAsyncComponent(
-  () => import("./components/HeavyChart.vue"),
-);
+	() => import("./components/HeavyChart.vue"),
+)
 ```
 
 ### Error Handling
@@ -180,13 +180,13 @@ Add proper error boundaries:
 
 ```vue
 <template>
-  <div v-if="error" class="error-state">
-    <p gxp-string="error_generic">Something went wrong</p>
-    <button @click="retry">Retry</button>
-  </div>
-  <div v-else>
-    <!-- Normal content -->
-  </div>
+	<div v-if="error" class="error-state">
+		<p gxp-string="error_generic">Something went wrong</p>
+		<button @click="retry">Retry</button>
+	</div>
+	<div v-else>
+		<!-- Normal content -->
+	</div>
 </template>
 ```
 
@@ -195,14 +195,14 @@ Add proper error boundaries:
 Consider what happens when the network is unavailable:
 
 ```javascript
-const store = useGxpStore();
+const store = useGxpStore()
 
 try {
-  const data = await store.apiGet("/endpoint");
+	const data = await store.apiGet("/endpoint")
 } catch (error) {
-  if (!navigator.onLine) {
-    store.updateState("offline_mode", true);
-  }
+	if (!navigator.onLine) {
+		store.updateState("offline_mode", true)
+	}
 }
 ```
 
@@ -217,11 +217,11 @@ Ensure your plugin is accessible:
 
 ```html
 <button
-  gxp-string="btn_checkin"
-  aria-label="Check in to the event"
-  @keydown.enter="handleCheckin"
+	gxp-string="btn_checkin"
+	aria-label="Check in to the event"
+	@keydown.enter="handleCheckin"
 >
-  Check In
+	Check In
 </button>
 ```
 
@@ -244,8 +244,8 @@ Track your plugin versions:
 ```json
 // package.json
 {
-  "name": "my-plugin",
-  "version": "1.2.0"
+	"name": "my-plugin",
+	"version": "1.2.0"
 }
 ```
 
@@ -274,10 +274,10 @@ Check that all imports use the correct aliases:
 
 ```javascript
 // Correct
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
 
 // Wrong - path won't resolve in production
-import { useGxpStore } from "../../node_modules/@gxp-dev/tools/runtime/stores/gxpPortalConfigStore";
+import { useGxpStore } from "../../node_modules/@gxp-dev/tools/runtime/stores/gxpPortalConfigStore"
 ```
 
 ### CSS Not Loading
@@ -288,7 +288,7 @@ Ensure styles are properly scoped or imported:
 <style scoped>
 /* Scoped styles are extracted correctly */
 .my-component {
-  color: blue;
+	color: blue;
 }
 </style>
 ```

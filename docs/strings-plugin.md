@@ -25,11 +25,11 @@ The plugin is automatically included when you use the GxP Toolkit. It's register
 
 ```javascript
 // main.js (from runtime)
-import { createGxpStringsPlugin } from "@gx-runtime/gxpStringsPlugin";
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
+import { createGxpStringsPlugin } from "@gx-runtime/gxpStringsPlugin"
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
 
-const store = useGxpStore();
-app.use(createGxpStringsPlugin(store));
+const store = useGxpStore()
+app.use(createGxpStringsPlugin(store))
 ```
 
 ## Basic Usage
@@ -74,14 +74,14 @@ For translatable text content. Configure in `app-manifest.json`:
 
 ```json
 {
-  "strings": {
-    "default": {
-      "welcome_title": "Welcome to the Event",
-      "welcome_subtitle": "Please check in below",
-      "btn_checkin": "Check In",
-      "btn_cancel": "Cancel"
-    }
-  }
+	"strings": {
+		"default": {
+			"welcome_title": "Welcome to the Event",
+			"welcome_subtitle": "Please check in below",
+			"btn_checkin": "Check In",
+			"btn_cancel": "Cancel"
+		}
+	}
 }
 ```
 
@@ -99,11 +99,11 @@ For configuration values. Use the `gxp-settings` modifier:
 
 ```json
 {
-  "settings": {
-    "company_name": "TechConf 2024",
-    "event_date": "January 15-17, 2024",
-    "max_badge_prints": 3
-  }
+	"settings": {
+		"company_name": "TechConf 2024",
+		"event_date": "January 15-17, 2024",
+		"max_badge_prints": 3
+	}
 }
 ```
 
@@ -118,11 +118,11 @@ For image and media URLs. Default for `gxp-src`:
 
 ```json
 {
-  "assets": {
-    "logo": "/dev-assets/images/logo.png",
-    "hero_image": "/dev-assets/images/hero.jpg",
-    "background": "/dev-assets/images/bg-pattern.svg"
-  }
+	"assets": {
+		"logo": "/dev-assets/images/logo.png",
+		"hero_image": "/dev-assets/images/hero.jpg",
+		"background": "/dev-assets/images/bg-pattern.svg"
+	}
 }
 ```
 
@@ -143,11 +143,11 @@ For dynamic runtime values. Use the `gxp-state` modifier:
 
 ```json
 {
-  "triggerState": {
-    "current_step": 1,
-    "checked_in_count": 0,
-    "current_status": "ready"
-  }
+	"triggerState": {
+		"current_step": 1,
+		"checked_in_count": 0,
+		"current_status": "ready"
+	}
 }
 ```
 
@@ -186,19 +186,19 @@ The plugin automatically watches for store changes and updates elements reactive
 ### From Code
 
 ```javascript
-const store = useGxpStore();
+const store = useGxpStore()
 
 // Update a string - all gxp-string="welcome_title" elements update
-store.updateString("welcome_title", "Welcome Back!");
+store.updateString("welcome_title", "Welcome Back!")
 
 // Update a setting - all gxp-string="company" gxp-settings elements update
-store.updateSetting("company_name", "NewTech 2024");
+store.updateSetting("company_name", "NewTech 2024")
 
 // Update an asset - all gxp-src="logo" elements update
-store.updateAsset("logo", "/new-logo.png");
+store.updateAsset("logo", "/new-logo.png")
 
 // Update state - all gxp-state elements for this key update
-store.updateState("current_step", 2);
+store.updateState("current_step", 2)
 ```
 
 ### From Dev Tools
@@ -216,11 +216,11 @@ Edit `app-manifest.json` during development - changes hot-reload automatically:
 
 ```json
 {
-  "strings": {
-    "default": {
-      "welcome_title": "New Welcome Message" // Change this
-    }
-  }
+	"strings": {
+		"default": {
+			"welcome_title": "New Welcome Message" // Change this
+		}
+	}
 }
 ```
 
@@ -284,18 +284,18 @@ Combine with Vue's reactive bindings:
 
 <!-- Conditional class based on state -->
 <span
-  gxp-string="status"
-  gxp-state
-  :class="{ active: store.getState('is_active') }"
+	gxp-string="status"
+	gxp-state
+	:class="{ active: store.getState('is_active') }"
 >
-  idle
+	idle
 </span>
 
 <!-- Use alongside other attributes -->
 <img
-  gxp-src="avatar"
-  :alt="store.getString('avatar_alt', 'User Avatar')"
-  class="user-avatar"
+	gxp-src="avatar"
+	:alt="store.getString('avatar_alt', 'User Avatar')"
+	class="user-avatar"
 />
 ```
 
@@ -304,31 +304,28 @@ Combine with Vue's reactive bindings:
 For advanced use cases, process elements manually:
 
 ```javascript
-import {
-  processGxpStrings,
-  processGxpSrcs,
-} from "@gx-runtime/gxpStringsPlugin";
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
+import { processGxpStrings, processGxpSrcs } from "@gx-runtime/gxpStringsPlugin"
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
 
-const store = useGxpStore();
+const store = useGxpStore()
 
 // Process all gxp-string elements in a container
-const container = document.querySelector(".my-container");
-processGxpStrings(container, store);
+const container = document.querySelector(".my-container")
+processGxpStrings(container, store)
 
 // Process all gxp-src elements
-processGxpSrcs(container, store);
+processGxpSrcs(container, store)
 ```
 
 ### Utility Functions
 
 ```javascript
-import { getGxpStringKey, hasGxpString } from "@gx-runtime/gxpStringsPlugin";
+import { getGxpStringKey, hasGxpString } from "@gx-runtime/gxpStringsPlugin"
 
 // Check if element has gxp-string
 if (hasGxpString(element)) {
-  const key = getGxpStringKey(element);
-  console.log(`Element uses string key: ${key}`);
+	const key = getGxpStringKey(element)
+	console.log(`Element uses string key: ${key}`)
 }
 ```
 
@@ -341,12 +338,12 @@ Each element with a directive creates a Vue watcher. For large lists, consider:
 ```html
 <!-- Less efficient: watcher per item -->
 <li v-for="item in items" :key="item.id">
-  <span gxp-string="item_label">Label</span>
+	<span gxp-string="item_label">Label</span>
 </li>
 
 <!-- More efficient: use computed string -->
 <li v-for="item in items" :key="item.id">
-  {{ store.getString('item_label', 'Label') }}
+	{{ store.getString('item_label', 'Label') }}
 </li>
 ```
 
@@ -388,16 +385,16 @@ In your manifest:
 
 ```json
 {
-  "strings": {
-    "default": {
-      "checkin_title": "Check In",
-      "checkin_subtitle": "Scan your badge",
-      "checkin_btn_submit": "Check In Now",
-      "checkin_btn_cancel": "Cancel",
-      "checkin_success": "You're all set!",
-      "checkin_error": "Something went wrong"
-    }
-  }
+	"strings": {
+		"default": {
+			"checkin_title": "Check In",
+			"checkin_subtitle": "Scan your badge",
+			"checkin_btn_submit": "Check In Now",
+			"checkin_btn_cancel": "Cancel",
+			"checkin_success": "You're all set!",
+			"checkin_error": "Something went wrong"
+		}
+	}
 }
 ```
 

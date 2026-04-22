@@ -215,20 +215,20 @@ The content script (`content.js`) is injected into your development page and pro
 ```javascript
 // Highlight an element
 window.postMessage(
-  {
-    type: "GXP_HIGHLIGHT_ELEMENT",
-    selector: ".my-element",
-  },
-  "*",
-);
+	{
+		type: "GXP_HIGHLIGHT_ELEMENT",
+		selector: ".my-element",
+	},
+	"*",
+)
 
 // Clear highlights
 window.postMessage(
-  {
-    type: "GXP_CLEAR_HIGHLIGHTS",
-  },
-  "*",
-);
+	{
+		type: "GXP_CLEAR_HIGHLIGHTS",
+	},
+	"*",
+)
 ```
 
 ### Element Selection
@@ -236,18 +236,18 @@ window.postMessage(
 ```javascript
 // Enable selection mode
 window.postMessage(
-  {
-    type: "GXP_ENABLE_SELECTION",
-  },
-  "*",
-);
+	{
+		type: "GXP_ENABLE_SELECTION",
+	},
+	"*",
+)
 
 // Listen for selection
 window.addEventListener("message", (event) => {
-  if (event.data.type === "GXP_ELEMENT_SELECTED") {
-    console.log("Selected:", event.data.element);
-  }
-});
+	if (event.data.type === "GXP_ELEMENT_SELECTED") {
+		console.log("Selected:", event.data.element)
+	}
+})
 ```
 
 ### Vue Component Detection
@@ -257,20 +257,20 @@ The content script detects Vue components and exposes their data:
 ```javascript
 // Get component info for an element
 window.postMessage(
-  {
-    type: "GXP_GET_COMPONENT_INFO",
-    selector: ".my-element",
-  },
-  "*",
-);
+	{
+		type: "GXP_GET_COMPONENT_INFO",
+		selector: ".my-element",
+	},
+	"*",
+)
 
 // Receive component info
 window.addEventListener("message", (event) => {
-  if (event.data.type === "GXP_COMPONENT_INFO") {
-    console.log("Component:", event.data.componentName);
-    console.log("Props:", event.data.props);
-  }
-});
+	if (event.data.type === "GXP_COMPONENT_INFO") {
+		console.log("Component:", event.data.componentName)
+		console.log("Props:", event.data.props)
+	}
+})
 ```
 
 ## Building Extensions

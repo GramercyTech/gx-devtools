@@ -64,23 +64,23 @@ Access dev tools programmatically from the browser console:
 
 ```javascript
 // Open/close dev tools
-window.gxDevTools.open();
-window.gxDevTools.close();
-window.gxDevTools.toggle();
+window.gxDevTools.open()
+window.gxDevTools.close()
+window.gxDevTools.toggle()
 
 // Access the store directly
-const store = window.gxDevTools.store();
-console.log(store.stringsList);
-store.updateState("test_value", 123);
+const store = window.gxDevTools.store()
+console.log(store.stringsList)
+store.updateState("test_value", 123)
 
 // Change layout
-window.gxDevTools.setLayout("private");
-window.gxDevTools.setLayout("public");
-window.gxDevTools.setLayout("system");
+window.gxDevTools.setLayout("private")
+window.gxDevTools.setLayout("public")
+window.gxDevTools.setLayout("system")
 
 // Get current layout
-const layout = window.gxDevTools.getLayout();
-console.log(layout); // 'private'
+const layout = window.gxDevTools.getLayout()
+console.log(layout) // 'private'
 ```
 
 ## Browser Extensions
@@ -253,12 +253,12 @@ Source maps are enabled by default in development. Check your browser's Sources 
 Use the store's console helpers:
 
 ```javascript
-const store = useGxpStore();
+const store = useGxpStore()
 
 // Log current state
-console.log("Settings:", store.pluginVars);
-console.log("Strings:", store.stringsList);
-console.log("State:", store.triggerState);
+console.log("Settings:", store.pluginVars)
+console.log("Strings:", store.stringsList)
+console.log("State:", store.triggerState)
 ```
 
 ### 4. Network Tab

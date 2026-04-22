@@ -49,23 +49,23 @@ your-project/
 
 ```vue
 <template>
-  <div class="my-plugin">
-    <h1>{{ stringsList?.welcome_text || "Welcome!" }}</h1>
-    <!-- Your custom content here -->
-  </div>
+	<div class="my-plugin">
+		<h1>{{ stringsList?.welcome_text || "Welcome!" }}</h1>
+		<!-- Your custom content here -->
+	</div>
 </template>
 
 <script setup>
 // Props injected by the platform
 const props = defineProps({
-  pluginVars: Object, // Custom variables from admin panel
-  dependencyList: Object, // Selected dependencies
-  assetUrls: Object, // Asset URLs (signed URLs for images, etc.)
-  stringsList: Object, // Localized strings
-  permissionFlags: Array, // Permission flags
-  theme: Object, // Theme configuration
-  router: Object, // Platform router for navigation
-});
+	pluginVars: Object, // Custom variables from admin panel
+	dependencyList: Object, // Selected dependencies
+	assetUrls: Object, // Asset URLs (signed URLs for images, etc.)
+	stringsList: Object, // Localized strings
+	permissionFlags: Array, // Permission flags
+	theme: Object, // Theme configuration
+	router: Object, // Platform router for navigation
+})
 </script>
 ```
 
@@ -118,9 +118,9 @@ The Dev Tools Modal provides:
 You can also control dev tools from the browser console:
 
 ```javascript
-window.gxDevTools.open(); // Open modal
-window.gxDevTools.close(); // Close modal
-window.gxDevTools.toggle(); // Toggle modal
+window.gxDevTools.open() // Open modal
+window.gxDevTools.close() // Close modal
+window.gxDevTools.toggle() // Toggle modal
 ```
 
 ### Environment Variables
@@ -148,9 +148,9 @@ Your Plugin.vue component receives these props from the platform:
 Custom variables configured in the admin panel:
 
 ```javascript
-const { pluginVars } = props;
-console.log(pluginVars.primary_color); // "#FFD600"
-console.log(pluginVars.projectId); // 39
+const { pluginVars } = props
+console.log(pluginVars.primary_color) // "#FFD600"
+console.log(pluginVars.projectId) // 39
 ```
 
 ### assetUrls
@@ -187,23 +187,23 @@ Platform router for navigation (Inertia.js-style):
 
 ```javascript
 // Basic navigation
-router.visit("/camera");
+router.visit("/camera")
 
 // POST data to a route
 router.visit("/share", {
-  method: "post",
-  data: { image: photoUrl, caption: "My photo!" },
-});
+	method: "post",
+	data: { image: photoUrl, caption: "My photo!" },
+})
 
 // Navigation with options
 router.visit("/results", {
-  preserveScroll: true,
-  preserveState: true,
-  replace: true,
-  onStart: () => {},
-  onFinish: () => {},
-  onError: (errors) => {},
-});
+	preserveScroll: true,
+	preserveState: true,
+	replace: true,
+	onStart: () => {},
+	onFinish: () => {},
+	onError: (errors) => {},
+})
 ```
 
 ## GX ComponentKit
@@ -239,18 +239,18 @@ This project includes `@gramercytech/gx-componentkit` with pre-built components:
 ```vue
 <script setup>
 import {
-  GxModal,
-  GxCountdown,
-  GxVideoPlayer,
-  useMedia,
-} from "@gramercytech/gx-componentkit";
+	GxModal,
+	GxCountdown,
+	GxVideoPlayer,
+	useMedia,
+} from "@gramercytech/gx-componentkit"
 
-const { startCamera, takePhoto } = useMedia();
+const { startCamera, takePhoto } = useMedia()
 </script>
 
 <template>
-  <GxCountdown :duration="30" @finished="handleFinished" />
-  <GxVideoPlayer :src="videoUrl" @play="handlePlay" />
+	<GxCountdown :duration="30" @finished="handleFinished" />
+	<GxVideoPlayer :src="videoUrl" @play="handlePlay" />
 </template>
 ```
 
@@ -260,9 +260,9 @@ Theme CSS variables are automatically available:
 
 ```css
 .my-component {
-  background: var(--gx-primary-color);
-  color: var(--gx-text-color);
-  border: 2px solid var(--gx-primary-color);
+	background: var(--gx-primary-color);
+	color: var(--gx-text-color);
+	border: 2px solid var(--gx-primary-color);
 }
 ```
 

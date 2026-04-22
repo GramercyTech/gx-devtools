@@ -52,9 +52,9 @@ project/
 The store is the central hub for all platform data. Import it in any component:
 
 ```javascript
-import { useGxpStore } from "@/stores/gxpPortalConfigStore";
+import { useGxpStore } from "@/stores/gxpPortalConfigStore"
 
-const store = useGxpStore();
+const store = useGxpStore()
 ```
 
 ### Store Sections
@@ -72,11 +72,11 @@ const store = useGxpStore();
 
 ```javascript
 // Get values with fallbacks
-store.getString("welcome_title", "Default Title");
-store.getSetting("primary_color", "#FFD600");
-store.getAsset("hero_image", "/fallback.jpg");
-store.getState("current_step", 0);
-store.hasPermission("admin");
+store.getString("welcome_title", "Default Title")
+store.getSetting("primary_color", "#FFD600")
+store.getAsset("hero_image", "/fallback.jpg")
+store.getState("current_step", 0)
+store.hasPermission("admin")
 ```
 
 ## API Calls - ALWAYS USE THE STORE
@@ -89,25 +89,25 @@ store.hasPermission("admin");
 - Error handling and logging
 
 ```javascript
-const store = useGxpStore();
+const store = useGxpStore()
 
 // GET request
-const data = await store.apiGet("/api/v1/attendees", { event_id: 123 });
+const data = await store.apiGet("/api/v1/attendees", { event_id: 123 })
 
 // POST request
 const result = await store.apiPost("/api/v1/check-ins", {
-  attendee_id: 456,
-  station_id: "kiosk-1",
-});
+	attendee_id: 456,
+	station_id: "kiosk-1",
+})
 
 // PUT request
-await store.apiPut("/api/v1/attendees/456", { status: "checked_in" });
+await store.apiPut("/api/v1/attendees/456", { status: "checked_in" })
 
 // PATCH request
-await store.apiPatch("/api/v1/attendees/456", { badge_printed: true });
+await store.apiPatch("/api/v1/attendees/456", { badge_printed: true })
 
 // DELETE request
-await store.apiDelete("/api/v1/check-ins/789");
+await store.apiDelete("/api/v1/check-ins/789")
 ```
 
 ### API Environment Configuration
@@ -127,20 +127,20 @@ The store reads `VITE_API_ENV` from `.env`:
 WebSockets are pre-configured through the store. Listen for real-time events:
 
 ```javascript
-const store = useGxpStore();
+const store = useGxpStore()
 
 // Listen on primary socket
 store.listenSocket("primary", "EventName", (data) => {
-  console.log("Event received:", data);
-});
+	console.log("Event received:", data)
+})
 
 // Emit to primary socket
-store.emitSocket("primary", "client-event", { message: "Hello" });
+store.emitSocket("primary", "client-event", { message: "Hello" })
 
 // For dependency-based sockets (configured in app-manifest.json)
 store.useSocketListener("dependency_identifier", "updated", (data) => {
-  console.log("Dependency updated:", data);
-});
+	console.log("Dependency updated:", data)
+})
 ```
 
 ### Dependency Socket Configuration
@@ -149,16 +149,16 @@ In `app-manifest.json`:
 
 ```json
 {
-  "dependencies": [
-    {
-      "identifier": "ai_session",
-      "model": "AiInterface",
-      "events": {
-        "created": "AiSessionMessageCreated",
-        "updated": "AiSessionMessageUpdated"
-      }
-    }
-  ]
+	"dependencies": [
+		{
+			"identifier": "ai_session",
+			"model": "AiInterface",
+			"events": {
+				"created": "AiSessionMessageCreated",
+				"updated": "AiSessionMessageUpdated"
+			}
+		}
+	]
 }
 ```
 
@@ -166,8 +166,8 @@ Then listen:
 
 ```javascript
 store.sockets.ai_session?.created?.listen((data) => {
-  console.log("AI message created:", data);
-});
+	console.log("AI message created:", data)
+})
 ```
 
 ## Vue Directives for Dynamic Content
@@ -204,48 +204,48 @@ When creating new components, use this pattern:
 
 ```vue
 <template>
-  <div class="my-component">
-    <h1 gxp-string="component_title">Default Title</h1>
-    <img gxp-src="component_image" src="/placeholder.jpg" alt="" />
+	<div class="my-component">
+		<h1 gxp-string="component_title">Default Title</h1>
+		<img gxp-src="component_image" src="/placeholder.jpg" alt="" />
 
-    <button @click="handleAction" variant="primary">
-      <span gxp-string="action_button">Click Me</span>
-    </button>
+		<button @click="handleAction" variant="primary">
+			<span gxp-string="action_button">Click Me</span>
+		</button>
 
-    <div v-if="loading" class="spinner"></div>
-  </div>
+		<div v-if="loading" class="spinner"></div>
+	</div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import { useGxpStore } from "@/stores/gxpPortalConfigStore";
+import { ref, onMounted } from "vue"
+import { useGxpStore } from "@/stores/gxpPortalConfigStore"
 
-const store = useGxpStore();
-const loading = ref(false);
-const data = ref(null);
+const store = useGxpStore()
+const loading = ref(false)
+const data = ref(null)
 
 async function handleAction() {
-  loading.value = true;
-  try {
-    data.value = await store.apiGet("/api/v1/endpoint");
-  } catch (error) {
-    console.error("API Error:", error);
-  } finally {
-    loading.value = false;
-  }
+	loading.value = true
+	try {
+		data.value = await store.apiGet("/api/v1/endpoint")
+	} catch (error) {
+		console.error("API Error:", error)
+	} finally {
+		loading.value = false
+	}
 }
 
 onMounted(() => {
-  // Listen for real-time updates
-  store.listenSocket("primary", "DataUpdated", (eventData) => {
-    data.value = eventData;
-  });
-});
+	// Listen for real-time updates
+	store.listenSocket("primary", "DataUpdated", (eventData) => {
+		data.value = eventData
+	})
+})
 </script>
 
 <style scoped>
 .my-component {
-  padding: 20px;
+	padding: 20px;
 }
 </style>
 ```
@@ -256,24 +256,24 @@ This is the main configuration file. Changes hot-reload during development:
 
 ```json
 {
-  "name": "my-plugin",
-  "description": "My GxP Plugin",
-  "settings": {
-    "primary_color": "#FFD600",
-    "idle_timeout": 30
-  },
-  "strings": {
-    "default": {
-      "welcome_title": "Welcome",
-      "action_button": "Get Started"
-    }
-  },
-  "assets": {
-    "hero_image": "/dev-assets/images/hero.jpg",
-    "logo": "/dev-assets/images/logo.png"
-  },
-  "dependencies": [],
-  "permissions": []
+	"name": "my-plugin",
+	"description": "My GxP Plugin",
+	"settings": {
+		"primary_color": "#FFD600",
+		"idle_timeout": 30
+	},
+	"strings": {
+		"default": {
+			"welcome_title": "Welcome",
+			"action_button": "Get Started"
+		}
+	},
+	"assets": {
+		"hero_image": "/dev-assets/images/hero.jpg",
+		"logo": "/dev-assets/images/logo.png"
+	},
+	"dependencies": [],
+	"permissions": []
 }
 ```
 

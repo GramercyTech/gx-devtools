@@ -24,22 +24,22 @@
 // const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default {
-  // resolve: {
-  //   alias: {
-  //     // "@" is already set to the project's src/ by the runtime — override
-  //     // or add new aliases here as needed.
-  //     "@components": path.resolve(__dirname, "src/components"),
-  //     "@pages": path.resolve(__dirname, "src/pages"),
-  //     "@composables": path.resolve(__dirname, "src/composables"),
-  //     "@stores": path.resolve(__dirname, "src/stores"),
-  //     "@helpers": path.resolve(__dirname, "src/helpers"),
-  //     "@assets": path.resolve(__dirname, "src/assets"),
-  //   },
-  // },
-  // Add extra Vite plugins here. They run after the runtime's plugins.
-  // plugins: [somePlugin()],
-  // Expose extra compile-time constants to your app.
-  // define: {
-  //   "import.meta.env.VITE_MY_FLAG": JSON.stringify("value"),
-  // },
-};
+	// resolve: {
+	//   alias: {
+	//     // "@" is already set to the project's src/ by the runtime — override
+	//     // or add new aliases here as needed.
+	//     "@components": path.resolve(__dirname, "src/components"),
+	//     "@pages": path.resolve(__dirname, "src/pages"),
+	//     "@composables": path.resolve(__dirname, "src/composables"),
+	//     "@stores": path.resolve(__dirname, "src/stores"),
+	//     "@helpers": path.resolve(__dirname, "src/helpers"),
+	//     "@assets": path.resolve(__dirname, "src/assets"),
+	//   },
+	// },
+	// Add extra Vite plugins here. They run after the runtime's plugins.
+	// plugins: [somePlugin()],
+	// Expose extra compile-time constants to your app.
+	// define: {
+	//   "import.meta.env.VITE_MY_FLAG": JSON.stringify("value"),
+	// },
+}

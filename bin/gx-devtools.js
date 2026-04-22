@@ -23,96 +23,96 @@
 
 // Commands that should use the traditional CLI (one-shot commands)
 const ONE_SHOT_COMMANDS = [
-  "init",
-  "build",
-  "publish",
-  "setup-ssl",
-  "ext:build",
-  "add-dependency",
-  "extract-config",
-  "--help",
-  "-h",
-  "--version",
-];
+	"init",
+	"build",
+	"publish",
+	"setup-ssl",
+	"ext:build",
+	"add-dependency",
+	"extract-config",
+	"--help",
+	"-h",
+	"--version",
+]
 
 // Commands that should launch TUI with auto-start
 const TUI_AUTO_START_COMMANDS = [
-  "dev",
-  "socket",
-  "ext:firefox",
-  "ext:chrome",
-  "datastore",
-  "assets",
-];
+	"dev",
+	"socket",
+	"ext:firefox",
+	"ext:chrome",
+	"datastore",
+	"assets",
+]
 
-const args = process.argv.slice(2);
-const command = args[0];
+const args = process.argv.slice(2)
+const command = args[0]
 
 // Check if this is a one-shot command
 const isOneShot =
-  ONE_SHOT_COMMANDS.includes(command) || (command && command.startsWith("-"));
+	ONE_SHOT_COMMANDS.includes(command) || (command && command.startsWith("-"))
 
 // Check if we should use TUI with auto-start
-const isTuiCommand = TUI_AUTO_START_COMMANDS.includes(command);
+const isTuiCommand = TUI_AUTO_START_COMMANDS.includes(command)
 
 // --cli flag forces non-TUI mode regardless of TTY
-const forceCliMode = args.includes("--cli");
+const forceCliMode = args.includes("--cli")
 
 // If no command or TUI command, try to launch TUI
 // Fall back to traditional CLI if TUI dependencies are not available
 if (!isOneShot) {
-  const fs = require("fs");
-  const path = require("path");
-  // TUI output is in project root's dist/tui, not bin/dist/tui
-  const tuiPath = path.join(__dirname, "..", "dist", "tui", "index.js");
+	const fs = require("fs")
+	const path = require("path")
+	// TUI output is in project root's dist/tui, not bin/dist/tui
+	const tuiPath = path.join(__dirname, "..", "dist", "tui", "index.js")
 
-  // Check if we're in an interactive terminal (TTY); fall back to CLI if not
-  const isTTY = process.stdout.isTTY && process.stdin.isTTY;
+	// Check if we're in an interactive terminal (TTY); fall back to CLI if not
+	const isTTY = process.stdout.isTTY && process.stdin.isTTY
 
-  if (fs.existsSync(tuiPath) && isTTY && !forceCliMode) {
-    // Use dynamic import() for ESM modules (ink v5 is ESM-only)
-    (async () => {
-      try {
-        const { startTUI } = await import(tuiPath);
+	if (fs.existsSync(tuiPath) && isTTY && !forceCliMode) {
+		// Use dynamic import() for ESM modules (ink v5 is ESM-only)
+		;(async () => {
+			try {
+				const { startTUI } = await import(tuiPath)
 
-        // Determine auto-start commands
-        const autoStart = [];
-        const tuiArgs = {};
+				// Determine auto-start commands
+				const autoStart = []
+				const tuiArgs = {}
 
-        if (command === "dev") {
-          autoStart.push("dev");
-          if (args.includes("--with-socket") || args.includes("-s")) {
-            autoStart.push("socket");
-          }
-          tuiArgs.noHttps = args.includes("--no-https");
-        } else if (command === "socket") {
-          autoStart.push("socket");
-        } else if (command === "ext:firefox") {
-          autoStart.push("ext firefox");
-        } else if (command === "ext:chrome") {
-          autoStart.push("ext chrome");
-        }
+				if (command === "dev") {
+					autoStart.push("dev")
+					if (args.includes("--with-socket") || args.includes("-s")) {
+						autoStart.push("socket")
+					}
+					tuiArgs.noHttps = args.includes("--no-https")
+				} else if (command === "socket") {
+					autoStart.push("socket")
+				} else if (command === "ext:firefox") {
+					autoStart.push("ext firefox")
+				} else if (command === "ext:chrome") {
+					autoStart.push("ext chrome")
+				}
 
-        startTUI({ autoStart, args: tuiArgs });
-      } catch (err) {
-        // TUI not available or no TTY — fall back to traditional CLI
-        if (err.message !== "NO_TTY") {
-          console.error("TUI error:", err.message);
-        }
-        require("./lib/cli");
-      }
-    })();
-  } else if (!isTTY || forceCliMode) {
-    // Non-interactive shell or --cli flag — skip TUI and run directly
-    require("./lib/cli");
-  } else {
-    // TUI not compiled yet, use traditional CLI
-    console.log(
-      'Note: TUI not yet available. Run "npm run build:tui" to enable interactive mode.',
-    );
-    require("./lib/cli");
-  }
+				startTUI({ autoStart, args: tuiArgs })
+			} catch (err) {
+				// TUI not available or no TTY — fall back to traditional CLI
+				if (err.message !== "NO_TTY") {
+					console.error("TUI error:", err.message)
+				}
+				require("./lib/cli")
+			}
+		})()
+	} else if (!isTTY || forceCliMode) {
+		// Non-interactive shell or --cli flag — skip TUI and run directly
+		require("./lib/cli")
+	} else {
+		// TUI not compiled yet, use traditional CLI
+		console.log(
+			'Note: TUI not yet available. Run "npm run build:tui" to enable interactive mode.',
+		)
+		require("./lib/cli")
+	}
 } else {
-  // One-shot command, use traditional CLI
-  require("./lib/cli");
+	// One-shot command, use traditional CLI
+	require("./lib/cli")
 }

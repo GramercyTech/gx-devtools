@@ -20,8 +20,8 @@ src/
 The `gxpPortalConfigStore` is the central hub. Import it in any component:
 
 ```javascript
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
-const store = useGxpStore();
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
+const store = useGxpStore()
 ```
 
 ## API Calls - ALWAYS Use Store Methods
@@ -30,11 +30,11 @@ NEVER use axios or fetch directly. The store handles authentication, base URLs, 
 
 ```javascript
 // Correct - use store methods
-const data = await store.apiGet("/api/v1/endpoint", { param: "value" });
-await store.apiPost("/api/v1/endpoint", { data: "value" });
-await store.apiPut("/api/v1/endpoint/123", { data: "value" });
-await store.apiPatch("/api/v1/endpoint/123", { data: "value" });
-await store.apiDelete("/api/v1/endpoint/123");
+const data = await store.apiGet("/api/v1/endpoint", { param: "value" })
+await store.apiPost("/api/v1/endpoint", { data: "value" })
+await store.apiPut("/api/v1/endpoint/123", { data: "value" })
+await store.apiPatch("/api/v1/endpoint/123", { data: "value" })
+await store.apiDelete("/api/v1/endpoint/123")
 
 // WRONG - never do this
 // const response = await axios.get(...);  // NO!
@@ -45,17 +45,17 @@ await store.apiDelete("/api/v1/endpoint/123");
 
 ```javascript
 // Get values with fallbacks
-store.getString("key", "default"); // From stringsList
-store.getSetting("key", "default"); // From pluginVars
-store.getAsset("key", "/fallback.jpg"); // From assetList
-store.getState("key", null); // From triggerState
-store.hasPermission("admin"); // Check permissions
+store.getString("key", "default") // From stringsList
+store.getSetting("key", "default") // From pluginVars
+store.getAsset("key", "/fallback.jpg") // From assetList
+store.getState("key", null) // From triggerState
+store.hasPermission("admin") // Check permissions
 
 // Update values
-store.updateString("key", "value");
-store.updateSetting("key", "value");
-store.updateAsset("key", "url");
-store.updateState("key", "value");
+store.updateString("key", "value")
+store.updateSetting("key", "value")
+store.updateAsset("key", "url")
+store.updateState("key", "value")
 ```
 
 ## WebSocket Events
@@ -65,14 +65,14 @@ Listen for real-time events through the store:
 ```javascript
 // Listen on primary socket
 store.listenSocket("primary", "EventName", (data) => {
-  console.log("Received:", data);
-});
+	console.log("Received:", data)
+})
 
 // Emit events
-store.emitSocket("primary", "client-event", { data: "value" });
+store.emitSocket("primary", "client-event", { data: "value" })
 
 // For dependency-based sockets
-store.useSocketListener("dependency_id", "updated", callback);
+store.useSocketListener("dependency_id", "updated", callback)
 ```
 
 ## Vue Directives for Dynamic Content
@@ -96,12 +96,12 @@ Import UI components from `@gramercytech/gx-componentkit`:
 
 ```javascript
 import {
-  GxButton,
-  GxCard,
-  GxInput,
-  GxModal,
-  GxSpinner,
-} from "@gramercytech/gx-componentkit";
+	GxButton,
+	GxCard,
+	GxInput,
+	GxModal,
+	GxSpinner,
+} from "@gramercytech/gx-componentkit"
 ```
 
 Available: GxButton, GxCard, GxInput, GxModal, GxSpinner, GxAlert, GxBadge, GxAvatar, GxProgress, GxTabs, GxAccordion

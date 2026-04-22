@@ -167,9 +167,9 @@ The toolkit configures these path aliases in `vite.config.js`:
 Example imports:
 
 ```javascript
-import MyComponent from "@/components/MyComponent.vue";
-import PublicLayout from "@layouts/PublicLayout.vue";
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
+import MyComponent from "@/components/MyComponent.vue"
+import PublicLayout from "@layouts/PublicLayout.vue"
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
 ```
 
 ## Plugin Architecture
@@ -403,15 +403,15 @@ Use Plugin.vue as a thin wrapper that imports your actual components:
 
 ```vue
 <template>
-  <component :is="currentView" />
+	<component :is="currentView" />
 </template>
 
 <script setup>
-import { ref } from "vue";
-import WelcomeView from "@/views/WelcomeView.vue";
-import CheckInView from "@/views/CheckInView.vue";
+import { ref } from "vue"
+import WelcomeView from "@/views/WelcomeView.vue"
+import CheckInView from "@/views/CheckInView.vue"
 
-const currentView = ref(WelcomeView);
+const currentView = ref(WelcomeView)
 </script>
 ```
 
@@ -421,8 +421,8 @@ Don't pass props through multiple components. Use the store directly:
 
 ```vue
 <script setup>
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
-const store = useGxpStore();
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
+const store = useGxpStore()
 </script>
 ```
 
@@ -449,14 +449,14 @@ Group related strings and settings:
 
 ```json
 {
-  "strings": {
-    "default": {
-      "checkin_title": "...",
-      "checkin_subtitle": "...",
-      "checkin_btn_submit": "...",
-      "welcome_title": "...",
-      "welcome_subtitle": "..."
-    }
-  }
+	"strings": {
+		"default": {
+			"checkin_title": "...",
+			"checkin_subtitle": "...",
+			"checkin_btn_submit": "...",
+			"welcome_title": "...",
+			"welcome_subtitle": "..."
+		}
+	}
 }
 ```

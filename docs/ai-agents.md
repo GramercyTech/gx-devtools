@@ -54,13 +54,13 @@ The MCP configuration in `.claude/settings.json`:
 
 ```json
 {
-  "mcpServers": {
-    "gxp-api": {
-      "command": "gxp-api-server",
-      "args": [],
-      "env": {}
-    }
-  }
+	"mcpServers": {
+		"gxp-api": {
+			"command": "gxp-api-server",
+			"args": [],
+			"env": {}
+		}
+	}
 }
 ```
 
@@ -111,12 +111,12 @@ The agent files emphasize these critical rules:
 
 ```javascript
 // WRONG - Never do this
-const response = await axios.get("/api/v1/attendees");
-const data = await fetch("/api/v1/attendees");
+const response = await axios.get("/api/v1/attendees")
+const data = await fetch("/api/v1/attendees")
 
 // CORRECT - Always use the store
-const store = useGxpStore();
-const data = await store.apiGet("/api/v1/attendees");
+const store = useGxpStore()
+const data = await store.apiGet("/api/v1/attendees")
 ```
 
 ### 2. Use Store API Methods
@@ -130,11 +130,11 @@ The store handles:
 
 ```javascript
 // Available methods
-await store.apiGet("/endpoint", { params });
-await store.apiPost("/endpoint", data);
-await store.apiPut("/endpoint/id", data);
-await store.apiPatch("/endpoint/id", data);
-await store.apiDelete("/endpoint/id");
+await store.apiGet("/endpoint", { params })
+await store.apiPost("/endpoint", data)
+await store.apiPut("/endpoint/id", data)
+await store.apiPatch("/endpoint/id", data)
+await store.apiDelete("/endpoint/id")
 ```
 
 ### 3. Use Dynamic Content Directives
@@ -155,11 +155,11 @@ await store.apiDelete("/endpoint/id");
 ```javascript
 // Listen for events
 store.listenSocket("primary", "EventName", (data) => {
-  console.log("Received:", data);
-});
+	console.log("Received:", data)
+})
 
 // Emit events
-store.emitSocket("primary", "event-name", { data: "value" });
+store.emitSocket("primary", "event-name", { data: "value" })
 ```
 
 ## Customizing Agent Files

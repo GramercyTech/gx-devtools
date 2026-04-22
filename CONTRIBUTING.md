@@ -146,9 +146,9 @@ npm run ext:build
    ```javascript
    // bin/lib/commands/mycommand.js
    function myCommand(argv) {
-     console.log("My command running!");
+   	console.log("My command running!")
    }
-   module.exports = { myCommand };
+   module.exports = { myCommand }
    ```
 
 2. Export from `bin/lib/commands/index.js`

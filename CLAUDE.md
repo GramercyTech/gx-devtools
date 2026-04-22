@@ -194,27 +194,27 @@ The `app-manifest.json` file in the project root configures the plugin:
 
 ```json
 {
-  "settings": {
-    "primary_color": "#FFD600",
-    "background_color": "#ffffff",
-    "custom_setting": "value"
-  },
-  "strings": {
-    "default": {
-      "welcome_title": "Welcome to My Plugin",
-      "button_text": "Click Me"
-    }
-  },
-  "assets": {
-    "hero_image": "/dev-assets/images/hero.jpg",
-    "logo": "/dev-assets/images/logo.png"
-  },
-  "triggerState": {
-    "is_active": true,
-    "current_step": 1
-  },
-  "dependencies": [],
-  "permissions": []
+	"settings": {
+		"primary_color": "#FFD600",
+		"background_color": "#ffffff",
+		"custom_setting": "value"
+	},
+	"strings": {
+		"default": {
+			"welcome_title": "Welcome to My Plugin",
+			"button_text": "Click Me"
+		}
+	},
+	"assets": {
+		"hero_image": "/dev-assets/images/hero.jpg",
+		"logo": "/dev-assets/images/logo.png"
+	},
+	"triggerState": {
+		"is_active": true,
+		"current_step": 1
+	},
+	"dependencies": [],
+	"permissions": []
 }
 ```
 
@@ -274,39 +274,39 @@ The Pinia store provides reactive state management:
 ### Getter Methods
 
 ```javascript
-const store = useGxpStore();
-store.getString("welcome_title", "Default");
-store.getSetting("primary_color", "#000");
-store.getAsset("hero_image", "/fallback.jpg");
-store.getState("is_active", false);
-store.hasPermission("admin");
+const store = useGxpStore()
+store.getString("welcome_title", "Default")
+store.getSetting("primary_color", "#000")
+store.getAsset("hero_image", "/fallback.jpg")
+store.getState("is_active", false)
+store.hasPermission("admin")
 ```
 
 ### Update Methods (for programmatic updates)
 
 ```javascript
-store.updateString("welcome_title", "New Title");
-store.updateSetting("primary_color", "#FF0000");
-store.updateAsset("hero_image", "/new-image.jpg");
-store.updateState("is_active", true);
-store.addDevAsset("logo", "logo.png"); // Adds with dev server URL prefix
+store.updateString("welcome_title", "New Title")
+store.updateSetting("primary_color", "#FF0000")
+store.updateAsset("hero_image", "/new-image.jpg")
+store.updateState("is_active", true)
+store.addDevAsset("logo", "logo.png") // Adds with dev server URL prefix
 ```
 
 ### API Client
 
 ```javascript
-await store.apiGet("/endpoint", { params });
-await store.apiPost("/endpoint", data);
-await store.apiPut("/endpoint", data);
-await store.apiDelete("/endpoint");
+await store.apiGet("/endpoint", { params })
+await store.apiPost("/endpoint", data)
+await store.apiPut("/endpoint", data)
+await store.apiDelete("/endpoint")
 ```
 
 ### Socket Methods
 
 ```javascript
-store.emitSocket("primary", "event-name", data);
-store.listenSocket("primary", "event-name", callback);
-store.useSocketListener("dependency-id", "updated", callback);
+store.emitSocket("primary", "event-name", data)
+store.listenSocket("primary", "event-name", callback)
+store.useSocketListener("dependency-id", "updated", callback)
 ```
 
 ## Dev Tools
@@ -323,12 +323,12 @@ store.useSocketListener("dependency-id", "updated", callback);
 ### Console API
 
 ```javascript
-window.gxDevTools.open(); // Open dev tools
-window.gxDevTools.close(); // Close dev tools
-window.gxDevTools.toggle(); // Toggle dev tools
-window.gxDevTools.store(); // Access the GxP store
-window.gxDevTools.setLayout("private"); // Change layout
-window.gxDevTools.getLayout(); // Get current layout name
+window.gxDevTools.open() // Open dev tools
+window.gxDevTools.close() // Close dev tools
+window.gxDevTools.toggle() // Toggle dev tools
+window.gxDevTools.store() // Access the GxP store
+window.gxDevTools.setLayout("private") // Change layout
+window.gxDevTools.getLayout() // Get current layout name
 ```
 
 ## Browser Extensions

@@ -1,19 +1,19 @@
 {
-  "name": "GxToolkit",
-  "version": "1.0.0",
-  "description": "GxToolkit Plugin",
-  "manifest_version": 3,
-  "asset_dir": "/src/assets/",
-  "configurationFile": "configuration.json",
-  "appInstructionsFile": "app-instructions.md",
-  "defaultStylingFile": "default-styling.css",
-  "settings": {
-    "primary_color": "#FFD600"
-  },
-  "strings": {
-    "default": {}
-  },
-  "assets": {},
-  "dependencies": [],
-  "permissions": []
+	"name": "GxToolkit",
+	"version": "1.0.0",
+	"description": "GxToolkit Plugin",
+	"manifest_version": 3,
+	"asset_dir": "/src/assets/",
+	"configurationFile": "configuration.json",
+	"appInstructionsFile": "app-instructions.md",
+	"defaultStylingFile": "default-styling.css",
+	"settings": {
+		"primary_color": "#FFD600"
+	},
+	"strings": {
+		"default": {}
+	},
+	"assets": {},
+	"dependencies": [],
+	"permissions": []
 }

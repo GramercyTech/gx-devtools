@@ -44,14 +44,14 @@ gxdev socket send --event AiSessionMessageCreated
 ### Listen in Your Plugin
 
 ```javascript
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
 
-const store = useGxpStore();
+const store = useGxpStore()
 
 // Listen for events on the primary socket
 store.listenSocket("primary", "AiSessionMessageCreated", (data) => {
-  console.log("Message received:", data);
-});
+	console.log("Message received:", data)
+})
 ```
 
 ## Socket Server
@@ -109,14 +109,14 @@ socket-events/
 
 ```json
 {
-  "event": "EventName",
-  "channel": "private.Model.identifier",
-  "data": {
-    "id": 123,
-    "field1": "value1",
-    "field2": "value2",
-    "created_at": "2024-01-15T10:30:00Z"
-  }
+	"event": "EventName",
+	"channel": "private.Model.identifier",
+	"data": {
+		"id": 123,
+		"field1": "value1",
+		"field2": "value2",
+		"created_at": "2024-01-15T10:30:00Z"
+	}
 }
 ```
 
@@ -146,22 +146,22 @@ Examples:
 
 ```json
 {
-  "event": "AiSessionMessageCreated",
-  "channel": "private.AiInterface.ai_interface_background_remover",
-  "data": {
-    "id": 1234,
-    "ai_session_id": 567,
-    "message": "Background removal process completed successfully",
-    "type": "completion",
-    "metadata": {
-      "processing_time": 2.3,
-      "input_image": "/dev-assets/images/product-placeholder.jpg",
-      "output_image": "/dev-assets/images/background-placeholder.jpg",
-      "confidence": 0.95
-    },
-    "created_at": "2024-01-15T10:30:00Z",
-    "updated_at": "2024-01-15T10:30:00Z"
-  }
+	"event": "AiSessionMessageCreated",
+	"channel": "private.AiInterface.ai_interface_background_remover",
+	"data": {
+		"id": 1234,
+		"ai_session_id": 567,
+		"message": "Background removal process completed successfully",
+		"type": "completion",
+		"metadata": {
+			"processing_time": 2.3,
+			"input_image": "/dev-assets/images/product-placeholder.jpg",
+			"output_image": "/dev-assets/images/background-placeholder.jpg",
+			"confidence": 0.95
+		},
+		"created_at": "2024-01-15T10:30:00Z",
+		"updated_at": "2024-01-15T10:30:00Z"
+	}
 }
 ```
 
@@ -169,22 +169,22 @@ Examples:
 
 ```json
 {
-  "event": "SocialStreamPostCreated",
-  "channel": "private.SocialStream.social_stream_main",
-  "data": {
-    "id": 789,
-    "social_stream_id": 101,
-    "content": "Just arrived at the conference! #TechConf2024",
-    "author": {
-      "name": "Jane Smith",
-      "avatar": "/dev-assets/images/avatar-placeholder.jpg",
-      "handle": "@janesmith"
-    },
-    "media": [],
-    "likes": 0,
-    "shares": 0,
-    "created_at": "2024-01-15T14:22:00Z"
-  }
+	"event": "SocialStreamPostCreated",
+	"channel": "private.SocialStream.social_stream_main",
+	"data": {
+		"id": 789,
+		"social_stream_id": 101,
+		"content": "Just arrived at the conference! #TechConf2024",
+		"author": {
+			"name": "Jane Smith",
+			"avatar": "/dev-assets/images/avatar-placeholder.jpg",
+			"handle": "@janesmith"
+		},
+		"media": [],
+		"likes": 0,
+		"shares": 0,
+		"created_at": "2024-01-15T14:22:00Z"
+	}
 }
 ```
 
@@ -194,16 +194,16 @@ Examples:
 
 ```json
 {
-  "event": "AttendeeCheckedIn",
-  "channel": "private.CheckIn.checkin_kiosk_lobby",
-  "data": {
-    "id": 456,
-    "attendee_id": 789,
-    "attendee_name": "John Doe",
-    "badge_number": "A-0042",
-    "check_in_time": "2024-01-15T09:15:00Z",
-    "kiosk_id": "kiosk_lobby"
-  }
+	"event": "AttendeeCheckedIn",
+	"channel": "private.CheckIn.checkin_kiosk_lobby",
+	"data": {
+		"id": 456,
+		"attendee_id": 789,
+		"attendee_name": "John Doe",
+		"badge_number": "A-0042",
+		"check_in_time": "2024-01-15T09:15:00Z",
+		"kiosk_id": "kiosk_lobby"
+	}
 }
 ```
 
@@ -220,9 +220,9 @@ gxdev socket send --event AttendeeCheckedIn
 The GxP store automatically connects to the Socket.IO server:
 
 ```javascript
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
 
-const store = useGxpStore();
+const store = useGxpStore()
 ```
 
 ### Listening for Events
@@ -232,8 +232,8 @@ const store = useGxpStore();
 ```javascript
 // Listen on primary socket
 store.listenSocket("primary", "EventName", (data) => {
-  console.log("Event received:", data);
-});
+	console.log("Event received:", data)
+})
 ```
 
 #### With Dependency
@@ -243,10 +243,10 @@ For events tied to specific dependencies:
 ```javascript
 // Listen for dependency-specific events
 store.useSocketListener("badge-printer", "print-complete", (result) => {
-  if (result.success) {
-    console.log("Badge printed!");
-  }
-});
+	if (result.success) {
+		console.log("Badge printed!")
+	}
+})
 ```
 
 ### Emitting Events
@@ -256,10 +256,10 @@ Send events from your plugin:
 ```javascript
 // Emit on primary socket
 store.emitSocket("primary", "user-action", {
-  action: "button_click",
-  button_id: "checkin-submit",
-  timestamp: new Date().toISOString(),
-});
+	action: "button_click",
+	button_id: "checkin-submit",
+	timestamp: new Date().toISOString(),
+})
 ```
 
 ### State Change Listener
@@ -267,11 +267,11 @@ store.emitSocket("primary", "user-action", {
 Listen for state change broadcasts:
 
 ```javascript
-const socket = store.sockets.primary;
+const socket = store.sockets.primary
 socket.listenForStateChange((newState) => {
-  console.log("State changed:", newState);
-  store.updateState("remote_value", newState.value);
-});
+	console.log("State changed:", newState)
+	store.updateState("remote_value", newState.value)
+})
 ```
 
 ## Dependency-Based Sockets
@@ -280,17 +280,17 @@ Configure dependencies in your manifest to set up automatic socket listeners:
 
 ```json
 {
-  "dependencies": [
-    {
-      "identifier": "badge_printer_1",
-      "model": "BadgePrinter",
-      "events": {
-        "created": "BadgePrintJobCreated",
-        "updated": "BadgePrintJobUpdated",
-        "completed": "BadgePrintJobCompleted"
-      }
-    }
-  ]
+	"dependencies": [
+		{
+			"identifier": "badge_printer_1",
+			"model": "BadgePrinter",
+			"events": {
+				"created": "BadgePrintJobCreated",
+				"updated": "BadgePrintJobUpdated",
+				"completed": "BadgePrintJobCompleted"
+			}
+		}
+	]
 }
 ```
 
@@ -299,12 +299,12 @@ The store automatically sets up listeners:
 ```javascript
 // Listeners are created automatically
 store.sockets["badge_printer_1"].created.listen((data) => {
-  console.log("Print job created:", data);
-});
+	console.log("Print job created:", data)
+})
 
 store.sockets["badge_printer_1"].completed.listen((data) => {
-  console.log("Print job done:", data);
-});
+	console.log("Print job done:", data)
+})
 ```
 
 ## CLI Commands
@@ -408,61 +408,61 @@ The mock API provides:
 ```javascript
 // Setup: Listen for check-in events
 onMounted(() => {
-  store.listenSocket("primary", "AttendeeCheckedIn", handleCheckIn);
-});
+	store.listenSocket("primary", "AttendeeCheckedIn", handleCheckIn)
+})
 
 function handleCheckIn(data) {
-  // Update UI with check-in data
-  store.updateState("last_checkin", data);
+	// Update UI with check-in data
+	store.updateState("last_checkin", data)
 
-  // Trigger badge print
-  store.emitSocket("primary", "PrintBadge", {
-    attendee_id: data.attendee_id,
-    badge_number: data.badge_number,
-  });
+	// Trigger badge print
+	store.emitSocket("primary", "PrintBadge", {
+		attendee_id: data.attendee_id,
+		badge_number: data.badge_number,
+	})
 }
 ```
 
 ### Social Wall
 
 ```javascript
-const posts = ref([]);
+const posts = ref([])
 
 onMounted(() => {
-  // Listen for new posts
-  store.listenSocket("primary", "SocialStreamPostCreated", (post) => {
-    posts.value.unshift(post);
-  });
+	// Listen for new posts
+	store.listenSocket("primary", "SocialStreamPostCreated", (post) => {
+		posts.value.unshift(post)
+	})
 
-  // Listen for post updates (likes, shares)
-  store.listenSocket("primary", "SocialStreamPostUpdated", (update) => {
-    const idx = posts.value.findIndex((p) => p.id === update.id);
-    if (idx >= 0) {
-      posts.value[idx] = { ...posts.value[idx], ...update };
-    }
-  });
-});
+	// Listen for post updates (likes, shares)
+	store.listenSocket("primary", "SocialStreamPostUpdated", (update) => {
+		const idx = posts.value.findIndex((p) => p.id === update.id)
+		if (idx >= 0) {
+			posts.value[idx] = { ...posts.value[idx], ...update }
+		}
+	})
+})
 ```
 
 ### AI Processing
 
 ```javascript
-const processing = ref(false);
-const result = ref(null);
+const processing = ref(false)
+const result = ref(null)
 
 async function startAiProcessing(imageUrl) {
-  processing.value = true;
+	processing.value = true
 
-  // Request processing
-  await store.apiPost("/ai/process", { image: imageUrl });
+	// Request processing
+	await store.apiPost("/ai/process", { image: imageUrl })
 
-  // Listen for completion
-  store.listenSocket("primary", "AiSessionMessageCreated", (data) => {
-    if (data.type === "completion") {
-      processing.value = false;
-      result.value = data;
-    }
-  });
+	// Listen for completion
+	store.listenSocket("primary", "AiSessionMessageCreated", (data) => {
+		if (data.type === "completion") {
+			processing.value = false
+			result.value = data
+		}
+	})
 }
 ```
 
@@ -523,8 +523,8 @@ Then modify `server.js` in your project root to:
 ```javascript
 // Example: Add custom endpoint
 app.post("/custom-emit", (req, res) => {
-  const { event, data } = req.body;
-  io.emit(event, data);
-  res.json({ success: true });
-});
+	const { event, data } = req.body
+	io.emit(event, data)
+	res.json({ success: true })
+})
 ```

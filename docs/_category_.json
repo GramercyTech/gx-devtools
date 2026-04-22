@@ -1,8 +1,8 @@
 {
-  "label": "Gx Dev Tools",
-  "position": 10,
-  "link": {
-    "type": "generated-index",
-    "description": "Documentation for the Gx Dev Tools - build plugins for the GxP kiosk platform."
-  }
+	"label": "Gx Dev Tools",
+	"position": 10,
+	"link": {
+		"type": "generated-index",
+		"description": "Documentation for the Gx Dev Tools - build plugins for the GxP kiosk platform."
+	}
 }

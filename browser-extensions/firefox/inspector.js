@@ -14,306 +14,305 @@
 // Check if we're in the page context (already injected) vs content script context
 // In page context, neither 'browser' nor 'chrome' runtime APIs are available
 const isContentScriptContext =
-  (typeof browser !== "undefined" && browser.runtime) ||
-  (typeof chrome !== "undefined" && chrome.runtime);
+	(typeof browser !== "undefined" && browser.runtime) ||
+	(typeof chrome !== "undefined" && chrome.runtime)
 
 if (
-  isContentScriptContext &&
-  typeof window.__gxpInspectorInjected === "undefined"
+	isContentScriptContext &&
+	typeof window.__gxpInspectorInjected === "undefined"
 ) {
-  // We're in the content script context - inject into page
-  const runtime = typeof browser !== "undefined" ? browser : chrome;
-  const script = document.createElement("script");
-  script.src = runtime.runtime.getURL("inspector.js");
-  script.onload = function () {
-    this.remove();
-  };
-  (document.head || document.documentElement).appendChild(script);
+	// We're in the content script context - inject into page
+	const runtime = typeof browser !== "undefined" ? browser : chrome
+	const script = document.createElement("script")
+	script.src = runtime.runtime.getURL("inspector.js")
+	script.onload = function () {
+		this.remove()
+	}
+	;(document.head || document.documentElement).appendChild(script)
 
-  // Also set up message relay from page to extension
-  window.addEventListener("message", (event) => {
-    if (event.source !== window) return;
-    if (event.data?.type === "GXP_INSPECTOR_MESSAGE") {
-      runtime.runtime.sendMessage(event.data.payload);
-    }
-  });
+	// Also set up message relay from page to extension
+	window.addEventListener("message", (event) => {
+		if (event.source !== window) return
+		if (event.data?.type === "GXP_INSPECTOR_MESSAGE") {
+			runtime.runtime.sendMessage(event.data.payload)
+		}
+	})
 
-  // Mark that content script has run (for content script context)
-  window.__gxpInspectorContentScriptLoaded = true;
+	// Mark that content script has run (for content script context)
+	window.__gxpInspectorContentScriptLoaded = true
 }
 
 // Mark as injected (for both contexts)
-window.__gxpInspectorInjected = true;
+window.__gxpInspectorInjected = true
+;(function () {
+	"use strict"
 
-(function () {
-  "use strict";
+	// If gxpInspector already exists, we're done (prevent double init)
+	if (window.gxpInspector) {
+		return
+	}
 
-  // If gxpInspector already exists, we're done (prevent double init)
-  if (window.gxpInspector) {
-    return;
-  }
+	// Configuration
+	const DEV_SERVER_URL = "https://localhost:3060"
+	const API_PREFIX = "/__gxp-inspector"
 
-  // Configuration
-  const DEV_SERVER_URL = "https://localhost:3060";
-  const API_PREFIX = "/__gxp-inspector";
+	// State
+	let inspectorEnabled = false
+	let highlightOverlay = null
+	let inspectorPanel = null
+	let selectedElement = null
+	let hoveredElement = null
+	let selectionHighlight = null // Persistent highlight for selected element
 
-  // State
-  let inspectorEnabled = false;
-  let highlightOverlay = null;
-  let inspectorPanel = null;
-  let selectedElement = null;
-  let hoveredElement = null;
-  let selectionHighlight = null; // Persistent highlight for selected element
+	// ============================================================
+	// API Communication
+	// ============================================================
 
-  // ============================================================
-  // API Communication
-  // ============================================================
+	async function apiCall(endpoint, options = {}) {
+		const url = `${DEV_SERVER_URL}${API_PREFIX}${endpoint}`
+		try {
+			const response = await fetch(url, {
+				...options,
+				headers: {
+					"Content-Type": "application/json",
+					...options.headers,
+				},
+			})
+			return await response.json()
+		} catch (error) {
+			console.error("[GxP Inspector] API Error:", error)
+			return { success: false, error: error.message }
+		}
+	}
 
-  async function apiCall(endpoint, options = {}) {
-    const url = `${DEV_SERVER_URL}${API_PREFIX}${endpoint}`;
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...options.headers,
-        },
-      });
-      return await response.json();
-    } catch (error) {
-      console.error("[GxP Inspector] API Error:", error);
-      return { success: false, error: error.message };
-    }
-  }
+	async function ping() {
+		return apiCall("/ping")
+	}
 
-  async function ping() {
-    return apiCall("/ping");
-  }
+	async function extractString(data) {
+		return apiCall("/extract-string", {
+			method: "POST",
+			body: JSON.stringify(data),
+		})
+	}
 
-  async function extractString(data) {
-    return apiCall("/extract-string", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
+	async function getStrings() {
+		return apiCall("/strings")
+	}
 
-  async function getStrings() {
-    return apiCall("/strings");
-  }
+	// ============================================================
+	// Vue Component Detection
+	// ============================================================
 
-  // ============================================================
-  // Vue Component Detection
-  // ============================================================
+	function getVueInstance(el) {
+		// Vue 3 detection
+		if (el.__vueParentComponent) {
+			return el.__vueParentComponent
+		}
+		// Walk up to find Vue component
+		let current = el
+		while (current) {
+			if (current.__vueParentComponent) {
+				return current.__vueParentComponent
+			}
+			current = current.parentElement
+		}
+		return null
+	}
 
-  function getVueInstance(el) {
-    // Vue 3 detection
-    if (el.__vueParentComponent) {
-      return el.__vueParentComponent;
-    }
-    // Walk up to find Vue component
-    let current = el;
-    while (current) {
-      if (current.__vueParentComponent) {
-        return current.__vueParentComponent;
-      }
-      current = current.parentElement;
-    }
-    return null;
-  }
+	function getComponentInfo(vueInstance) {
+		if (!vueInstance) return null
 
-  function getComponentInfo(vueInstance) {
-    if (!vueInstance) return null;
+		const type = vueInstance.type
+		const name =
+			type?.name ||
+			type?.__name ||
+			type?.__file?.split("/").pop()?.replace(".vue", "") ||
+			"Anonymous"
+		const file = type?.__file || null
 
-    const type = vueInstance.type;
-    const name =
-      type?.name ||
-      type?.__name ||
-      type?.__file?.split("/").pop()?.replace(".vue", "") ||
-      "Anonymous";
-    const file = type?.__file || null;
+		// Helper to safely serialize a value (handles circular refs, functions, etc.)
+		function safeSerialize(value) {
+			if (value === null || value === undefined) return value
+			if (typeof value === "function") return "[Function]"
+			if (typeof value !== "object") return value
 
-    // Helper to safely serialize a value (handles circular refs, functions, etc.)
-    function safeSerialize(value) {
-      if (value === null || value === undefined) return value;
-      if (typeof value === "function") return "[Function]";
-      if (typeof value !== "object") return value;
+			try {
+				// Try JSON stringify/parse to get a clean copy
+				return JSON.parse(JSON.stringify(value))
+			} catch {
+				// If that fails, return a string representation
+				if (Array.isArray(value)) return `[Array(${value.length})]`
+				return "{...}"
+			}
+		}
 
-      try {
-        // Try JSON stringify/parse to get a clean copy
-        return JSON.parse(JSON.stringify(value));
-      } catch {
-        // If that fails, return a string representation
-        if (Array.isArray(value)) return `[Array(${value.length})]`;
-        return "{...}";
-      }
-    }
+		// Get props
+		const props = {}
+		if (vueInstance.props) {
+			Object.keys(vueInstance.props).forEach((key) => {
+				props[key] = safeSerialize(vueInstance.props[key])
+			})
+		}
 
-    // Get props
-    const props = {};
-    if (vueInstance.props) {
-      Object.keys(vueInstance.props).forEach((key) => {
-        props[key] = safeSerialize(vueInstance.props[key]);
-      });
-    }
+		// Get component data/state
+		const data = {}
+		if (vueInstance.setupState) {
+			Object.keys(vueInstance.setupState).forEach((key) => {
+				const value = vueInstance.setupState[key]
+				if (typeof value !== "function") {
+					data[key] = safeSerialize(value)
+				}
+			})
+		}
 
-    // Get component data/state
-    const data = {};
-    if (vueInstance.setupState) {
-      Object.keys(vueInstance.setupState).forEach((key) => {
-        const value = vueInstance.setupState[key];
-        if (typeof value !== "function") {
-          data[key] = safeSerialize(value);
-        }
-      });
-    }
+		return { name, file, props, data }
+	}
 
-    return { name, file, props, data };
-  }
+	function getTextContent(el) {
+		// Get direct text content, excluding child elements
+		const texts = []
+		el.childNodes.forEach((node) => {
+			if (node.nodeType === Node.TEXT_NODE) {
+				const text = node.textContent.trim()
+				if (text) texts.push(text)
+			}
+		})
+		return texts
+	}
 
-  function getTextContent(el) {
-    // Get direct text content, excluding child elements
-    const texts = [];
-    el.childNodes.forEach((node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent.trim();
-        if (text) texts.push(text);
-      }
-    });
-    return texts;
-  }
+	/**
+	 * Check if an element has a gxp-string attribute (indicating it's already extracted)
+	 */
+	function getGxpStringKey(el) {
+		return el?.getAttribute?.("gxp-string") || null
+	}
 
-  /**
-   * Check if an element has a gxp-string attribute (indicating it's already extracted)
-   */
-  function getGxpStringKey(el) {
-    return el?.getAttribute?.("gxp-string") || null;
-  }
+	/**
+	 * Check for a data-gxp-expr attribute on the element
+	 * The vite-source-tracker-plugin adds this attribute in dev mode
+	 * @param {Element} el - The element to check
+	 * @returns {string|null} - The source expression or null
+	 */
+	function getGxpSourceExpression(el) {
+		if (!el || !el.getAttribute) return null
+		return el.getAttribute("data-gxp-expr") || null
+	}
 
-  /**
-   * Check for a data-gxp-expr attribute on the element
-   * The vite-source-tracker-plugin adds this attribute in dev mode
-   * @param {Element} el - The element to check
-   * @returns {string|null} - The source expression or null
-   */
-  function getGxpSourceExpression(el) {
-    if (!el || !el.getAttribute) return null;
-    return el.getAttribute("data-gxp-expr") || null;
-  }
+	/**
+	 * Get text content with gxp-string attribute info
+	 * Returns array of objects: { text, gxpStringKey, isExtracted, sourceExpression, isDynamic }
+	 */
+	function getTextContentWithAttributes(el) {
+		const results = []
 
-  /**
-   * Get text content with gxp-string attribute info
-   * Returns array of objects: { text, gxpStringKey, isExtracted, sourceExpression, isDynamic }
-   */
-  function getTextContentWithAttributes(el) {
-    const results = [];
+		// Check if this element itself has gxp-string
+		const elementKey = getGxpStringKey(el)
+		// Check for data-gxp-source attribute (injected by vite plugin for {{ expressions }})
+		const sourceExpression = getGxpSourceExpression(el)
 
-    // Check if this element itself has gxp-string
-    const elementKey = getGxpStringKey(el);
-    // Check for data-gxp-source attribute (injected by vite plugin for {{ expressions }})
-    const sourceExpression = getGxpSourceExpression(el);
+		el.childNodes.forEach((node) => {
+			if (node.nodeType === Node.TEXT_NODE) {
+				const text = node.textContent.trim()
+				if (text) {
+					results.push({
+						text: text,
+						gxpStringKey: elementKey,
+						isExtracted: elementKey !== null,
+						sourceExpression: sourceExpression,
+						isDynamic: sourceExpression !== null,
+					})
+				}
+			}
+		})
 
-    el.childNodes.forEach((node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent.trim();
-        if (text) {
-          results.push({
-            text: text,
-            gxpStringKey: elementKey,
-            isExtracted: elementKey !== null,
-            sourceExpression: sourceExpression,
-            isDynamic: sourceExpression !== null,
-          });
-        }
-      }
-    });
+		return results
+	}
 
-    return results;
-  }
+	/**
+	 * Find all child elements with gxp-string attributes
+	 */
+	function findChildGxpStrings(el) {
+		const strings = []
+		const elements = el.querySelectorAll("[gxp-string]")
 
-  /**
-   * Find all child elements with gxp-string attributes
-   */
-  function findChildGxpStrings(el) {
-    const strings = [];
-    const elements = el.querySelectorAll("[gxp-string]");
+		elements.forEach((child) => {
+			const key = child.getAttribute("gxp-string")
+			const text = child.textContent.trim()
+			if (key && text) {
+				strings.push({
+					key: key,
+					text: text,
+					element: child.tagName.toLowerCase(),
+				})
+			}
+		})
 
-    elements.forEach((child) => {
-      const key = child.getAttribute("gxp-string");
-      const text = child.textContent.trim();
-      if (key && text) {
-        strings.push({
-          key: key,
-          text: text,
-          element: child.tagName.toLowerCase(),
-        });
-      }
-    });
+		return strings
+	}
 
-    return strings;
-  }
+	/**
+	 * Analyze text content to detect if it comes from getString() calls
+	 * Returns an array of text info objects with type: 'raw' or 'getString'
+	 */
+	function analyzeTextContent(el, vueInstance) {
+		const textInfos = []
+		const texts = getTextContent(el)
 
-  /**
-   * Analyze text content to detect if it comes from getString() calls
-   * Returns an array of text info objects with type: 'raw' or 'getString'
-   */
-  function analyzeTextContent(el, vueInstance) {
-    const textInfos = [];
-    const texts = getTextContent(el);
+		// Get the component's source info to help detect getString usage
+		const componentFile = vueInstance?.type?.__file || null
 
-    // Get the component's source info to help detect getString usage
-    const componentFile = vueInstance?.type?.__file || null;
+		// Try to detect getString calls by checking if this element's text
+		// is likely from a getString call. We look for patterns in the rendered output
+		// and can cross-reference with the app-manifest.json via API later.
 
-    // Try to detect getString calls by checking if this element's text
-    // is likely from a getString call. We look for patterns in the rendered output
-    // and can cross-reference with the app-manifest.json via API later.
+		texts.forEach((text, index) => {
+			// Default to raw text
+			const textInfo = {
+				text: text,
+				type: "raw",
+				index: index,
+			}
 
-    texts.forEach((text, index) => {
-      // Default to raw text
-      const textInfo = {
-        text: text,
-        type: "raw",
-        index: index,
-      };
+			// We'll mark it as potentially from getString if we can detect it
+			// The panel will verify against the manifest
+			textInfos.push(textInfo)
+		})
 
-      // We'll mark it as potentially from getString if we can detect it
-      // The panel will verify against the manifest
-      textInfos.push(textInfo);
-    });
+		return textInfos
+	}
 
-    return textInfos;
-  }
+	/**
+	 * Try to find getString calls in the Vue component by inspecting
+	 * the component's template bindings (if accessible)
+	 */
+	function findGetStringCalls(vueInstance, filePath) {
+		const getStringCalls = []
 
-  /**
-   * Try to find getString calls in the Vue component by inspecting
-   * the component's template bindings (if accessible)
-   */
-  function findGetStringCalls(vueInstance, filePath) {
-    const getStringCalls = [];
+		if (!vueInstance) return getStringCalls
 
-    if (!vueInstance) return getStringCalls;
+		// Check setupState for gxpStore reference
+		const hasGxpStore = vueInstance.setupState?.gxpStore !== undefined
 
-    // Check setupState for gxpStore reference
-    const hasGxpStore = vueInstance.setupState?.gxpStore !== undefined;
+		// We can't directly see the template, but we can check for gxpStore usage
+		// The actual verification happens on the server side by checking the source file
 
-    // We can't directly see the template, but we can check for gxpStore usage
-    // The actual verification happens on the server side by checking the source file
+		return { hasGxpStore, getStringCalls }
+	}
 
-    return { hasGxpStore, getStringCalls };
-  }
+	// ============================================================
+	// Overlay UI
+	// ============================================================
 
-  // ============================================================
-  // Overlay UI
-  // ============================================================
+	function createHighlightOverlay() {
+		if (highlightOverlay) return highlightOverlay
 
-  function createHighlightOverlay() {
-    if (highlightOverlay) return highlightOverlay;
+		highlightOverlay = document.createElement("div")
+		highlightOverlay.id = "gxp-inspector-highlight"
 
-    highlightOverlay = document.createElement("div");
-    highlightOverlay.id = "gxp-inspector-highlight";
-
-    const style = document.createElement("style");
-    style.id = "gxp-highlight-style";
-    style.textContent = `
+		const style = document.createElement("style")
+		style.id = "gxp-highlight-style"
+		style.textContent = `
       /* Pointer cursor when in selection mode */
       body.gxp-inspector-selecting,
       body.gxp-inspector-selecting * {
@@ -342,53 +341,53 @@ window.__gxpInspectorInjected = true;
         border-radius: 3px 3px 0 0;
         white-space: nowrap;
       }
-    `;
+    `
 
-    highlightOverlay.innerHTML = `<div class="gxp-highlight-label"></div>`;
+		highlightOverlay.innerHTML = `<div class="gxp-highlight-label"></div>`
 
-    if (!document.getElementById("gxp-highlight-style")) {
-      document.head.appendChild(style);
-    }
-    document.body.appendChild(highlightOverlay);
-    return highlightOverlay;
-  }
+		if (!document.getElementById("gxp-highlight-style")) {
+			document.head.appendChild(style)
+		}
+		document.body.appendChild(highlightOverlay)
+		return highlightOverlay
+	}
 
-  function updateHighlight(el) {
-    if (!el || !highlightOverlay) return;
+	function updateHighlight(el) {
+		if (!el || !highlightOverlay) return
 
-    const rect = el.getBoundingClientRect();
-    const label = highlightOverlay.querySelector(".gxp-highlight-label");
+		const rect = el.getBoundingClientRect()
+		const label = highlightOverlay.querySelector(".gxp-highlight-label")
 
-    // Position the highlight overlay directly
-    highlightOverlay.style.display = "block";
-    highlightOverlay.style.left = `${rect.left}px`;
-    highlightOverlay.style.top = `${rect.top}px`;
-    highlightOverlay.style.width = `${rect.width}px`;
-    highlightOverlay.style.height = `${rect.height}px`;
+		// Position the highlight overlay directly
+		highlightOverlay.style.display = "block"
+		highlightOverlay.style.left = `${rect.left}px`
+		highlightOverlay.style.top = `${rect.top}px`
+		highlightOverlay.style.width = `${rect.width}px`
+		highlightOverlay.style.height = `${rect.height}px`
 
-    // Build label: Component::element::gxp-string-key
-    label.textContent = buildElementLabel(el);
-  }
+		// Build label: Component::element::gxp-string-key
+		label.textContent = buildElementLabel(el)
+	}
 
-  function hideHighlight() {
-    if (highlightOverlay) {
-      highlightOverlay.style.display = "none";
-    }
-  }
+	function hideHighlight() {
+		if (highlightOverlay) {
+			highlightOverlay.style.display = "none"
+		}
+	}
 
-  // ============================================================
-  // Selection Highlight (persistent border on selected element)
-  // ============================================================
+	// ============================================================
+	// Selection Highlight (persistent border on selected element)
+	// ============================================================
 
-  function createSelectionHighlight() {
-    if (selectionHighlight) return selectionHighlight;
+	function createSelectionHighlight() {
+		if (selectionHighlight) return selectionHighlight
 
-    selectionHighlight = document.createElement("div");
-    selectionHighlight.id = "gxp-inspector-selection";
+		selectionHighlight = document.createElement("div")
+		selectionHighlight.id = "gxp-inspector-selection"
 
-    const style = document.createElement("style");
-    style.id = "gxp-selection-style";
-    style.textContent = `
+		const style = document.createElement("style")
+		style.id = "gxp-selection-style"
+		style.textContent = `
       #gxp-inspector-selection {
         position: fixed;
         pointer-events: none;
@@ -431,65 +430,65 @@ window.__gxpInspectorInjected = true;
                       inset 0 0 30px rgba(97, 218, 251, 0.15);
         }
       }
-    `;
+    `
 
-    selectionHighlight.innerHTML = `<div class="gxp-selection-label"></div>`;
+		selectionHighlight.innerHTML = `<div class="gxp-selection-label"></div>`
 
-    if (!document.getElementById("gxp-selection-style")) {
-      document.head.appendChild(style);
-    }
-    document.body.appendChild(selectionHighlight);
-    return selectionHighlight;
-  }
+		if (!document.getElementById("gxp-selection-style")) {
+			document.head.appendChild(style)
+		}
+		document.body.appendChild(selectionHighlight)
+		return selectionHighlight
+	}
 
-  function updateSelectionHighlight(el) {
-    if (!el) {
-      hideSelectionHighlight();
-      return;
-    }
+	function updateSelectionHighlight(el) {
+		if (!el) {
+			hideSelectionHighlight()
+			return
+		}
 
-    createSelectionHighlight();
-    const rect = el.getBoundingClientRect();
-    const label = selectionHighlight.querySelector(".gxp-selection-label");
+		createSelectionHighlight()
+		const rect = el.getBoundingClientRect()
+		const label = selectionHighlight.querySelector(".gxp-selection-label")
 
-    // Position the main overlay element directly
-    selectionHighlight.style.display = "block";
-    selectionHighlight.style.left = `${rect.left}px`;
-    selectionHighlight.style.top = `${rect.top}px`;
-    selectionHighlight.style.width = `${rect.width}px`;
-    selectionHighlight.style.height = `${rect.height}px`;
+		// Position the main overlay element directly
+		selectionHighlight.style.display = "block"
+		selectionHighlight.style.left = `${rect.left}px`
+		selectionHighlight.style.top = `${rect.top}px`
+		selectionHighlight.style.width = `${rect.width}px`
+		selectionHighlight.style.height = `${rect.height}px`
 
-    // Build label: Component::element::gxp-string-key
-    label.textContent = buildElementLabel(el);
-  }
+		// Build label: Component::element::gxp-string-key
+		label.textContent = buildElementLabel(el)
+	}
 
-  function hideSelectionHighlight() {
-    if (selectionHighlight) {
-      selectionHighlight.style.display = "none";
-    }
-  }
+	function hideSelectionHighlight() {
+		if (selectionHighlight) {
+			selectionHighlight.style.display = "none"
+		}
+	}
 
-  // Update selection highlight position on scroll/resize
-  function updateSelectionPosition() {
-    if (
-      selectedElement &&
-      selectionHighlight &&
-      selectionHighlight.style.display !== "none"
-    ) {
-      updateSelectionHighlight(selectedElement);
-    }
-  }
+	// Update selection highlight position on scroll/resize
+	function updateSelectionPosition() {
+		if (
+			selectedElement &&
+			selectionHighlight &&
+			selectionHighlight.style.display !== "none"
+		) {
+			updateSelectionHighlight(selectedElement)
+		}
+	}
 
-  // ============================================================
-  // Inspector Panel
-  // ============================================================
+	// ============================================================
+	// Inspector Panel
+	// ============================================================
 
-  function createInspectorPanel() {
-    if (inspectorPanel) return inspectorPanel;
+	function createInspectorPanel() {
+		if (inspectorPanel) return inspectorPanel
 
-    inspectorPanel = document.createElement("div");
-    inspectorPanel.id = "gxp-inspector-panel";
-    inspectorPanel.innerHTML = `
+		inspectorPanel = document.createElement("div")
+		inspectorPanel.id = "gxp-inspector-panel"
+		inspectorPanel.innerHTML = `
       <div class="gxp-panel-header">
         <span class="gxp-panel-title">GxP Component Inspector</span>
         <button class="gxp-panel-close">&times;</button>
@@ -528,10 +527,10 @@ window.__gxpInspectorInjected = true;
           <pre class="gxp-props-content"></pre>
         </div>
       </div>
-    `;
+    `
 
-    const style = document.createElement("style");
-    style.textContent = `
+		const style = document.createElement("style")
+		style.textContent = `
       #gxp-inspector-panel {
         position: fixed;
         bottom: 20px;
@@ -710,414 +709,414 @@ window.__gxpInspectorInjected = true;
         max-height: 150px;
         margin: 0;
       }
-    `;
+    `
 
-    document.head.appendChild(style);
-    document.body.appendChild(inspectorPanel);
+		document.head.appendChild(style)
+		document.body.appendChild(inspectorPanel)
 
-    // Event handlers
-    inspectorPanel
-      .querySelector(".gxp-panel-close")
-      .addEventListener("click", () => {
-        disableInspector();
-      });
+		// Event handlers
+		inspectorPanel
+			.querySelector(".gxp-panel-close")
+			.addEventListener("click", () => {
+				disableInspector()
+			})
 
-    inspectorPanel
-      .querySelector(".gxp-extract-button")
-      .addEventListener("click", handleExtract);
+		inspectorPanel
+			.querySelector(".gxp-extract-button")
+			.addEventListener("click", handleExtract)
 
-    return inspectorPanel;
-  }
+		return inspectorPanel
+	}
 
-  function updatePanel(el) {
-    if (!inspectorPanel || !el) return;
+	function updatePanel(el) {
+		if (!inspectorPanel || !el) return
 
-    const vueInstance = getVueInstance(el);
-    const info = getComponentInfo(vueInstance);
-    const texts = getTextContent(el);
+		const vueInstance = getVueInstance(el)
+		const info = getComponentInfo(vueInstance)
+		const texts = getTextContent(el)
 
-    // Update component info
-    const nameEl = inspectorPanel.querySelector(".gxp-component-name");
-    const fileEl = inspectorPanel.querySelector(".gxp-component-file");
+		// Update component info
+		const nameEl = inspectorPanel.querySelector(".gxp-component-name")
+		const fileEl = inspectorPanel.querySelector(".gxp-component-file")
 
-    if (info) {
-      nameEl.textContent = `<${info.name}>`;
-      fileEl.textContent = info.file || "Unknown file";
-    } else {
-      nameEl.textContent = `<${el.tagName.toLowerCase()}>`;
-      fileEl.textContent = "Not a Vue component";
-    }
+		if (info) {
+			nameEl.textContent = `<${info.name}>`
+			fileEl.textContent = info.file || "Unknown file"
+		} else {
+			nameEl.textContent = `<${el.tagName.toLowerCase()}>`
+			fileEl.textContent = "Not a Vue component"
+		}
 
-    // Update strings list
-    const stringsSection = inspectorPanel.querySelector(".gxp-strings-section");
-    const stringsList = inspectorPanel.querySelector(".gxp-strings-list");
+		// Update strings list
+		const stringsSection = inspectorPanel.querySelector(".gxp-strings-section")
+		const stringsList = inspectorPanel.querySelector(".gxp-strings-list")
 
-    if (texts.length > 0) {
-      stringsSection.style.display = "block";
-      stringsList.innerHTML = texts
-        .map(
-          (text) => `
+		if (texts.length > 0) {
+			stringsSection.style.display = "block"
+			stringsList.innerHTML = texts
+				.map(
+					(text) => `
         <div class="gxp-string-item" data-text="${escapeHtml(text)}">
           <span class="gxp-string-text">${escapeHtml(text)}</span>
           <button class="gxp-string-extract">Extract</button>
         </div>
       `,
-        )
-        .join("");
+				)
+				.join("")
 
-      // Add click handlers
-      stringsList.querySelectorAll(".gxp-string-item").forEach((item) => {
-        item
-          .querySelector(".gxp-string-extract")
-          .addEventListener("click", (e) => {
-            e.stopPropagation();
-            showExtractForm(item.dataset.text, info?.file);
-          });
-      });
-    } else {
-      stringsSection.style.display = "none";
-    }
+			// Add click handlers
+			stringsList.querySelectorAll(".gxp-string-item").forEach((item) => {
+				item
+					.querySelector(".gxp-string-extract")
+					.addEventListener("click", (e) => {
+						e.stopPropagation()
+						showExtractForm(item.dataset.text, info?.file)
+					})
+			})
+		} else {
+			stringsSection.style.display = "none"
+		}
 
-    // Update props section
-    const propsSection = inspectorPanel.querySelector(".gxp-props-section");
-    const propsContent = inspectorPanel.querySelector(".gxp-props-content");
+		// Update props section
+		const propsSection = inspectorPanel.querySelector(".gxp-props-section")
+		const propsContent = inspectorPanel.querySelector(".gxp-props-content")
 
-    if (info && Object.keys(info.props).length > 0) {
-      propsSection.style.display = "block";
-      propsContent.textContent = JSON.stringify(info.props, null, 2);
-    } else {
-      propsSection.style.display = "none";
-    }
-  }
+		if (info && Object.keys(info.props).length > 0) {
+			propsSection.style.display = "block"
+			propsContent.textContent = JSON.stringify(info.props, null, 2)
+		} else {
+			propsSection.style.display = "none"
+		}
+	}
 
-  function showExtractForm(text, filePath) {
-    const extractSection = inspectorPanel.querySelector(".gxp-extract-section");
-    const textInput = inspectorPanel.querySelector(".gxp-extract-text");
-    const keyInput = inspectorPanel.querySelector(".gxp-extract-key");
-    const fileInput = inspectorPanel.querySelector(".gxp-extract-file");
-    const statusEl = inspectorPanel.querySelector(".gxp-extract-status");
+	function showExtractForm(text, filePath) {
+		const extractSection = inspectorPanel.querySelector(".gxp-extract-section")
+		const textInput = inspectorPanel.querySelector(".gxp-extract-text")
+		const keyInput = inspectorPanel.querySelector(".gxp-extract-key")
+		const fileInput = inspectorPanel.querySelector(".gxp-extract-file")
+		const statusEl = inspectorPanel.querySelector(".gxp-extract-status")
 
-    extractSection.style.display = "block";
-    textInput.value = text;
-    keyInput.value = textToKey(text);
-    fileInput.value = filePath || "";
-    statusEl.style.display = "none";
-    statusEl.className = "gxp-extract-status";
-  }
+		extractSection.style.display = "block"
+		textInput.value = text
+		keyInput.value = textToKey(text)
+		fileInput.value = filePath || ""
+		statusEl.style.display = "none"
+		statusEl.className = "gxp-extract-status"
+	}
 
-  async function handleExtract() {
-    const textInput = inspectorPanel.querySelector(".gxp-extract-text");
-    const keyInput = inspectorPanel.querySelector(".gxp-extract-key");
-    const fileInput = inspectorPanel.querySelector(".gxp-extract-file");
-    const button = inspectorPanel.querySelector(".gxp-extract-button");
-    const statusEl = inspectorPanel.querySelector(".gxp-extract-status");
+	async function handleExtract() {
+		const textInput = inspectorPanel.querySelector(".gxp-extract-text")
+		const keyInput = inspectorPanel.querySelector(".gxp-extract-key")
+		const fileInput = inspectorPanel.querySelector(".gxp-extract-file")
+		const button = inspectorPanel.querySelector(".gxp-extract-button")
+		const statusEl = inspectorPanel.querySelector(".gxp-extract-status")
 
-    const text = textInput.value;
-    const key = keyInput.value;
-    const filePath = fileInput.value;
+		const text = textInput.value
+		const key = keyInput.value
+		const filePath = fileInput.value
 
-    if (!text || !key || !filePath) {
-      statusEl.textContent = "All fields are required";
-      statusEl.className = "gxp-extract-status error";
-      return;
-    }
+		if (!text || !key || !filePath) {
+			statusEl.textContent = "All fields are required"
+			statusEl.className = "gxp-extract-status error"
+			return
+		}
 
-    button.disabled = true;
-    button.textContent = "Extracting...";
+		button.disabled = true
+		button.textContent = "Extracting..."
 
-    try {
-      const result = await extractString({
-        text,
-        key,
-        filePath,
-      });
+		try {
+			const result = await extractString({
+				text,
+				key,
+				filePath,
+			})
 
-      if (result.success) {
-        statusEl.textContent = `Success! Added getString('${key}') to ${filePath}`;
-        statusEl.className = "gxp-extract-status success";
-      } else {
-        statusEl.textContent = result.error || "Extraction failed";
-        statusEl.className = "gxp-extract-status error";
-      }
-    } catch (error) {
-      statusEl.textContent = error.message;
-      statusEl.className = "gxp-extract-status error";
-    } finally {
-      button.disabled = false;
-      button.textContent = "Extract to getString()";
-    }
-  }
+			if (result.success) {
+				statusEl.textContent = `Success! Added getString('${key}') to ${filePath}`
+				statusEl.className = "gxp-extract-status success"
+			} else {
+				statusEl.textContent = result.error || "Extraction failed"
+				statusEl.className = "gxp-extract-status error"
+			}
+		} catch (error) {
+			statusEl.textContent = error.message
+			statusEl.className = "gxp-extract-status error"
+		} finally {
+			button.disabled = false
+			button.textContent = "Extract to getString()"
+		}
+	}
 
-  // ============================================================
-  // Event Handlers
-  // ============================================================
+	// ============================================================
+	// Event Handlers
+	// ============================================================
 
-  function handleMouseMove(e) {
-    if (!inspectorEnabled) return;
+	function handleMouseMove(e) {
+		if (!inspectorEnabled) return
 
-    const el = e.target;
-    if (
-      el === highlightOverlay ||
-      highlightOverlay?.contains(el) ||
-      el === inspectorPanel ||
-      inspectorPanel?.contains(el)
-    ) {
-      return;
-    }
+		const el = e.target
+		if (
+			el === highlightOverlay ||
+			highlightOverlay?.contains(el) ||
+			el === inspectorPanel ||
+			inspectorPanel?.contains(el)
+		) {
+			return
+		}
 
-    if (el !== hoveredElement) {
-      hoveredElement = el;
-      updateHighlight(el);
-    }
-  }
+		if (el !== hoveredElement) {
+			hoveredElement = el
+			updateHighlight(el)
+		}
+	}
 
-  function handleClick(e) {
-    if (!inspectorEnabled) return;
+	function handleClick(e) {
+		if (!inspectorEnabled) return
 
-    const el = e.target;
-    if (
-      el === highlightOverlay ||
-      highlightOverlay?.contains(el) ||
-      el === inspectorPanel ||
-      inspectorPanel?.contains(el) ||
-      el === selectionHighlight ||
-      selectionHighlight?.contains(el)
-    ) {
-      return;
-    }
+		const el = e.target
+		if (
+			el === highlightOverlay ||
+			highlightOverlay?.contains(el) ||
+			el === inspectorPanel ||
+			inspectorPanel?.contains(el) ||
+			el === selectionHighlight ||
+			selectionHighlight?.contains(el)
+		) {
+			return
+		}
 
-    e.preventDefault();
-    e.stopPropagation();
+		e.preventDefault()
+		e.stopPropagation()
 
-    selectedElement = el;
-    // Store for DevTools panel access via eval
-    window.__gxpSelectedElement = el;
+		selectedElement = el
+		// Store for DevTools panel access via eval
+		window.__gxpSelectedElement = el
 
-    updatePanel(el);
+		updatePanel(el)
 
-    // Show persistent selection highlight
-    updateSelectionHighlight(el);
+		// Show persistent selection highlight
+		updateSelectionHighlight(el)
 
-    // Hide hover highlight
-    hideHighlight();
+		// Hide hover highlight
+		hideHighlight()
 
-    // Disable inspector (selection mode) after selecting
-    // This prevents accidental re-selection on next click
-    disableInspector();
+		// Disable inspector (selection mode) after selecting
+		// This prevents accidental re-selection on next click
+		disableInspector()
 
-    // Send selection to background for DevTools panel
-    sendElementToDevTools(el);
-  }
+		// Send selection to background for DevTools panel
+		sendElementToDevTools(el)
+	}
 
-  function sendElementToDevTools(el) {
-    const vueInstance = getVueInstance(el);
-    const info = getComponentInfo(vueInstance);
-    const texts = getTextContent(el);
-    const textsWithAttrs = getTextContentWithAttributes(el);
-    const childGxpStrings = findChildGxpStrings(el);
+	function sendElementToDevTools(el) {
+		const vueInstance = getVueInstance(el)
+		const info = getComponentInfo(vueInstance)
+		const texts = getTextContent(el)
+		const textsWithAttrs = getTextContentWithAttributes(el)
+		const childGxpStrings = findChildGxpStrings(el)
 
-    // Check if the element itself has gxp-string
-    const gxpStringKey = getGxpStringKey(el);
-    // Check for data-gxp-source attribute (injected by vite plugin)
-    const sourceExpression = getGxpSourceExpression(el);
+		// Check if the element itself has gxp-string
+		const gxpStringKey = getGxpStringKey(el)
+		// Check for data-gxp-source attribute (injected by vite plugin)
+		const sourceExpression = getGxpSourceExpression(el)
 
-    const data = {
-      tagName: el.tagName.toLowerCase(),
-      component: info,
-      texts: texts,
-      textsWithAttributes: textsWithAttrs,
-      childGxpStrings: childGxpStrings,
-      gxpStringKey: gxpStringKey,
-      isExtracted: gxpStringKey !== null,
-      sourceExpression: sourceExpression,
-      isDynamic: sourceExpression !== null,
-    };
+		const data = {
+			tagName: el.tagName.toLowerCase(),
+			component: info,
+			texts: texts,
+			textsWithAttributes: textsWithAttrs,
+			childGxpStrings: childGxpStrings,
+			gxpStringKey: gxpStringKey,
+			isExtracted: gxpStringKey !== null,
+			sourceExpression: sourceExpression,
+			isDynamic: sourceExpression !== null,
+		}
 
-    // Send to content script via postMessage (since we're in page context)
-    // The content script will relay to the background script
-    window.postMessage(
-      {
-        type: "GXP_INSPECTOR_MESSAGE",
-        payload: {
-          type: "elementSelected",
-          data: data,
-        },
-      },
-      "*",
-    );
-  }
+		// Send to content script via postMessage (since we're in page context)
+		// The content script will relay to the background script
+		window.postMessage(
+			{
+				type: "GXP_INSPECTOR_MESSAGE",
+				payload: {
+					type: "elementSelected",
+					data: data,
+				},
+			},
+			"*",
+		)
+	}
 
-  function handleKeyDown(e) {
-    // Escape to disable inspector
-    if (e.key === "Escape" && inspectorEnabled) {
-      disableInspector();
-    }
+	function handleKeyDown(e) {
+		// Escape to disable inspector
+		if (e.key === "Escape" && inspectorEnabled) {
+			disableInspector()
+		}
 
-    // Ctrl+Shift+I to toggle inspector
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "I") {
-      e.preventDefault();
-      toggleInspector();
-    }
-  }
+		// Ctrl+Shift+I to toggle inspector
+		if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "I") {
+			e.preventDefault()
+			toggleInspector()
+		}
+	}
 
-  // ============================================================
-  // Public API
-  // ============================================================
+	// ============================================================
+	// Public API
+	// ============================================================
 
-  function enableInspector() {
-    if (inspectorEnabled) return;
+	function enableInspector() {
+		if (inspectorEnabled) return
 
-    inspectorEnabled = true;
-    createHighlightOverlay();
-    createInspectorPanel();
+		inspectorEnabled = true
+		createHighlightOverlay()
+		createInspectorPanel()
 
-    // Add selecting class for pointer cursor
-    document.body.classList.add("gxp-inspector-selecting");
+		// Add selecting class for pointer cursor
+		document.body.classList.add("gxp-inspector-selecting")
 
-    // Hide previous selection highlight when entering selection mode
-    hideSelectionHighlight();
-    selectedElement = null;
-    window.__gxpSelectedElement = null;
+		// Hide previous selection highlight when entering selection mode
+		hideSelectionHighlight()
+		selectedElement = null
+		window.__gxpSelectedElement = null
 
-    document.addEventListener("mousemove", handleMouseMove, true);
-    document.addEventListener("click", handleClick, true);
-    window.addEventListener("scroll", updateSelectionPosition, true);
-    window.addEventListener("resize", updateSelectionPosition);
+		document.addEventListener("mousemove", handleMouseMove, true)
+		document.addEventListener("click", handleClick, true)
+		window.addEventListener("scroll", updateSelectionPosition, true)
+		window.addEventListener("resize", updateSelectionPosition)
 
-    console.log("[GxP Inspector] Enabled - Hover over elements to inspect");
-  }
+		console.log("[GxP Inspector] Enabled - Hover over elements to inspect")
+	}
 
-  function disableInspector() {
-    if (!inspectorEnabled) return;
+	function disableInspector() {
+		if (!inspectorEnabled) return
 
-    inspectorEnabled = false;
-    hideHighlight();
+		inspectorEnabled = false
+		hideHighlight()
 
-    // Remove selecting class for pointer cursor
-    document.body.classList.remove("gxp-inspector-selecting");
+		// Remove selecting class for pointer cursor
+		document.body.classList.remove("gxp-inspector-selecting")
 
-    if (inspectorPanel) {
-      inspectorPanel.remove();
-      inspectorPanel = null;
-    }
+		if (inspectorPanel) {
+			inspectorPanel.remove()
+			inspectorPanel = null
+		}
 
-    document.removeEventListener("mousemove", handleMouseMove, true);
-    document.removeEventListener("click", handleClick, true);
-    // Keep scroll/resize listeners for selection highlight position updates
-    // They will be removed when a new selection starts
+		document.removeEventListener("mousemove", handleMouseMove, true)
+		document.removeEventListener("click", handleClick, true)
+		// Keep scroll/resize listeners for selection highlight position updates
+		// They will be removed when a new selection starts
 
-    // Don't clear selectedElement here - we want to keep the selection
-    hoveredElement = null;
+		// Don't clear selectedElement here - we want to keep the selection
+		hoveredElement = null
 
-    console.log("[GxP Inspector] Disabled - Selection preserved");
-  }
+		console.log("[GxP Inspector] Disabled - Selection preserved")
+	}
 
-  // Clear selection completely (called when user wants to deselect)
-  function clearSelection() {
-    hideSelectionHighlight();
-    selectedElement = null;
-    window.__gxpSelectedElement = null;
-    window.removeEventListener("scroll", updateSelectionPosition, true);
-    window.removeEventListener("resize", updateSelectionPosition);
-  }
+	// Clear selection completely (called when user wants to deselect)
+	function clearSelection() {
+		hideSelectionHighlight()
+		selectedElement = null
+		window.__gxpSelectedElement = null
+		window.removeEventListener("scroll", updateSelectionPosition, true)
+		window.removeEventListener("resize", updateSelectionPosition)
+	}
 
-  function toggleInspector() {
-    if (inspectorEnabled) {
-      disableInspector();
-    } else {
-      enableInspector();
-    }
-  }
+	function toggleInspector() {
+		if (inspectorEnabled) {
+			disableInspector()
+		} else {
+			enableInspector()
+		}
+	}
 
-  // ============================================================
-  // Utility Functions
-  // ============================================================
+	// ============================================================
+	// Utility Functions
+	// ============================================================
 
-  /**
-   * Build a descriptive label for an element
-   * Format: ComponentName::element::gxp-string-key
-   * Examples:
-   *   - DemoPage::h1::welcome_title
-   *   - DemoPage::h1 (no gxp-string)
-   *   - div::gxp-string-key (no Vue component)
-   *   - div (plain element)
-   */
-  function buildElementLabel(el) {
-    const parts = [];
+	/**
+	 * Build a descriptive label for an element
+	 * Format: ComponentName::element::gxp-string-key
+	 * Examples:
+	 *   - DemoPage::h1::welcome_title
+	 *   - DemoPage::h1 (no gxp-string)
+	 *   - div::gxp-string-key (no Vue component)
+	 *   - div (plain element)
+	 */
+	function buildElementLabel(el) {
+		const parts = []
 
-    // Get Vue component name
-    const vueInstance = getVueInstance(el);
-    const info = getComponentInfo(vueInstance);
-    if (info && info.name) {
-      parts.push(info.name);
-    }
+		// Get Vue component name
+		const vueInstance = getVueInstance(el)
+		const info = getComponentInfo(vueInstance)
+		if (info && info.name) {
+			parts.push(info.name)
+		}
 
-    // Add element tag name
-    parts.push(el.tagName.toLowerCase());
+		// Add element tag name
+		parts.push(el.tagName.toLowerCase())
 
-    // Check for gxp-string attribute
-    const gxpStringKey = el.getAttribute("gxp-string");
-    if (gxpStringKey) {
-      parts.push(gxpStringKey);
-    }
+		// Check for gxp-string attribute
+		const gxpStringKey = el.getAttribute("gxp-string")
+		if (gxpStringKey) {
+			parts.push(gxpStringKey)
+		}
 
-    // Check for gxp-src attribute (for images/assets)
-    const gxpSrcKey = el.getAttribute("gxp-src");
-    if (gxpSrcKey && !gxpStringKey) {
-      parts.push(gxpSrcKey);
-    }
+		// Check for gxp-src attribute (for images/assets)
+		const gxpSrcKey = el.getAttribute("gxp-src")
+		if (gxpSrcKey && !gxpStringKey) {
+			parts.push(gxpSrcKey)
+		}
 
-    return parts.join("::");
-  }
+		return parts.join("::")
+	}
 
-  function textToKey(text) {
-    return text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
-      .replace(/\s+/g, "_")
-      .substring(0, 40)
-      .replace(/_+$/, "");
-  }
+	function textToKey(text) {
+		return text
+			.toLowerCase()
+			.replace(/[^a-z0-9\s]/g, "")
+			.replace(/\s+/g, "_")
+			.substring(0, 40)
+			.replace(/_+$/, "")
+	}
 
-  function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-  }
+	function escapeHtml(text) {
+		const div = document.createElement("div")
+		div.textContent = text
+		return div.innerHTML
+	}
 
-  // ============================================================
-  // Initialize
-  // ============================================================
+	// ============================================================
+	// Initialize
+	// ============================================================
 
-  // Add keyboard listener
-  document.addEventListener("keydown", handleKeyDown);
+	// Add keyboard listener
+	document.addEventListener("keydown", handleKeyDown)
 
-  // Expose API
-  window.gxpInspector = {
-    enable: enableInspector,
-    disable: disableInspector,
-    toggle: toggleInspector,
-    isEnabled: () => inspectorEnabled,
-    clearSelection: clearSelection,
-    ping: ping,
-  };
+	// Expose API
+	window.gxpInspector = {
+		enable: enableInspector,
+		disable: disableInspector,
+		toggle: toggleInspector,
+		isEnabled: () => inspectorEnabled,
+		clearSelection: clearSelection,
+		ping: ping,
+	}
 
-  // Listen for messages from content script (which relays from popup/background)
-  window.addEventListener("message", (event) => {
-    if (event.source !== window) return;
-    if (event.data?.type === "GXP_INSPECTOR_ACTION") {
-      const action = event.data.action;
-      if (action === "toggleInspector") {
-        toggleInspector();
-      } else if (action === "enable") {
-        enableInspector();
-      } else if (action === "disable") {
-        disableInspector();
-      }
-    }
-  });
+	// Listen for messages from content script (which relays from popup/background)
+	window.addEventListener("message", (event) => {
+		if (event.source !== window) return
+		if (event.data?.type === "GXP_INSPECTOR_ACTION") {
+			const action = event.data.action
+			if (action === "toggleInspector") {
+				toggleInspector()
+			} else if (action === "enable") {
+				enableInspector()
+			} else if (action === "disable") {
+				disableInspector()
+			}
+		}
+	})
 
-  console.log(
-    "[GxP Inspector] Loaded in page context. Press Ctrl+Shift+I to toggle inspector.",
-  );
-})();
+	console.log(
+		"[GxP Inspector] Loaded in page context. Press Ctrl+Shift+I to toggle inspector.",
+	)
+})()

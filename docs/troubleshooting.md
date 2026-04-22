@@ -183,10 +183,10 @@ Error: Cannot find module '@/components/...'
 
 ```javascript
 // Correct
-import MyComponent from "@/components/MyComponent.vue";
+import MyComponent from "@/components/MyComponent.vue"
 
 // Wrong
-import MyComponent from "./src/components/MyComponent.vue";
+import MyComponent from "./src/components/MyComponent.vue"
 ```
 
 2. **Verify vite.config.js** has correct aliases
@@ -207,7 +207,7 @@ import MyComponent from "./src/components/MyComponent.vue";
 ```vue
 <style scoped>
 .my-class {
-  color: blue;
+	color: blue;
 }
 </style>
 ```
@@ -215,7 +215,7 @@ import MyComponent from "./src/components/MyComponent.vue";
 2. **Import CSS in component:**
 
 ```javascript
-import "./MyComponent.css";
+import "./MyComponent.css"
 ```
 
 3. **Check for CSS import errors** in terminal
@@ -237,8 +237,8 @@ npx vite build --mode analyze
 
 ```javascript
 const HeavyComponent = defineAsyncComponent(
-  () => import("./HeavyComponent.vue"),
-);
+	() => import("./HeavyComponent.vue"),
+)
 ```
 
 4. **Ensure Vue/Pinia are externalized** (they're provided by platform)
@@ -316,27 +316,27 @@ cat app-manifest.json | python -m json.tool
 
 ```javascript
 // Correct
-store.updateString("key", "value");
+store.updateString("key", "value")
 
 // Wrong - not reactive
-store.stringsList.key = "value";
+store.stringsList.key = "value"
 ```
 
 2. **Access via getters:**
 
 ```javascript
 // Reactive
-const title = computed(() => store.getString("title", "Default"));
+const title = computed(() => store.getString("title", "Default"))
 
 // Not reactive if accessed once
-const title = store.getString("title", "Default");
+const title = store.getString("title", "Default")
 ```
 
 3. **Use toRefs** for destructuring:
 
 ```javascript
-import { storeToRefs } from "pinia";
-const { stringsList, pluginVars } = storeToRefs(store);
+import { storeToRefs } from "pinia"
+const { stringsList, pluginVars } = storeToRefs(store)
 ```
 
 ### API calls failing
@@ -490,11 +490,11 @@ The `.gxpapp` file is a ZIP archive ready for platform upload.
 
 ```json
 {
-  "strings": {
-    "default": {
-      "new_string_key": "Your text here"
-    }
-  }
+	"strings": {
+		"default": {
+			"new_string_key": "Your text here"
+		}
+	}
 }
 ```
 

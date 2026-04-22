@@ -229,16 +229,16 @@ Open `src/Plugin.vue` and make a change:
 
 ```vue
 <template>
-  <div class="my-plugin">
-    <h1 gxp-string="welcome_title">Welcome to My Plugin!</h1>
-    <p>Edit this file to get started.</p>
-  </div>
+	<div class="my-plugin">
+		<h1 gxp-string="welcome_title">Welcome to My Plugin!</h1>
+		<p>Edit this file to get started.</p>
+	</div>
 </template>
 
 <script setup>
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
 
-const store = useGxpStore();
+const store = useGxpStore()
 </script>
 ```
 

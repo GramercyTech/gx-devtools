@@ -23,12 +23,12 @@ my-plugin/
 
 ```json
 {
-  "settings": {},
-  "strings": {},
-  "assets": {},
-  "triggerState": {},
-  "dependencies": [],
-  "permissions": []
+	"settings": {},
+	"strings": {},
+	"assets": {},
+	"triggerState": {},
+	"dependencies": [],
+	"permissions": []
 }
 ```
 
@@ -40,27 +40,27 @@ Define configurable settings that administrators can customize per deployment:
 
 ```json
 {
-  "settings": {
-    "primary_color": "#FFD600",
-    "background_color": "#ffffff",
-    "company_name": "Acme Corp",
-    "max_items": 10,
-    "enable_animations": true
-  }
+	"settings": {
+		"primary_color": "#FFD600",
+		"background_color": "#ffffff",
+		"company_name": "Acme Corp",
+		"max_items": 10,
+		"enable_animations": true
+	}
 }
 ```
 
 Access in your component:
 
 ```javascript
-const store = useGxpStore();
+const store = useGxpStore()
 
 // Get a setting with fallback
-const color = store.getSetting("primary_color", "#000000");
+const color = store.getSetting("primary_color", "#000000")
 
 // Check if setting exists
 if (store.pluginVars.enable_animations) {
-  // ...
+	// ...
 }
 ```
 
@@ -76,15 +76,15 @@ Define translatable text content:
 
 ```json
 {
-  "strings": {
-    "default": {
-      "welcome_title": "Welcome to the Event",
-      "welcome_subtitle": "Please check in below",
-      "button_checkin": "Check In",
-      "button_cancel": "Cancel",
-      "error_not_found": "Registration not found"
-    }
-  }
+	"strings": {
+		"default": {
+			"welcome_title": "Welcome to the Event",
+			"welcome_subtitle": "Please check in below",
+			"button_checkin": "Check In",
+			"button_cancel": "Cancel",
+			"error_not_found": "Registration not found"
+		}
+	}
 }
 ```
 
@@ -98,8 +98,8 @@ Use in templates with the `gxp-string` directive:
 Access programmatically:
 
 ```javascript
-const store = useGxpStore();
-const title = store.getString("welcome_title", "Default Title");
+const store = useGxpStore()
+const title = store.getString("welcome_title", "Default Title")
 ```
 
 :::tip Hot Reload
@@ -112,12 +112,12 @@ Define asset URLs (images, documents, etc.):
 
 ```json
 {
-  "assets": {
-    "hero_image": "/dev-assets/images/hero.jpg",
-    "logo": "/dev-assets/images/logo.png",
-    "background": "/dev-assets/images/bg-pattern.svg",
-    "welcome_video": "/dev-assets/videos/intro.mp4"
-  }
+	"assets": {
+		"hero_image": "/dev-assets/images/hero.jpg",
+		"logo": "/dev-assets/images/logo.png",
+		"background": "/dev-assets/images/bg-pattern.svg",
+		"welcome_video": "/dev-assets/videos/intro.mp4"
+	}
 }
 ```
 
@@ -131,8 +131,8 @@ Use in templates with the `gxp-src` directive:
 Access programmatically:
 
 ```javascript
-const store = useGxpStore();
-const heroUrl = store.getAsset("hero_image", "/fallback.jpg");
+const store = useGxpStore()
+const heroUrl = store.getAsset("hero_image", "/fallback.jpg")
 ```
 
 ### Trigger State (`triggerState`)
@@ -141,12 +141,12 @@ Define dynamic runtime state that can change during plugin execution:
 
 ```json
 {
-  "triggerState": {
-    "is_active": true,
-    "current_step": 1,
-    "checked_in_count": 0,
-    "last_scan_result": null
-  }
+	"triggerState": {
+		"is_active": true,
+		"current_step": 1,
+		"checked_in_count": 0,
+		"last_scan_result": null
+	}
 }
 ```
 
@@ -160,14 +160,14 @@ Use in templates with the `gxp-state` modifier:
 Update programmatically:
 
 ```javascript
-const store = useGxpStore();
+const store = useGxpStore()
 
 // Update state
-store.updateState("current_step", 2);
-store.updateState("checked_in_count", store.triggerState.checked_in_count + 1);
+store.updateState("current_step", 2)
+store.updateState("checked_in_count", store.triggerState.checked_in_count + 1)
 
 // Read state
-const step = store.getState("current_step", 1);
+const step = store.getState("current_step", 1)
 ```
 
 ### Dependencies
@@ -178,25 +178,25 @@ Dependencies define external API services your plugin can interact with. Each de
 
 ```json
 {
-  "dependencies": [
-    {
-      "identifier": "access_points",
-      "model": "AccessPoint",
-      "permissionKey": "access_point",
-      "permissions": ["view_access_points", "manage_access_points"],
-      "operations": {
-        "access-points.index": "get:/v1/projects/{teamSlug}/{projectSlug}/access-points",
-        "access-points.show": "get:/v1/projects/{teamSlug}/{projectSlug}/access-points/{access_point}",
-        "access-points.store": "post:/v1/projects/{teamSlug}/{projectSlug}/access-points",
-        "access-points.update": "put:/v1/projects/{teamSlug}/{projectSlug}/access-points/{access_point}",
-        "access-points.destroy": "delete:/v1/projects/{teamSlug}/{projectSlug}/access-points/{access_point}"
-      },
-      "events": {
-        "AccessPointUpdated": "AccessPointUpdated",
-        "AccessPointDeleted": "AccessPointDeleted"
-      }
-    }
-  ]
+	"dependencies": [
+		{
+			"identifier": "access_points",
+			"model": "AccessPoint",
+			"permissionKey": "access_point",
+			"permissions": ["view_access_points", "manage_access_points"],
+			"operations": {
+				"access-points.index": "get:/v1/projects/{teamSlug}/{projectSlug}/access-points",
+				"access-points.show": "get:/v1/projects/{teamSlug}/{projectSlug}/access-points/{access_point}",
+				"access-points.store": "post:/v1/projects/{teamSlug}/{projectSlug}/access-points",
+				"access-points.update": "put:/v1/projects/{teamSlug}/{projectSlug}/access-points/{access_point}",
+				"access-points.destroy": "delete:/v1/projects/{teamSlug}/{projectSlug}/access-points/{access_point}"
+			},
+			"events": {
+				"AccessPointUpdated": "AccessPointUpdated",
+				"AccessPointDeleted": "AccessPointDeleted"
+			}
+		}
+	]
 }
 ```
 
@@ -233,47 +233,44 @@ This interactive wizard will:
 Once defined, call any operation using `gxpStore.callApi()`:
 
 ```javascript
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore";
+import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
 
-const store = useGxpStore();
+const store = useGxpStore()
 
 // List all access points
-const accessPoints = await store.callApi(
-  "access-points.index",
-  "access_points",
-);
+const accessPoints = await store.callApi("access-points.index", "access_points")
 
 // Get a specific access point
 const accessPoint = await store.callApi("access-points.show", "access_points", {
-  access_point: 123,
-});
+	access_point: 123,
+})
 
 // Create a new access point
 const newAccessPoint = await store.callApi(
-  "access-points.store",
-  "access_points",
-  {
-    name: "Main Entrance",
-    location: "Building A",
-  },
-);
+	"access-points.store",
+	"access_points",
+	{
+		name: "Main Entrance",
+		location: "Building A",
+	},
+)
 
 // Update an access point
 await store.callApi("access-points.update", "access_points", {
-  access_point: 123,
-  name: "Updated Name",
-});
+	access_point: 123,
+	name: "Updated Name",
+})
 
 // Delete an access point
 await store.callApi("access-points.destroy", "access_points", {
-  access_point: 123,
-});
+	access_point: 123,
+})
 ```
 
 The `callApi` method signature:
 
 ```javascript
-store.callApi(operationId, identifier, (additionalData = {}));
+store.callApi(operationId, identifier, (additionalData = {}))
 ```
 
 - **operationId**: The operation key from `operations` (e.g., `'access-points.index'`)
@@ -288,17 +285,17 @@ Define permissions required by the plugin:
 
 ```json
 {
-  "permissions": ["camera", "bluetooth", "notifications"]
+	"permissions": ["camera", "bluetooth", "notifications"]
 }
 ```
 
 Check permissions in code:
 
 ```javascript
-const store = useGxpStore();
+const store = useGxpStore()
 
 if (store.hasPermission("camera")) {
-  // Enable camera features
+	// Enable camera features
 }
 ```
 
@@ -306,36 +303,36 @@ if (store.hasPermission("camera")) {
 
 ```json
 {
-  "settings": {
-    "primary_color": "#FFD600",
-    "secondary_color": "#1976D2",
-    "company_name": "TechConf 2024",
-    "check_in_timeout": 30,
-    "enable_badge_printing": true
-  },
-  "strings": {
-    "default": {
-      "welcome_title": "Welcome to TechConf 2024",
-      "welcome_subtitle": "Scan your QR code to check in",
-      "btn_manual_entry": "Enter Code Manually",
-      "btn_help": "Need Help?",
-      "success_message": "You're all set!",
-      "error_invalid_code": "Invalid code. Please try again.",
-      "error_already_checked_in": "You've already checked in."
-    }
-  },
-  "assets": {
-    "logo": "/dev-assets/images/techconf-logo.png",
-    "hero_background": "/dev-assets/images/hero-bg.jpg",
-    "success_animation": "/dev-assets/animations/success.json"
-  },
-  "triggerState": {
-    "is_scanning": false,
-    "current_attendee": null,
-    "badge_printing": false
-  },
-  "dependencies": [],
-  "permissions": ["camera"]
+	"settings": {
+		"primary_color": "#FFD600",
+		"secondary_color": "#1976D2",
+		"company_name": "TechConf 2024",
+		"check_in_timeout": 30,
+		"enable_badge_printing": true
+	},
+	"strings": {
+		"default": {
+			"welcome_title": "Welcome to TechConf 2024",
+			"welcome_subtitle": "Scan your QR code to check in",
+			"btn_manual_entry": "Enter Code Manually",
+			"btn_help": "Need Help?",
+			"success_message": "You're all set!",
+			"error_invalid_code": "Invalid code. Please try again.",
+			"error_already_checked_in": "You've already checked in."
+		}
+	},
+	"assets": {
+		"logo": "/dev-assets/images/techconf-logo.png",
+		"hero_background": "/dev-assets/images/hero-bg.jpg",
+		"success_animation": "/dev-assets/animations/success.json"
+	},
+	"triggerState": {
+		"is_scanning": false,
+		"current_attendee": null,
+		"badge_printing": false
+	},
+	"dependencies": [],
+	"permissions": ["camera"]
 }
 ```
 

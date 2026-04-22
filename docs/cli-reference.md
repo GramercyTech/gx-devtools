@@ -557,12 +557,12 @@ Events are defined in JSON files in the `socket-events/` directory:
 
 ```json
 {
-  "event": "EventName",
-  "channel": "private.Model.identifier",
-  "data": {
-    "id": 123,
-    "message": "Event payload"
-  }
+	"event": "EventName",
+	"channel": "private.Model.identifier",
+	"data": {
+		"id": 123,
+		"message": "Event payload"
+	}
 }
 ```
 
@@ -856,9 +856,9 @@ Create a `.gxdevrc.json` file in your home directory for global defaults:
 
 ```json
 {
-  "defaultPort": 3060,
-  "preferHttps": true,
-  "autoStartSocket": false
+	"defaultPort": 3060,
+	"preferHttps": true,
+	"autoStartSocket": false
 }
 ```
 
@@ -961,14 +961,14 @@ Generated Dependency Configuration:
 Once added, call any operation using `gxpStore.callApi()`:
 
 ```javascript
-const store = useGxpStore();
+const store = useGxpStore()
 
 // Use the operationId and identifier
-const items = await store.callApi("access-points.index", "access_points");
+const items = await store.callApi("access-points.index", "access_points")
 
 const item = await store.callApi("access-points.show", "access_points", {
-  access_point: 123,
-});
+	access_point: 123,
+})
 ```
 
 ### Examples
