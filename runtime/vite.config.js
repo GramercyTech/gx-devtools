@@ -320,9 +320,11 @@ export default defineConfig(async (ctx) => {
 					"@/stores/gxpPortalConfigStore":
 						"(window.useGxpStore || (() => { console.warn('useGxpStore not found on window, using fallback'); return {}; }))",
 				},
-				{
-					include: ["src/**"],
-				},
+				// No `include` filter — rewrite `from "vue"` / `from "pinia"`
+				// in every module of the final bundle, including transitive deps
+				// from node_modules (component libraries, etc.). Without this,
+				// deps' internal `import { h } from "vue"` leak through as bare
+				// specifiers and crash at runtime on the platform.
 			),
 			// Custom request logging and CORS plugin
 			{
