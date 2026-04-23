@@ -233,18 +233,36 @@ Tools: `config_list_card_types`, `config_list_field_types`, `config_get_field_sc
 
 ## Form / Quiz / Survey Apps — `formTemplate`
 
-If the plugin _is_ a form (quiz, survey, questionnaire), ship a starter question set the admin can customize on install. Two keys, both required, must be kept consistent:
+`formTemplate` lives in two files and the two meanings are independent — don't treat them as a single toggle.
 
-1. `app-manifest.json` → `"formTemplate": true` — marks the plugin as a form app.
-2. `configuration.json` → `"formTemplate": [ ...cards ]` — array of cards (same shape as `additionalTabs`), typically `fields_list` sections whose `fieldsList` items are the questions.
+### The two keys
 
-Build it with the same MCP tools, pointed at `/formTemplate`:
+- **`app-manifest.json` → `"formTemplate": true` — capability flag.** Set **any time** the plugin uses the platform's form/quiz/survey API (creating a form, reading questions, submitting responses, etc.). Tells the platform to auto-provision a `ProjectForm` for this install and opt into form-specific admin UI. Required whenever form/quiz operationIds are in play, regardless of whether you ship starter questions.
+
+- **`configuration.json` → `"formTemplate": [ ...cards ]` — prepopulated questions.** Starter question set the platform seeds into the auto-provisioned form at install time. Structured identically to `additionalTabs`. Optional — omit to let the admin build the form from scratch.
+
+### The rule
+
+- Uses form/quiz API → manifest `formTemplate: true`. Non-negotiable.
+- Wants to ship starter questions → configuration `formTemplate: [...]`. Optional payload.
+- Doesn't touch the form/quiz API → neither key.
+
+### Runtime flow
+
+1. `formTemplate: true` in the manifest → platform auto-provisions a `ProjectForm` on install.
+2. `formTemplate` array in configuration.json (if present) → seeds the new form with those starter questions.
+3. Plugin code still declares form dependencies (e.g. `quiz_form`) in `app-manifest.json` and calls `store.callApi("forms.show", "quiz_form")` / `store.callApi("form_responses.store", "quiz_form", {...})` — discover operationIds via the MCP (`search_api_endpoints quiz` / `api_list_operation_ids --tag Forms`).
+4. The admin owns the form after install; your array is a starting point, not a lock.
+
+### Building `formTemplate` with the MCP
 
 - `config_add_card` with `parent_path: "/formTemplate"` (the array is auto-initialized on first add).
 - `config_add_field` with `card_path: "/formTemplate/0"` to add questions to a section.
 - `config_list_cards` surfaces both `/additionalTabs` and `/formTemplate` cards.
 
-Mental model: `additionalTabs` = **admin** config (every plugin). `formTemplate` = **end-user** questions (only form apps). Admin strings, assets, colors, dependency bindings → `additionalTabs`. Questions an attendee/user will answer → `formTemplate`.
+### Don't confuse with `additionalTabs`
+
+`additionalTabs` = **admin** config (every plugin). `formTemplate` = **end-user** questions (only form apps). Admin strings, assets, colors, dependency bindings → `additionalTabs`. Questions an attendee/user will answer → `formTemplate`.
 
 ## Component Kit
 

@@ -524,12 +524,38 @@ Every mutation is linter-guarded against `bin/lib/lint/schemas/`. If a write is 
 
 ## Form / Quiz / Survey Apps — `formTemplate`
 
-Some plugins _are_ a form: a quiz, a survey, a signup flow. For those, ship a starter question set an admin can customize on install. Two keys, kept consistent:
+`formTemplate` appears in **two** files and the two meanings are **independent**. Don't collapse them — treat the manifest flag and the configuration array as separate decisions.
 
-1. **`app-manifest.json` → `"formTemplate": true`** — flags the plugin as a form app so the platform opts into form-specific UI (question editor, response viewer).
-2. **`configuration.json` → `"formTemplate": [ ...cards ]`** — array of cards defining the starter form sections, same shape as `additionalTabs`. Typically `fields_list` cards whose `fieldsList` items are the end-user questions.
+### The two keys
 
-### Minimal example
+**1. `app-manifest.json` → `"formTemplate": true` — capability flag.**
+
+Set this **any time** the plugin calls the platform's form/quiz/survey API: creating a form, reading questions, submitting responses, listing form data. It tells the platform "this plugin uses a form resource" and opts the install into form-specific behavior — auto-provisioning a `ProjectForm` for the install, enabling the question editor and response viewer in the admin UI, etc. **Required whenever form/quiz operationIds are in play, regardless of whether you ship starter questions.**
+
+**2. `configuration.json` → `"formTemplate": [ ...cards ]` — prepopulated starter questions.**
+
+An array of cards (same shape as `additionalTabs`, typically `fields_list`) that the platform seeds into the auto-provisioned `ProjectForm` at install time. **Optional** — omit it if you want the admin to build the form from scratch.
+
+### The rule — three scenarios
+
+| Scenario                                                    | Manifest `formTemplate`                                     | Configuration `formTemplate` |
+| ----------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------- |
+| Uses form/quiz API, no starter questions                    | **`true`** (required)                                       | omit                         |
+| Uses form/quiz API, with starter questions                  | **`true`** (required)                                       | `[ ...cards ]`               |
+| Doesn't touch the form/quiz API                             | omit / `false`                                              | must not be set              |
+| You have starter questions but the manifest flag is missing | — wrong: the array is dead content until the flag is `true` | —                            |
+
+In one line: **uses form API → flag is true.** **Wants to prepopulate questions → array is populated.** These are independent decisions.
+
+### How it lands at runtime
+
+1. Install-time: platform sees `formTemplate: true` in the manifest → auto-provisions a `ProjectForm` for this plugin install.
+2. If `configuration.json` has a `formTemplate` array → platform seeds that new form with those cards/questions. If absent → the form is empty and the admin fills it in.
+3. The plugin still declares its form dependencies in `app-manifest.json` (e.g. `{ "identifier": "quiz_form", "model": "ProjectForm" }`) and the admin binds that identifier to the auto-provisioned form. Plugin code then calls `store.callApi("forms.show", "quiz_form")`, `store.callApi("form_responses.store", "quiz_form", {...})`, etc.
+4. Discover the right operationIds via MCP: `api_list_tags`, then `api_list_operation_ids --tag Forms` (or `search_api_endpoints quiz`). Never invent them.
+5. After install the admin owns the form — they can add/remove/reorder questions. Your `formTemplate` is a starting point, not a lock.
+
+### Minimal example — form app with starter questions and a dependency
 
 ```json
 // app-manifest.json
@@ -540,8 +566,13 @@ Some plugins _are_ a form: a quiz, a survey, a signup flow. For those, ship a st
 	"settings": {},
 	"strings": { "default": { "title": "Welcome Quiz" } },
 	"assets": {},
-	"dependencies": [],
-	"permissions": []
+	"dependencies": [{ "identifier": "quiz_form", "model": "ProjectForm" }],
+	"permissions": [
+		{
+			"identifier": "quiz_form",
+			"description": "Read questions and submit responses"
+		}
+	]
 }
 ```
 

@@ -313,19 +313,25 @@ export default defineConfig(async (ctx) => {
 			vue(),
 			// GxP Inspector plugin for browser extension integration
 			...(useInspector ? [gxpInspectorPlugin()] : []),
-			externalGlobals(
-				{
+			// `externalGlobals` rewrites `import ... from "vue"` → references to
+			// the `Vue` global that the GxP platform exposes on `window`. This is
+			// only desirable at **build** time — in dev, the toolkit runtime
+			// bootstraps its own Vue + Pinia (via main.js → createApp + app.use),
+			// and rewriting `from "pinia"` to a non-existent `window.Pinia`
+			// crashes `getActivePinia()` at store init.
+			//
+			// Using `apply: "build"` restricts the transform to production builds,
+			// where it rewrites every module in the final bundle (including
+			// transitive node_modules deps) so no bare specifiers leak through.
+			{
+				...externalGlobals({
 					vue: "Vue",
 					pinia: "Pinia",
 					"@/stores/gxpPortalConfigStore":
 						"(window.useGxpStore || (() => { console.warn('useGxpStore not found on window, using fallback'); return {}; }))",
-				},
-				// No `include` filter — rewrite `from "vue"` / `from "pinia"`
-				// in every module of the final bundle, including transitive deps
-				// from node_modules (component libraries, etc.). Without this,
-				// deps' internal `import { h } from "vue"` leak through as bare
-				// specifiers and crash at runtime on the platform.
-			),
+				}),
+				apply: "build",
+			},
 			// Custom request logging and CORS plugin
 			{
 				name: "request-logger-cors",
