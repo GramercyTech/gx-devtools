@@ -170,11 +170,96 @@ describe("tool registry", () => {
 			"api_list_operation_ids",
 			"api_get_operation_parameters",
 			"api_find_endpoints_by_schema",
+			"api_find_events_for_operation",
+			"api_list_events",
 			"api_generate_dependency",
 		]) {
 			expect(names).toContain(required)
 			expect(isExtApiTool(required)).toBe(true)
 		}
+	})
+})
+
+describe("AsyncAPI event tools", () => {
+	const FAKE_ASYNCAPI = {
+		asyncapi: "2.6.0",
+		components: {
+			messages: {
+				SocialStreamPostCreated: {
+					summary: "Post created on a social stream",
+					description: "Fires when a post is stored",
+					"x-triggered-by": "portal.v1.project.posts.store",
+					payload: { $ref: "#/components/schemas/Post" },
+				},
+				SocialStreamPostDeleted: {
+					summary: "Post deleted",
+					"x-triggered-by": "posts.destroy",
+				},
+				OrphanEvent: {
+					summary: "No trigger declared",
+				},
+			},
+		},
+	}
+
+	let extraRestore
+	beforeEach(() => {
+		extraRestore = __setCacheForTest({
+			openapi: FAKE_OPENAPI,
+			asyncapi: FAKE_ASYNCAPI,
+		})
+	})
+	afterEach(() => {
+		extraRestore()
+	})
+
+	it("api_list_events returns every message with triggeredBy", async () => {
+		const out = parseResult(
+			await handleExtApiToolCall("api_list_events", {}),
+		)
+		const names = out.events.map((e) => e.eventName).sort()
+		expect(names).toEqual([
+			"OrphanEvent",
+			"SocialStreamPostCreated",
+			"SocialStreamPostDeleted",
+		])
+		const created = out.events.find(
+			(e) => e.eventName === "SocialStreamPostCreated",
+		)
+		expect(created.triggeredBy).toBe("portal.v1.project.posts.store")
+		expect(created.payloadRef).toBe("#/components/schemas/Post")
+	})
+
+	it("api_list_events filters by triggeredBy and normalizes portal.v1.project prefix", async () => {
+		const out = parseResult(
+			await handleExtApiToolCall("api_list_events", {
+				triggeredBy: "posts.store",
+			}),
+		)
+		expect(out.events).toHaveLength(1)
+		expect(out.events[0].eventName).toBe("SocialStreamPostCreated")
+	})
+
+	it("api_find_events_for_operation finds events triggered by the operationId", async () => {
+		const out = parseResult(
+			await handleExtApiToolCall("api_find_events_for_operation", {
+				operationId: "posts.store",
+			}),
+		)
+		expect(out.ok).toBe(true)
+		expect(out.events).toHaveLength(1)
+		expect(out.events[0].eventName).toBe("SocialStreamPostCreated")
+	})
+
+	it("api_find_events_for_operation returns empty + guidance when nothing matches", async () => {
+		const out = parseResult(
+			await handleExtApiToolCall("api_find_events_for_operation", {
+				operationId: "nonexistent.op",
+			}),
+		)
+		expect(out.ok).toBe(true)
+		expect(out.events).toEqual([])
+		expect(out.note).toMatch(/No AsyncAPI messages/)
 	})
 })
 
