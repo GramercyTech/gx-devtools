@@ -1069,10 +1069,13 @@ function launchInteractiveAISession(
 		console.log("   implement. Exit the agent when you're done.")
 		console.log("")
 
+		// Do NOT pass shell: true here. The initial prompt contains backticks,
+		// parentheses, and quotes; going through /bin/sh -c would require
+		// shell-escaping every special character. Without shell: true, spawn
+		// execs the binary directly and the argv is delivered as-is.
 		const child = spawn(command, args, {
 			cwd: projectPath,
 			stdio: "inherit",
-			shell: true,
 		})
 
 		child.on("close", (code) => {

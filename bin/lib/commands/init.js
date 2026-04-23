@@ -506,14 +506,19 @@ async function runInteractiveConfig(projectPath, initialName, isLocal = false) {
 
 	// If an AI agent was chosen, it becomes the last step — skip starting the
 	// dev server. The agent is responsible for driving the rest of the session.
+	//
+	// Print the project-ready summary BEFORE we hand stdin/stdout to the agent
+	// so the user sees "setup complete, here's how to start the dev server"
+	// up front. Once the agent owns the terminal the init script is done — it
+	// won't print anything else on the way out.
 	if (selectedProvider) {
+		printFinalInstructions(projectPath, appName, sslSetup, isLocal)
 		await launchInteractiveAISession(
 			projectPath,
 			appName,
 			description,
 			selectedProvider,
 		)
-		printFinalInstructions(projectPath, appName, sslSetup, isLocal)
 		return null
 	}
 
