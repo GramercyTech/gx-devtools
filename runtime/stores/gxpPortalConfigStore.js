@@ -661,13 +661,65 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	}
 
 	// Standard Socket helper methods
-	function listen(socketName, event, callback) {
-		if (sockets[socketName] && sockets[socketName].listen) {
-			return sockets[socketName].listen(event, callback)
-		} else {
-			console.warn(`Socket not found: ${socketName}`)
-			return () => {}
+	//
+	// Polymorphic — supports two forms:
+	//
+	//   1. listen(socketName, event, callback)
+	//      Subscribes to `event` on the named socket (e.g. 'primary' or a
+	//      dependency identifier whose socket was initialized via
+	//      initializeDependencySockets). This matches the legacy shape.
+	//
+	//   2. listen(eventName, permissionIdentifier, callback)
+	//      Subscribes to an AsyncAPI-defined platform event on the primary
+	//      socket, scoped to a permission identifier from dependencyList
+	//      (or the reserved "project" identifier). Use this for events whose
+	//      `x-triggered-by` matches a callApi operationId.
+	//
+	// Disambiguation: if arg1 names a registered socket we take form 1,
+	// otherwise we fall through to form 2.
+	function listen(arg1, arg2, arg3) {
+		const hasRegisteredSocket =
+			sockets[arg1] && typeof sockets[arg1].listen === "function"
+
+		if (hasRegisteredSocket && typeof arg3 === "function") {
+			return sockets[arg1].listen(arg2, arg3)
 		}
+
+		if (typeof arg3 === "function") {
+			const eventName = arg1
+			const permissionIdentifier = arg2
+			const callback = arg3
+			const primary = socketConnections.primary
+			if (!primary) {
+				console.warn(
+					"[GxP Store] listen(): primary socket not initialized",
+				)
+				return () => {}
+			}
+			if (
+				permissionIdentifier !== "project" &&
+				dependencyList.value?.[permissionIdentifier] === undefined
+			) {
+				console.warn(
+					`[GxP Store] listen("${eventName}", "${permissionIdentifier}"): permission identifier not bound in dependencyList`,
+				)
+			}
+			const handler = (data) => {
+				try {
+					callback(data)
+				} catch (err) {
+					console.error(
+						`[GxP Store] listen callback error for ${eventName}:`,
+						err,
+					)
+				}
+			}
+			primary.on(eventName, handler)
+			return () => primary.off(eventName, handler)
+		}
+
+		console.warn(`Socket not found: ${arg1}`)
+		return () => {}
 	}
 
 	function broadcast(socketName, event, data) {

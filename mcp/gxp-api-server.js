@@ -63,11 +63,39 @@ function searchEndpoints(spec, query) {
 }
 
 /**
- * Search AsyncAPI spec for channels/events matching a query
+ * Search AsyncAPI spec for channels/events matching a query.
+ *
+ * Matches across:
+ *   - components.messages (event name, summary, description, x-triggered-by)
+ *   - channels            (channel name, description)
+ *
+ * For messages, the returned `eventName` is what you pass to
+ * store.listen(eventName, permissionIdentifier, callback) on the client.
  */
 function searchEvents(spec, query) {
 	const results = []
 	const queryLower = query.toLowerCase()
+
+	const messages = spec?.components?.messages || {}
+	for (const [eventName, message] of Object.entries(messages)) {
+		if (typeof message !== "object" || message === null) continue
+		const trigger = message["x-triggered-by"] || ""
+		if (
+			eventName.toLowerCase().includes(queryLower) ||
+			message.summary?.toLowerCase().includes(queryLower) ||
+			message.description?.toLowerCase().includes(queryLower) ||
+			trigger.toLowerCase().includes(queryLower)
+		) {
+			results.push({
+				kind: "event",
+				eventName,
+				summary: message.summary || "",
+				description: message.description || "",
+				triggeredBy: trigger || null,
+				payloadRef: message.payload?.$ref || null,
+			})
+		}
+	}
 
 	if (spec.channels) {
 		for (const [channel, details] of Object.entries(spec.channels)) {
@@ -92,6 +120,7 @@ function searchEvents(spec, query) {
 				}
 
 				results.push({
+					kind: "channel",
 					channel,
 					description: details.description || "",
 					operations,
@@ -200,7 +229,7 @@ const API_TOOLS = [
 	{
 		name: "search_websocket_events",
 		description:
-			"Search for WebSocket channels/events matching a query. Searches channel names and descriptions.",
+			"Search AsyncAPI events matching a query. Searches components.messages (event name, summary, description, x-triggered-by) and channel definitions. The returned eventName is what you pass to store.listen(eventName, permissionIdentifier, callback).",
 		inputSchema: {
 			type: "object",
 			properties: {

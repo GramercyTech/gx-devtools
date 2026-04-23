@@ -20,7 +20,7 @@ Ground the implementation in real platform endpoints and events. Do not invent A
 
 - Endpoints — `api_list_tags`, `api_list_operation_ids`, `search_api_endpoints`, `api_get_operation_parameters`, `get_endpoint_details`.
 - Find by payload shape — `api_find_endpoints_by_schema`.
-- WebSocket events — `search_websocket_events`, `get_asyncapi_spec`.
+- WebSocket events — `api_find_events_for_operation` (maps operationId → events via `x-triggered-by`), `api_list_events`, `search_websocket_events`, `get_asyncapi_spec`. Run for every planned operationId so you subscribe instead of polling.
 - Canonical dependency JSON — `api_generate_dependency`.
 - Documentation — `docs_list_pages`, `docs_search`, `docs_get_page`.
 
@@ -142,21 +142,45 @@ store.updateAsset("key", "url")
 store.updateState("key", "value")
 ```
 
-## WebSocket Events
+## Real-Time Events
+
+Two streams, both through the store:
+
+1. **`primary` channel** — peer pub/sub between users of this plugin.
+2. **Platform API events** — AsyncAPI events from `${apiDocsBaseUrl}/api-specs/asyncapi.json` (`components.messages`). Each message may declare `x-triggered-by` pointing at an OpenAPI operationId.
+
+### `primary` channel
 
 ```javascript
-// Listen for events
-store.listenSocket("primary", "EventName", (data) => {
-	console.log("Event received:", data)
-})
-
-// Emit events
-store.emitSocket("primary", "event-name", data)
+store.listen("primary", "custom_event", (data) => { /* ... */ })
+store.broadcast("primary", "custom_event", { hello: "world" })
 ```
 
-Test a broadcast without waiting for the platform:
+### Platform API events
+
+```javascript
+// Event name first, permission identifier second, callback third
+store.listen("SocialStreamPostCreated", "social_stream_two", (post) => {
+	// fires whenever the admin-bound social_stream_two receives a new post
+})
+```
+
+The permission identifier is the same one you use in `callApi` — it scopes the subscription to the admin-bound resource. Use `"project"` for project-wide events.
+
+### Replace polling with events
+
+Whenever you add a `callApi` call, check whether its operationId triggers a socket event using MCP tools:
+
+- `api_find_events_for_operation { operationId: "posts.store" }` — returns events whose `x-triggered-by` matches.
+- `api_list_events` — list all events; optional `triggeredBy` filter.
+- `search_websocket_events` — keyword search.
+
+If a match exists, subscribe instead of polling.
+
+### Testing broadcasts
 
 ```bash
+gxdev socket list
 gxdev socket send --event EventName
 ```
 

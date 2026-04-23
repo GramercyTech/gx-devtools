@@ -40,7 +40,9 @@ The `gxp-api` MCP server is your source of truth for the platform. Never invent 
 
 **Real-time events:**
 
-- `search_websocket_events` — keyword search AsyncAPI events.
+- `api_find_events_for_operation` — given an operationId, return the AsyncAPI events whose `x-triggered-by` matches. Run this for every `callApi` you're planning to add so you subscribe to live events instead of polling.
+- `api_list_events` — list every event in `components.messages`; optional `triggeredBy` filter.
+- `search_websocket_events` — keyword search across AsyncAPI events and channels.
 - `get_asyncapi_spec` — full AsyncAPI document.
 
 **Documentation (`docs.gxp.dev`):**
@@ -78,8 +80,11 @@ Build against the plan:
 
 ### Phase 5 — Test with real broadcasts
 
+Before declaring done, cover every `callApi` and every `store.listen`:
+
+- For each `callApi(operationId, ...)` you wired, run `api_find_events_for_operation({ operationId })`. If it returns an event, make sure you're subscribed to it via `store.listen(eventName, identifier, cb)` instead of polling.
 - `gxdev socket list` — see available test events.
-- `gxdev socket send --event <EventName>` — fire a test broadcast. Payloads live in `socket-events/` and can be edited or added.
+- `gxdev socket send --event <EventName>` — fire a test broadcast to exercise your subscriptions. Payloads live in `socket-events/` and can be edited or added.
 - `test_api_route` (MCP) — exercise an endpoint by operationId against the local mock API.
 - `test_scaffold_component_test` (MCP) — generate a Vitest + Vue Test Utils file for any non-trivial component.
 - Manual: Ctrl+Shift+D for in-browser dev tools; `window.gxDevTools.store()` to inspect store state.
@@ -310,41 +315,97 @@ The store reads `VITE_API_ENV` from `.env`:
 | `staging`    | https://api.efz-staging.env.eventfinity.app    |
 | `production` | https://api.gramercy.cloud                     |
 
-## WebSocket Events
+## Real-Time Events
 
-WebSockets are pre-configured through the store. Listen for real-time events:
+A plugin has two distinct streams of real-time data, both surfaced through the store:
+
+1. **The `primary` channel** — an in-app peer channel shared by everyone currently using this plugin. Use it for peer pub/sub that doesn't need a server round-trip (cursor position, "someone clicked start", presence beacons).
+2. **Platform API events** — events the GxP backend emits when API operations complete. They're documented in the AsyncAPI spec at `${apiDocsBaseUrl}/api-specs/asyncapi.json`, under `components.messages`. Each message may declare an `x-triggered-by` pointing at an OpenAPI operationId — that's the bridge between `callApi` and live updates.
+
+### The `primary` channel
+
+The `primary` socket is always initialized. Any connected user of the plugin can listen and broadcast:
 
 ```javascript
 const store = useGxpStore()
 
-// Listen on primary socket
-store.listenSocket("primary", "EventName", (data) => {
-	console.log("Event received:", data)
+// Listen for a custom event from other users of this plugin
+const unsubscribe = store.listen("primary", "cursor_moved", (data) => {
+	console.log("Peer moved:", data)
 })
 
-// Emit to primary socket
-store.emitSocket("primary", "client-event", { message: "Hello" })
+// Broadcast to everyone else on the primary channel
+store.broadcast("primary", "cursor_moved", { x: 42, y: 100 })
 
-// For dependency-based sockets (configured in app-manifest.json)
-store.useSocketListener("dependency_identifier", "updated", (data) => {
-	console.log("Dependency updated:", data)
+// Unsubscribe when the component unmounts
+onBeforeUnmount(() => unsubscribe())
+```
+
+`store.broadcast` is just an alias to the underlying primary emit. Event names are your choice — they don't need to exist in AsyncAPI.
+
+### Platform API events
+
+`store.listen` is polymorphic. Call it with an **event name** first and a **permission identifier** second and it subscribes to that AsyncAPI event on the primary socket, scoped to the resource the admin bound for that identifier.
+
+```javascript
+// When a post is created on the destination stream, append it to the UI.
+store.listen("SocialStreamPostCreated", "social_stream_two", (post) => {
+	posts.value.unshift(post)
 })
 ```
 
-Confirm the event name with `search_websocket_events` (MCP) before listening — typos silently fail.
+The permission identifier must be one of:
 
-### Simulating Broadcasts
+- A dependency identifier declared in `app-manifest.json` → `dependencies` (same identifiers you pass to `callApi`), **or**
+- The reserved `"project"` identifier for project-scoped events.
 
-You can send test broadcasts over any channel without waiting for the real platform. Payloads live under `socket-events/`; add or edit a JSON file to define a new one.
+Typo-check: if the identifier isn't bound in `dependencyList` at call time, the store logs a warning and the subscription is effectively silent.
+
+### The core rule: replace polling with events
+
+Whenever you add a `callApi` call, immediately check whether the platform fires an event for it. If it does, subscribe to that event instead of polling.
+
+MCP tools for this:
+
+| Tool                             | Purpose                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| `api_find_events_for_operation`  | Given an operationId, return every AsyncAPI message whose `x-triggered-by` matches. This is the primary lookup after wiring a `callApi`. |
+| `api_list_events`                | List every event in `components.messages`; optional `triggeredBy` filter. |
+| `search_websocket_events`        | Keyword search across event names + channels.                             |
+| `get_asyncapi_spec`              | Full AsyncAPI document when you need the raw payload schema.              |
+
+**Worked example — social streams:**
+
+```javascript
+// Creating a post via callApi
+const post = await store.callApi("posts.store", "social_stream_two", {
+	body: "Hello world",
+})
+
+// MCP lookup:
+//   api_find_events_for_operation({ operationId: "posts.store" })
+// returns: [{ eventName: "SocialStreamPostCreated", triggeredBy: "posts.store", ... }]
+//
+// So instead of re-fetching posts after the mutation, subscribe:
+store.listen("SocialStreamPostCreated", "social_stream_two", (newPost) => {
+	posts.value.unshift(newPost)
+})
+```
+
+That subscription covers posts created by *any* user, not just this one — which is usually what you want. No refetching, no drift.
+
+### Testing broadcasts locally
 
 ```bash
 gxdev socket list                      # list available events
-gxdev socket send --event EventName    # broadcast a test event
+gxdev socket send --event EventName    # fire a test broadcast
 ```
 
-### Dependency Socket Configuration
+Payloads live under `socket-events/`; add or edit a JSON file to define a new one. Use this to exercise a `store.listen` subscription without needing the real backend to fire the event.
 
-In `app-manifest.json`:
+### Dependency block in `app-manifest.json`
+
+If a dependency has backend events you want pre-wired (so `sockets[identifier][eventType]` becomes available for the legacy shape), declare them in the manifest:
 
 ```json
 {
@@ -361,15 +422,7 @@ In `app-manifest.json`:
 }
 ```
 
-Generate this structure via `api_generate_dependency` (MCP) rather than hand-writing it.
-
-Then listen:
-
-```javascript
-store.sockets.ai_session?.created?.listen((data) => {
-	console.log("AI message created:", data)
-})
-```
+Generate this with `api_generate_dependency` (MCP) — pass the `eventNames` array. For the AsyncAPI-scoped form (`store.listen(eventName, identifier, cb)`), no `events` map is required — you just need the identifier declared under `dependencies`.
 
 ## Vue Directives for Dynamic Content
 

@@ -159,6 +159,38 @@ const EXT_API_TOOLS = [
 		},
 	},
 	{
+		name: "api_find_events_for_operation",
+		description:
+			"Given an OpenAPI operationId, return every AsyncAPI message whose x-triggered-by matches. Use this after adding a callApi(operationId, ...) call to discover whether a socket event is fired server-side — subscribe to it with store.listen(eventName, permissionIdentifier, cb) instead of polling.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				operationId: {
+					type: "string",
+					description:
+						"OpenAPI operationId (e.g. 'posts.store'). Bare ids and 'portal.v1.project.<id>' are both accepted.",
+				},
+			},
+			required: ["operationId"],
+		},
+	},
+	{
+		name: "api_list_events",
+		description:
+			"List all AsyncAPI events from components.messages. Each entry includes the event name, summary/description, and x-triggered-by (if declared). Optionally filter by triggeredBy operationId.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				triggeredBy: {
+					type: "string",
+					description:
+						"Only return events whose x-triggered-by equals this operationId. Omit for all events.",
+				},
+			},
+			required: [],
+		},
+	},
+	{
 		name: "api_generate_dependency",
 		description:
 			"Build the GxP dependency JSON (for app-manifest.json dependencies[]) from a tag and an explicit list of operationIds and/or asyncapi event names. Optionally append it to an app-manifest.json file.",
@@ -312,6 +344,50 @@ async function findEndpointsBySchema(filters) {
 	return out
 }
 
+function normalizeOperationId(id) {
+	if (!id) return id
+	return id.replace(/^portal\.v1\.project\./, "")
+}
+
+async function listAsyncApiEvents(triggeredBy) {
+	const spec = await fetchSpec("asyncapi")
+	const messages = spec?.components?.messages || {}
+	const targetTrigger = triggeredBy ? normalizeOperationId(triggeredBy) : null
+
+	const out = []
+	for (const [eventName, message] of Object.entries(messages)) {
+		if (typeof message !== "object" || message === null) continue
+		const trigger = message["x-triggered-by"] || null
+		if (targetTrigger && normalizeOperationId(trigger) !== targetTrigger) {
+			continue
+		}
+		out.push({
+			eventName,
+			summary: message.summary || "",
+			description: message.description || "",
+			triggeredBy: trigger,
+			payloadRef: message.payload?.$ref || null,
+		})
+	}
+	return out
+}
+
+async function findEventsForOperation(operationId) {
+	if (!operationId) {
+		return { ok: false, error: "operationId is required" }
+	}
+	const events = await listAsyncApiEvents(operationId)
+	return {
+		ok: true,
+		operationId: normalizeOperationId(operationId),
+		events,
+		note:
+			events.length === 0
+				? "No AsyncAPI messages declare x-triggered-by for this operationId. Either the operation does not fire a platform event, or the spec has not declared the trigger yet."
+				: "Subscribe with store.listen(eventName, permissionIdentifier, callback) to receive these events live.",
+	}
+}
+
 async function generateDependency({
 	identifier,
 	tag,
@@ -429,6 +505,14 @@ async function handleExtApiToolCall(name, args = {}) {
 				results: await findEndpointsBySchema(args || {}),
 			})
 
+		case "api_find_events_for_operation":
+			return contentResult(await findEventsForOperation(args.operationId))
+
+		case "api_list_events":
+			return contentResult({
+				events: await listAsyncApiEvents(args.triggeredBy),
+			})
+
 		case "api_generate_dependency":
 			return contentResult(await generateDependency(args))
 
@@ -453,4 +537,7 @@ module.exports = {
 	getOperationParameters,
 	findEndpointsBySchema,
 	generateDependency,
+	listAsyncApiEvents,
+	findEventsForOperation,
+	normalizeOperationId,
 }
