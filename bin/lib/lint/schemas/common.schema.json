@@ -1,0 +1,62 @@
+{
+	"$id": "https://gxp.dev/schemas/common.schema.json",
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "GxP Common Definitions",
+	"description": "Shared sub-schemas referenced by card and field schemas.",
+	"$defs": {
+		"conditionParam": {
+			"type": "object",
+			"properties": {
+				"name": { "type": "string" },
+				"value": {
+					"type": ["string", "number", "boolean", "null"]
+				},
+				"logic": {
+					"type": "string",
+					"enum": ["==", "!=", ">", ">=", "<", "<=", "in", "not_in", "includes"]
+				},
+				"column": { "type": ["string", "null"] }
+			},
+			"required": ["name", "logic"],
+			"additionalProperties": true
+		},
+		"conditionParams": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/conditionParam" }
+		},
+		"gridCols": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 12
+		},
+		"colorHex": {
+			"type": "string",
+			"pattern": "^#(?:[0-9a-fA-F]{3}){1,2}$"
+		},
+		"urlOrPath": {
+			"type": "string",
+			"description": "Absolute URL or site-relative path",
+			"pattern": "^(https?:)?(//)?/?[^\\s]*$"
+		},
+		"identifier": {
+			"type": "string",
+			"pattern": "^[A-Za-z_][A-Za-z0-9_-]*$"
+		},
+		"option": {
+			"type": "object",
+			"properties": {
+				"label": { "type": "string" },
+				"value": {
+					"type": ["string", "number", "boolean", "null"]
+				},
+				"disabled": { "type": "boolean" }
+			},
+			"required": ["label", "value"],
+			"additionalProperties": true
+		},
+		"options": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/option" }
+		}
+	}
+}

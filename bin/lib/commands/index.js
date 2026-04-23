@@ -20,6 +20,7 @@ const {
 } = require("./extensions")
 const { extractConfigCommand } = require("./extract-config")
 const { addDependencyCommand } = require("./add-dependency")
+const { lintCommand } = require("./lint")
 
 module.exports = {
 	initCommand,
@@ -36,4 +37,5 @@ module.exports = {
 	extensionInstallCommand,
 	extractConfigCommand,
 	addDependencyCommand,
+	lintCommand,
 }

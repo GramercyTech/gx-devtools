@@ -1,0 +1,165 @@
+{
+	"$id": "https://gxp.dev/schemas/card.schema.json",
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "GxP Form Card",
+	"description": "A card inside additionalTabs.cards or a nested card_list/tabs_list.",
+	"type": "object",
+	"required": ["type"],
+	"properties": {
+		"type": {
+			"type": "string",
+			"enum": [
+				"fields_list",
+				"data_table",
+				"card_list",
+				"tabs_list",
+				"info_card",
+				"render_list",
+				"carousel",
+				"grid_view",
+				"component",
+				"data_display",
+				"button_group",
+				"form_builder"
+			]
+		},
+		"title": { "type": ["string", "null"] },
+		"tabId": { "type": ["string", "null"] },
+		"cols": { "$ref": "common.schema.json#/$defs/gridCols" },
+		"colsMd": { "$ref": "common.schema.json#/$defs/gridCols" },
+		"colsLg": { "$ref": "common.schema.json#/$defs/gridCols" },
+		"marginBottom": { "type": "integer", "minimum": 0 },
+		"showCard": { "type": "boolean" },
+		"border": { "type": "boolean" },
+		"listKey": { "type": ["string", "null"] },
+		"condition": { "type": ["string", "null"] },
+		"conditionParams": {
+			"$ref": "common.schema.json#/$defs/conditionParams"
+		},
+		"fieldsList": {
+			"type": "array",
+			"items": { "$ref": "field.schema.json" }
+		},
+		"cards": {
+			"type": "array",
+			"items": { "$ref": "card.schema.json" }
+		},
+		"tabsList": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["title"],
+				"properties": {
+					"title": { "type": "string" },
+					"tabId": { "type": ["string", "null"] },
+					"cards": {
+						"type": "array",
+						"items": { "$ref": "card.schema.json" }
+					}
+				},
+				"additionalProperties": true
+			}
+		},
+		"buttons": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["text"],
+				"properties": {
+					"text": { "type": "string" },
+					"type": { "type": "string" },
+					"icon": { "type": ["string", "null"] },
+					"href": { "type": ["string", "null"] },
+					"action": { "type": ["string", "null"] },
+					"condition": { "type": ["string", "null"] },
+					"conditionParams": {
+						"$ref": "common.schema.json#/$defs/conditionParams"
+					}
+				},
+				"additionalProperties": true
+			}
+		},
+		"component": { "type": ["string", "null"] },
+		"componentProps": { "type": "object" },
+		"headers": {
+			"type": "array",
+			"items": { "type": ["string", "object"] }
+		},
+		"rows": { "type": "array" },
+		"options": { "type": "object" },
+		"tableTitle": { "type": ["string", "null"] }
+	},
+	"allOf": [
+		{
+			"if": {
+				"properties": { "type": { "const": "fields_list" } },
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["fieldsList"],
+				"properties": {
+					"fieldsList": {
+						"type": "array",
+						"items": { "$ref": "field.schema.json" }
+					}
+				}
+			}
+		},
+		{
+			"if": {
+				"properties": { "type": { "const": "card_list" } },
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["cards"],
+				"properties": {
+					"cards": {
+						"type": "array",
+						"minItems": 1,
+						"items": { "$ref": "card.schema.json" }
+					}
+				}
+			}
+		},
+		{
+			"if": {
+				"properties": { "type": { "const": "tabs_list" } },
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["tabsList"]
+			}
+		},
+		{
+			"if": {
+				"properties": { "type": { "const": "button_group" } },
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["buttons"]
+			}
+		},
+		{
+			"if": {
+				"properties": { "type": { "const": "component" } },
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["component"],
+				"properties": {
+					"component": { "type": "string", "minLength": 1 }
+				}
+			}
+		},
+		{
+			"if": {
+				"properties": { "type": { "const": "data_table" } },
+				"required": ["type"]
+			},
+			"then": {
+				"anyOf": [{ "required": ["headers"] }, { "required": ["rows"] }]
+			}
+		}
+	],
+	"additionalProperties": true
+}

@@ -1,0 +1,19 @@
+{
+	"$id": "https://gxp.dev/schemas/configuration.schema.json",
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "GxP Plugin Configuration Form",
+	"description": "Defines the configuration form shown to admins in the GxP admin panel when they install or configure a plugin. Follows the GxP templating system (ShowPage > tabs > cards > fields).",
+	"type": "object",
+	"required": ["additionalTabs"],
+	"properties": {
+		"additionalTabs": {
+			"type": "array",
+			"description": "Top-level array of tab definitions. Each item is a card (usually card_list or fields_list) rendered under the plugin's configuration panel.",
+			"items": { "$ref": "card.schema.json" }
+		},
+		"title": { "type": ["string", "null"] },
+		"description": { "type": ["string", "null"] },
+		"version": { "type": ["string", "integer", "null"] }
+	},
+	"additionalProperties": true
+}

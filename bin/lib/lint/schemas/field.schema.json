@@ -1,0 +1,230 @@
+{
+	"$id": "https://gxp.dev/schemas/field.schema.json",
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "GxP Form Field",
+	"description": "A single form field descriptor used inside a fields_list card.",
+	"type": "object",
+	"required": ["type"],
+	"properties": {
+		"type": {
+			"type": "string",
+			"enum": [
+				"hidden",
+				"html",
+				"live-html",
+				"heading",
+				"heading-large",
+				"small-heading",
+				"description",
+				"image",
+				"video",
+				"icon",
+				"icon-selector",
+				"clipboard",
+				"timestamp",
+				"button",
+				"external_link",
+				"text",
+				"number",
+				"email",
+				"password",
+				"phone_number",
+				"textarea",
+				"select",
+				"pill_select",
+				"multi_select",
+				"autocomplete",
+				"asyncSelect",
+				"radio",
+				"checkbox",
+				"boolean",
+				"boolean_icon",
+				"file",
+				"selectAsset",
+				"selectPagePlugin",
+				"selectProjectPlan",
+				"keyValuePair",
+				"codeEditor",
+				"htmlEditor",
+				"render_markdown",
+				"colorPicker",
+				"tag_list",
+				"savedSearchBuilder",
+				"date",
+				"datetime",
+				"time",
+				"timezone_picker",
+				"data_table",
+				"integration_connector",
+				"form-builder",
+				"object-builder"
+			],
+			"description": "Field type. Determines which extra properties are required."
+		},
+		"name": { "type": ["string", "null"] },
+		"label": { "type": ["string", "null"] },
+		"default": {
+			"type": ["string", "number", "boolean", "array", "object", "null"]
+		},
+		"placeholder": { "type": ["string", "null"] },
+		"disabled": { "type": "boolean" },
+		"readonly": { "type": "boolean" },
+		"required": { "type": "boolean" },
+		"multiple": { "type": "boolean" },
+		"classList": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"columnClass": { "type": ["string", "null"] },
+		"cols": {
+			"$ref": "common.schema.json#/$defs/gridCols"
+		},
+		"colsSm": { "$ref": "common.schema.json#/$defs/gridCols" },
+		"colsMd": { "$ref": "common.schema.json#/$defs/gridCols" },
+		"colsLg": { "$ref": "common.schema.json#/$defs/gridCols" },
+		"condition": { "type": ["string", "null"] },
+		"conditionParams": {
+			"$ref": "common.schema.json#/$defs/conditionParams"
+		},
+		"content": { "type": ["string", "null"] },
+		"text": { "type": ["string", "null"] },
+		"href": { "type": ["string", "null"] },
+		"icon": { "type": ["string", "null"] },
+		"options": {
+			"$ref": "common.schema.json#/$defs/options"
+		},
+		"accept": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"format": { "type": ["string", "null"] },
+		"prepend": { "type": ["string", "null"] },
+		"append": { "type": ["string", "null"] },
+		"method": {
+			"type": ["string", "null"],
+			"enum": ["GET", "POST", "PUT", "PATCH", "DELETE", null]
+		},
+		"query_parameter": { "type": ["string", "null"] },
+		"refresh": {
+			"type": "object",
+			"properties": {
+				"only": { "type": "string" },
+				"key": { "type": "string" }
+			},
+			"additionalProperties": true
+		},
+		"validation_rules": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"custom_settings": { "type": "object" }
+	},
+	"allOf": [
+		{
+			"if": {
+				"properties": {
+					"type": {
+						"enum": [
+							"select",
+							"pill_select",
+							"multi_select",
+							"radio",
+							"checkbox"
+						]
+					}
+				},
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["options"],
+				"properties": {
+					"options": {
+						"$ref": "common.schema.json#/$defs/options",
+						"minItems": 1
+					}
+				}
+			}
+		},
+		{
+			"if": {
+				"properties": {
+					"type": {
+						"enum": [
+							"text",
+							"number",
+							"email",
+							"password",
+							"phone_number",
+							"textarea",
+							"select",
+							"pill_select",
+							"multi_select",
+							"autocomplete",
+							"asyncSelect",
+							"radio",
+							"checkbox",
+							"boolean",
+							"boolean_icon",
+							"file",
+							"selectAsset",
+							"keyValuePair",
+							"codeEditor",
+							"htmlEditor",
+							"colorPicker",
+							"tag_list",
+							"date",
+							"datetime",
+							"time",
+							"timezone_picker"
+						]
+					}
+				},
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["name"],
+				"properties": {
+					"name": {
+						"type": "string",
+						"minLength": 1
+					}
+				}
+			}
+		},
+		{
+			"if": {
+				"properties": { "type": { "const": "asyncSelect" } },
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["href", "method"]
+			}
+		},
+		{
+			"if": {
+				"properties": { "type": { "const": "external_link" } },
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["href"]
+			}
+		},
+		{
+			"if": {
+				"properties": { "type": { "const": "colorPicker" } },
+				"required": ["type"]
+			},
+			"then": {
+				"properties": {
+					"default": {
+						"oneOf": [
+							{ "$ref": "common.schema.json#/$defs/colorHex" },
+							{ "type": "null" }
+						]
+					}
+				}
+			}
+		}
+	],
+	"additionalProperties": true
+}

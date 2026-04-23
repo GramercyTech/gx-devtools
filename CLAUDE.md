@@ -410,6 +410,20 @@ Key environment variables (set in `.env`):
 - Ink (React-based TUI framework) for CLI interface
 - `@gramercytech/gx-componentkit` - Component library for kiosk UI
 
+## MCP Server for AI Assistants
+
+The toolkit ships an MCP server (`mcp/gxp-api-server.js`, bin name `gxp-api-server`) that exposes 29 tools to AI coding assistants across five families. Configure it in your AI tool's MCP settings to get API-aware, schema-aware, test-aware assistance inside plugin projects.
+
+| Family            | Count | Tools                                                                                                                                                                                                                                                                                               | Purpose                                                                                                                                       |
+| ----------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API spec**      | 6     | `get_openapi_spec`, `get_asyncapi_spec`, `search_api_endpoints`, `search_websocket_events`, `get_endpoint_details`, `get_api_environment`                                                                                                                                                           | Raw spec access + keyword search. Respects `VITE_API_ENV` from the project's `.env`.                                                          |
+| **Extended API**  | 5     | `api_list_tags`, `api_list_operation_ids`, `api_get_operation_parameters`, `api_find_endpoints_by_schema`, `api_generate_dependency`                                                                                                                                                                | Structured discovery (by tag, by request/response field shape) plus generation of the canonical GxP dependency JSON for `app-manifest.json`.  |
+| **Config editor** | 13    | `config_validate`, `config_list_field_types`, `config_list_card_types`, `config_get_field_schema`, `config_list_cards`, `config_list_fields`, `config_add_field`, `config_move_field`, `config_remove_field`, `config_add_card`, `config_move_card`, `config_remove_card`, `config_extract_strings` | Read + mutate `configuration.json` / `app-manifest.json`. Every mutation is linter-guarded — invalid writes are refused unless `force: true`. |
+| **Docs search**   | 3     | `docs_list_pages`, `docs_search`, `docs_get_page`                                                                                                                                                                                                                                                   | Full-text search across `docs.gxp.dev` (discovered via sitemap.xml, 30-min page cache).                                                       |
+| **Test helpers**  | 2     | `test_scaffold_component_test`, `test_api_route`                                                                                                                                                                                                                                                    | Generate Vitest + Vue Test Utils files; hit the local mock API at `localhost:3069/api` by operationId.                                        |
+
+The linter (shared with `gxdev lint`) is the authority for validity: `configuration.json` and `app-manifest.json` schemas live at `bin/lib/lint/schemas/` and are composed via `$ref`. Config-family mutation tools validate in-memory via `lintData(...)` before touching disk, so agents can't save broken state.
+
 ## Building the Devtools
 
 ```bash

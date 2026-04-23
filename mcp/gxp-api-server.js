@@ -18,130 +18,12 @@
  */
 
 const readline = require("readline")
-const fs = require("fs")
-const path = require("path")
-
-// Environment URL configuration (matches constants.js)
-const ENVIRONMENT_URLS = {
-	production: {
-		apiBaseUrl: "https://api.gramercy.cloud",
-		openApiSpec: "https://api.gramercy.cloud/api-specs/openapi.json",
-		asyncApiSpec: "https://api.gramercy.cloud/api-specs/asyncapi.json",
-		webhookSpec: "https://api.gramercy.cloud/api-specs/webhooks.json",
-	},
-	staging: {
-		apiBaseUrl: "https://api.efz-staging.env.eventfinity.app",
-		openApiSpec:
-			"https://api.efz-staging.env.eventfinity.app/api-specs/openapi.json",
-		asyncApiSpec:
-			"https://api.efz-staging.env.eventfinity.app/api-specs/asyncapi.json",
-		webhookSpec:
-			"https://api.efz-staging.env.eventfinity.app/api-specs/webhooks.json",
-	},
-	testing: {
-		apiBaseUrl: "https://api.zenith-develop-testing.env.eventfinity.app",
-		openApiSpec:
-			"https://api.zenith-develop-testing.env.eventfinity.app/api-specs/openapi.json",
-		asyncApiSpec:
-			"https://api.zenith-develop-testing.env.eventfinity.app/api-specs/asyncapi.json",
-		webhookSpec:
-			"https://api.zenith-develop-testing.env.eventfinity.app/api-specs/webhooks.json",
-	},
-	develop: {
-		apiBaseUrl: "https://api.zenith-develop.env.eventfinity.app",
-		openApiSpec:
-			"https://api.zenith-develop.env.eventfinity.app/api-specs/openapi.json",
-		asyncApiSpec:
-			"https://api.zenith-develop.env.eventfinity.app/api-specs/asyncapi.json",
-		webhookSpec:
-			"https://api.zenith-develop.env.eventfinity.app/api-specs/webhooks.json",
-	},
-	local: {
-		apiBaseUrl: "https://dashboard.eventfinity.test",
-		openApiSpec: "https://api.eventfinity.test/api-specs/openapi.json",
-		asyncApiSpec: "https://api.eventfinity.test/api-specs/asyncapi.json",
-		webhookSpec: "https://api.eventfinity.test/api-specs/webhooks.json",
-	},
-}
-
-// Cache for fetched specs
-const specCache = {
-	openapi: null,
-	asyncapi: null,
-	webhooks: null,
-	lastFetch: null,
-}
-
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-
-/**
- * Get current environment from .env file or default
- */
-function getEnvironment() {
-	// Try to read from .env file in current directory
-	const envPath = path.join(process.cwd(), ".env")
-	if (fs.existsSync(envPath)) {
-		const envContent = fs.readFileSync(envPath, "utf-8")
-		const match = envContent.match(/VITE_API_ENV=(\w+)/)
-		if (match) {
-			return match[1]
-		}
-	}
-
-	// Fall back to environment variable or default
-	return process.env.VITE_API_ENV || process.env.API_ENV || "develop"
-}
-
-/**
- * Get URLs for current environment
- */
-function getEnvUrls() {
-	const env = getEnvironment()
-	return ENVIRONMENT_URLS[env] || ENVIRONMENT_URLS.develop
-}
-
-/**
- * Fetch a spec with caching
- */
-async function fetchSpec(specType) {
-	const urls = getEnvUrls()
-	const urlMap = {
-		openapi: urls.openApiSpec,
-		asyncapi: urls.asyncApiSpec,
-		webhooks: urls.webhookSpec,
-	}
-
-	const url = urlMap[specType]
-	if (!url) {
-		throw new Error(`Unknown spec type: ${specType}`)
-	}
-
-	// Check cache
-	const now = Date.now()
-	if (
-		specCache[specType] &&
-		specCache.lastFetch &&
-		now - specCache.lastFetch < CACHE_TTL
-	) {
-		return specCache[specType]
-	}
-
-	// Fetch fresh
-	try {
-		const response = await fetch(url)
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-		}
-		const data = await response.json()
-		specCache[specType] = data
-		specCache.lastFetch = now
-		return data
-	} catch (error) {
-		throw new Error(
-			`Failed to fetch ${specType} spec from ${url}: ${error.message}`,
-		)
-	}
-}
+const {
+	ENVIRONMENT_URLS,
+	getEnvironment,
+	getEnvUrls,
+	fetchSpec,
+} = require("./lib/specs")
 
 /**
  * Search OpenAPI spec for endpoints matching a query
@@ -247,13 +129,38 @@ function getEndpointDetails(spec, path, method) {
 }
 
 // MCP Server Implementation
+const {
+	CONFIG_TOOLS,
+	handleConfigToolCall,
+	isConfigTool,
+} = require("./lib/config-tools")
+
+const {
+	EXT_API_TOOLS,
+	handleExtApiToolCall,
+	isExtApiTool,
+} = require("./lib/api-tools")
+
+const {
+	DOCS_TOOLS,
+	handleDocsToolCall,
+	isDocsTool,
+} = require("./lib/docs-tools")
+
+const {
+	TEST_TOOLS,
+	handleTestToolCall,
+	isTestTool,
+} = require("./lib/test-tools")
+
 const SERVER_INFO = {
 	name: "gxp-api-server",
-	version: "1.0.0",
-	description: "GxP API documentation server for AI coding assistants",
+	version: "2.0.0",
+	description:
+		"GxP toolkit MCP server: API specs, config/manifest editing, documentation search, and plugin test helpers for AI coding assistants.",
 }
 
-const TOOLS = [
+const API_TOOLS = [
 	{
 		name: "get_openapi_spec",
 		description:
@@ -337,10 +244,32 @@ const TOOLS = [
 	},
 ]
 
+// Final tool set surfaced to MCP clients: API spec tools + extended API tools
+// + config-editor tools + doc-search tools + test tools.
+const TOOLS = [
+	...API_TOOLS,
+	...EXT_API_TOOLS,
+	...CONFIG_TOOLS,
+	...DOCS_TOOLS,
+	...TEST_TOOLS,
+]
+
 /**
  * Handle MCP tool calls
  */
 async function handleToolCall(name, args) {
+	if (isConfigTool(name)) {
+		return handleConfigToolCall(name, args)
+	}
+	if (isExtApiTool(name)) {
+		return handleExtApiToolCall(name, args)
+	}
+	if (isDocsTool(name)) {
+		return handleDocsToolCall(name, args)
+	}
+	if (isTestTool(name)) {
+		return handleTestToolCall(name, args)
+	}
 	switch (name) {
 		case "get_openapi_spec": {
 			const spec = await fetchSpec("openapi")

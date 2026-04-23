@@ -1,0 +1,37 @@
+#!/usr/bin/env sh
+# Runs on every `git commit` in a GxP plugin project.
+# Enabled via `git config core.hooksPath .githooks` (set by the `prepare` npm script).
+#
+# Workflow (staged files only):
+#   1. Format staged files with Prettier.
+#   2. Fix lintable JS/Vue with ESLint --fix.
+#   3. Validate staged GxP config JSON with `gxdev lint`.
+#
+# Any non-zero exit aborts the commit.
+
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+
+# Prettier — everything it can format
+prettier_targets=$(echo "$staged" | grep -Ei '\.(js|jsx|ts|tsx|vue|css|scss|json|md|yml|yaml|html)$' || true)
+if [ -n "$prettier_targets" ]; then
+  echo "$prettier_targets" | xargs ./node_modules/.bin/prettier --write --ignore-unknown
+  echo "$prettier_targets" | xargs git add
+fi
+
+# ESLint — JS and Vue only, with --fix so formatting fixes don't block the commit
+eslint_targets=$(echo "$staged" | grep -Ei '\.(js|jsx|mjs|cjs|vue)$' || true)
+if [ -n "$eslint_targets" ]; then
+  echo "$eslint_targets" | xargs ./node_modules/.bin/eslint --fix --no-warn-ignored
+  echo "$eslint_targets" | xargs git add
+fi
+
+# GxP template linter — configuration.json and app-manifest.json
+gxp_targets=$(echo "$staged" | grep -Ei '(configuration\.json|app-manifest\.json)$' || true)
+if [ -n "$gxp_targets" ]; then
+  echo "$gxp_targets" | xargs npx --no-install gxdev lint
+fi
+
+exit 0

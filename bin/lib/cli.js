@@ -24,6 +24,7 @@ const {
 	extensionInstallCommand,
 	extractConfigCommand,
 	addDependencyCommand,
+	lintCommand,
 } = require("./commands")
 
 // Load global configuration
@@ -300,6 +301,23 @@ yargs
 			},
 		},
 		extractConfigCommand,
+	)
+	.command(
+		"lint [files..]",
+		"Lint GxP config JSON (configuration.json, app-manifest.json) against the templating schema",
+		{
+			all: {
+				describe: "Lint all known config files in the project root",
+				type: "boolean",
+				default: false,
+			},
+			json: {
+				describe: "Output results as JSON instead of terminal report",
+				type: "boolean",
+				default: false,
+			},
+		},
+		lintCommand,
 	)
 	.command(
 		"add-dependency",

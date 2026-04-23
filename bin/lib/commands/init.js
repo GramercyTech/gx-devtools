@@ -127,6 +127,22 @@ function copyBundleFiles(projectPath, paths, overwrite = false) {
 			dest: "vite.extend.js",
 			desc: "vite.extend.js (customize the Vite runtime config)",
 		},
+		{
+			src: "eslint.config.js",
+			dest: "eslint.config.js",
+			desc: "eslint.config.js (flat config for JS/Vue)",
+		},
+		{
+			src: ".prettierrc",
+			dest: ".prettierrc",
+			desc: ".prettierrc (format config)",
+		},
+		{
+			src: "githooks/pre-commit",
+			dest: ".githooks/pre-commit",
+			desc: ".githooks/pre-commit (runs prettier + eslint + gxdev lint)",
+			mode: 0o755,
+		},
 		{ src: "env.example", dest: ".env.example", desc: ".env.example" },
 		{ src: "gitignore", dest: ".gitignore", desc: ".gitignore" },
 		{
@@ -162,6 +178,13 @@ function copyBundleFiles(projectPath, paths, overwrite = false) {
 		const srcPath = path.join(paths.templateDir, file.src)
 		const destPath = path.join(projectPath, file.dest)
 		safeCopyFile(srcPath, destPath, file.desc, overwrite)
+		if (file.mode && fs.existsSync(destPath)) {
+			try {
+				fs.chmodSync(destPath, file.mode)
+			} catch (_e) {
+				// Best-effort — Windows or restrictive FS may reject chmod.
+			}
+		}
 	})
 }
 /**
