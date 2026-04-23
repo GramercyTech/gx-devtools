@@ -314,24 +314,34 @@ export default defineConfig(async (ctx) => {
 			// GxP Inspector plugin for browser extension integration
 			...(useInspector ? [gxpInspectorPlugin()] : []),
 			// `externalGlobals` rewrites `import ... from "vue"` → references to
-			// the `Vue` global that the GxP platform exposes on `window`. This is
-			// only desirable at **build** time — in dev, the toolkit runtime
-			// bootstraps its own Vue + Pinia (via main.js → createApp + app.use),
-			// and rewriting `from "pinia"` to a non-existent `window.Pinia`
-			// crashes `getActivePinia()` at store init.
+			// the `Vue` global that the GxP platform exposes on `window`, and
+			// `@/stores/gxpPortalConfigStore` imports → `window.useGxpStore`.
 			//
-			// Using `apply: "build"` restricts the transform to production builds,
-			// where it rewrites every module in the final bundle (including
-			// transitive node_modules deps) so no bare specifiers leak through.
-			{
-				...externalGlobals({
+			// We want this to run in BOTH dev and build so user source code keeps
+			// the same external-store indirection regardless of mode. The only
+			// exception is the toolkit's own runtime code (`@gxp-dev/tools/runtime/
+			// *.js` and the workspace equivalent) — that code bootstraps its own
+			// local Vue + Pinia via main.js (createApp + app.use) and would crash
+			// with "getActivePinia() was called" if its `from "pinia"` were
+			// rewritten to a non-existent `window.Pinia`.
+			//
+			// So: exclude the toolkit's runtime from the transform.
+			externalGlobals(
+				{
 					vue: "Vue",
 					pinia: "Pinia",
 					"@/stores/gxpPortalConfigStore":
 						"(window.useGxpStore || (() => { console.warn('useGxpStore not found on window, using fallback'); return {}; }))",
-				}),
-				apply: "build",
-			},
+				},
+				{
+					exclude: [
+						// Consumer install (published toolkit from npm)
+						"**/node_modules/@gxp-dev/tools/**",
+						// Workspace / `npm link` / self-dev: the runtime source itself
+						`${runtimeDir.replace(/\\/g, "/")}/**`,
+					],
+				},
+			),
 			// Custom request logging and CORS plugin
 			{
 				name: "request-logger-cors",
