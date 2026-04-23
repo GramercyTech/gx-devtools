@@ -231,6 +231,21 @@ Every admin-editable piece of content goes through a directive — that's the br
 
 Tools: `config_list_card_types`, `config_list_field_types`, `config_get_field_schema`, `config_add_card`, `config_add_field`, `config_move_field`, `config_remove_field`, `config_validate`, `config_extract_strings`. Every mutation is linter-guarded against schemas in `bin/lib/lint/schemas/`.
 
+## Form / Quiz / Survey Apps — `formTemplate`
+
+If the plugin _is_ a form (quiz, survey, questionnaire), ship a starter question set the admin can customize on install. Two keys, both required, must be kept consistent:
+
+1. `app-manifest.json` → `"formTemplate": true` — marks the plugin as a form app.
+2. `configuration.json` → `"formTemplate": [ ...cards ]` — array of cards (same shape as `additionalTabs`), typically `fields_list` sections whose `fieldsList` items are the questions.
+
+Build it with the same MCP tools, pointed at `/formTemplate`:
+
+- `config_add_card` with `parent_path: "/formTemplate"` (the array is auto-initialized on first add).
+- `config_add_field` with `card_path: "/formTemplate/0"` to add questions to a section.
+- `config_list_cards` surfaces both `/additionalTabs` and `/formTemplate` cards.
+
+Mental model: `additionalTabs` = **admin** config (every plugin). `formTemplate` = **end-user** questions (only form apps). Admin strings, assets, colors, dependency bindings → `additionalTabs`. Questions an attendee/user will answer → `formTemplate`.
+
 ## Component Kit
 
 Use `@gramercytech/gx-componentkit` for UI:

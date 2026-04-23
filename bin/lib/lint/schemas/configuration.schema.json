@@ -11,6 +11,11 @@
 			"description": "Top-level array of tab definitions. Each item is a card (usually card_list or fields_list) rendered under the plugin's configuration panel.",
 			"items": { "$ref": "card.schema.json" }
 		},
+		"formTemplate": {
+			"type": "array",
+			"description": "Starter form/quiz/survey question set for plugins that act as a form app. Each item is a card defining a form section (use `fields_list` for question groups or `card_list` to nest further). The admin can copy/customize these when they install the plugin. Only meaningful when `formTemplate` is true in app-manifest.json.",
+			"items": { "$ref": "card.schema.json" }
+		},
 		"title": { "type": ["string", "null"] },
 		"description": { "type": ["string", "null"] },
 		"version": { "type": ["string", "integer", "null"] }

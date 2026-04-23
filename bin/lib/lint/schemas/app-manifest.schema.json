@@ -29,6 +29,10 @@
 		"configurationFile": { "type": "string" },
 		"appInstructionsFile": { "type": "string" },
 		"defaultStylingFile": { "type": "string" },
+		"formTemplate": {
+			"type": "boolean",
+			"description": "Declares this plugin as a form/quiz/survey app. When true, the platform expects `configuration.json` to include a `formTemplate` root key — an array of cards defining the starter question set an admin can customize on install."
+		},
 		"appInstructions": { "type": "string" },
 		"defaultStyling": { "type": "string" },
 		"configuration": {

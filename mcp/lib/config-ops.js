@@ -163,7 +163,12 @@ function moveItem(doc, fromPointer, targetArrayPointer, position = "end") {
  * cards with their JSON pointer, type, title, and a summary of children.
  *
  * Cards are discovered under:
- *   additionalTabs[]                          (root array of cards)
+ *   additionalTabs[]                          (root array of cards — admin form)
+ *   formTemplate[]                            (root array of cards — starter
+ *                                              form/quiz/survey questions; only
+ *                                              present on form apps where
+ *                                              app-manifest.json has
+ *                                              `formTemplate: true`)
  *   <card>.cards[]                            (card_list)
  *   <card>.tabsList[].cards[]                 (tabs_list)
  */
@@ -200,6 +205,9 @@ function listCards(doc) {
 
 	if (Array.isArray(doc?.additionalTabs)) {
 		doc.additionalTabs.forEach((c, i) => walk(c, `/additionalTabs/${i}`))
+	}
+	if (Array.isArray(doc?.formTemplate)) {
+		doc.formTemplate.forEach((c, i) => walk(c, `/formTemplate/${i}`))
 	}
 	return out
 }

@@ -522,6 +522,74 @@ Each field's `name` must exactly match the manifest key it controls — that's t
 
 Every mutation is linter-guarded against `bin/lib/lint/schemas/`. If a write is refused, read the validation error and fix the input — do not reach for `force: true`.
 
+## Form / Quiz / Survey Apps — `formTemplate`
+
+Some plugins _are_ a form: a quiz, a survey, a signup flow. For those, ship a starter question set an admin can customize on install. Two keys, kept consistent:
+
+1. **`app-manifest.json` → `"formTemplate": true`** — flags the plugin as a form app so the platform opts into form-specific UI (question editor, response viewer).
+2. **`configuration.json` → `"formTemplate": [ ...cards ]`** — array of cards defining the starter form sections, same shape as `additionalTabs`. Typically `fields_list` cards whose `fieldsList` items are the end-user questions.
+
+### Minimal example
+
+```json
+// app-manifest.json
+{
+	"name": "welcome-quiz",
+	"version": "0.1.0",
+	"formTemplate": true,
+	"settings": {},
+	"strings": { "default": { "title": "Welcome Quiz" } },
+	"assets": {},
+	"dependencies": [],
+	"permissions": []
+}
+```
+
+```json
+// configuration.json
+{
+	"additionalTabs": [
+		/* admin-facing plugin config (unchanged) */
+	],
+	"formTemplate": [
+		{
+			"type": "fields_list",
+			"title": "About You",
+			"fieldsList": [
+				{ "type": "text", "name": "full_name", "label": "Full name" },
+				{
+					"type": "radio",
+					"name": "experience",
+					"label": "Experience level",
+					"options": [
+						{ "label": "Beginner", "value": "beginner" },
+						{ "label": "Advanced", "value": "advanced" }
+					]
+				}
+			]
+		}
+	]
+}
+```
+
+### Building with the MCP
+
+Pointer-based adds work against `/formTemplate` the same way they do against `/additionalTabs`:
+
+- `config_add_card` with `parent_path: "/formTemplate"` — the array auto-initializes on first add, no seed step.
+- `config_add_card` with `parent_path: "/formTemplate/0/cards"` — nest under a `card_list` for grouped sections.
+- `config_add_field` with `card_path: "/formTemplate/0"` — add a question to the first section.
+- `config_list_cards` — returns cards from both `/additionalTabs` and `/formTemplate` with their JSON pointers.
+
+Use any valid field type (`text`, `textarea`, `number`, `radio`, `checkbox`, `select`, `asyncSelect`, `selectAsset`, etc.). The `name` of each field becomes the response key the platform stores.
+
+### Mental model
+
+- `additionalTabs` → **admin** configuration (every plugin). Strings, assets, color pickers, dependency binding, feature toggles.
+- `formTemplate` → **end-user** questions (only form apps). Only add here if `app-manifest.json` has `formTemplate: true`.
+
+Don't mix. Quiz questions never belong in `additionalTabs`; admin config never belongs in `formTemplate`. Both roots validate against the same card/field schema, so `gxdev lint --all` catches malformed structures in either place.
+
 ## Component Template
 
 When creating new components, use this pattern:

@@ -224,7 +224,7 @@ const CONFIG_TOOLS = [
 	{
 		name: "config_add_card",
 		description:
-			"Add a card under a parent container (additionalTabs, a card_list's cards[], or a tabs_list tab).",
+			"Add a card under a parent container (additionalTabs, formTemplate, a card_list's cards[], or a tabs_list tab). The `/additionalTabs` and `/formTemplate` root arrays are auto-initialized if missing, so the first add works without seeding.",
 		inputSchema: {
 			type: "object",
 			properties: {
@@ -232,7 +232,7 @@ const CONFIG_TOOLS = [
 				parent_path: {
 					type: "string",
 					description:
-						"JSON pointer to the parent array of cards (e.g. '/additionalTabs' or '/additionalTabs/0/cards').",
+						"JSON pointer to the parent array of cards. Top-level options: '/additionalTabs' (admin configuration form) or '/formTemplate' (starter form/quiz questions for form apps). Nested options: '/additionalTabs/0/cards', '/formTemplate/0/cards', etc.",
 				},
 				card: {
 					type: "object",
@@ -448,6 +448,18 @@ async function handleConfigToolCall(name, args = {}) {
 		case "config_add_card": {
 			const abs = resolveProjectPath(args.path)
 			const doc = readJson(abs)
+
+			// Auto-initialize known root-level card arrays if they're missing
+			// so the first `config_add_card` against /formTemplate (or
+			// /additionalTabs) works without a separate seeding step.
+			const KNOWN_ROOT_ARRAYS = ["/formTemplate", "/additionalTabs"]
+			if (KNOWN_ROOT_ARRAYS.includes(args.parent_path)) {
+				const rootKey = args.parent_path.slice(1)
+				if (!Array.isArray(doc[rootKey])) {
+					doc[rootKey] = []
+				}
+			}
+
 			const parent = getByPointer(doc, args.parent_path)
 			if (!Array.isArray(parent)) {
 				throw new Error(

@@ -1009,6 +1009,7 @@ function buildInteractiveInitialPrompt(projectName, description, provider) {
 		"- What real-world data it reads/writes — identify the concrete platform operationIds via the MCP, never invent them",
 		"- Which real-time events matter (use `api_find_events_for_operation` for each planned operationId)",
 		"- Every piece of admin-editable content: strings, assets, colors/thresholds/settings, feature toggles",
+		'- Whether this is a **form app** (quiz, survey, questionnaire, signup flow). If yes, set `formTemplate: true` in `app-manifest.json` and populate `configuration.json`\'s `formTemplate` root array with starter question cards (`config_add_card` with `parent_path: "/formTemplate"` — auto-initializes). See the instructions file for the full pattern. Keep end-user questions in `formTemplate` and admin config in `additionalTabs` — do not mix the two.',
 		"",
 		"Then propose a plan — screens/components, data flow, admin configuration form, and the exact keys you'll add to `app-manifest.json` — and get my confirmation before implementing.",
 		"",
