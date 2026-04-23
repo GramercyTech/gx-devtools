@@ -244,8 +244,8 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 		if (manifest.dependencies && Array.isArray(manifest.dependencies)) {
 			dependencies.value = manifest.dependencies // Store full dependency objects
-			dependencyList.value = manifest.dependencies.reduce((acc, dependency) => {
-				acc[dependency.identifier] = "1"
+			dependencyList.value = manifest.dependencies.reduce((acc, permission) => {
+				acc[permission.identifier] = "1"
 				return acc
 			}, {})
 			console.log("[GxP Store] Dependency List:", dependencyList.value)
@@ -379,58 +379,16 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 		// Initialize dependency-based sockets based on the new structure
 		if (Array.isArray(dependencies.value)) {
-			dependencies.value.forEach((dependency) => {
-				if (
-					dependency.operations &&
-					Object.keys(dependency.operations).length > 0
-				) {
-					// Object.keys(dependency.operations).forEach((operation) => {
-					// 	if (
-					// 		Object.keys(apiOperations.value[dependency.identifier]).every(
-					// 			(key) =>
-					// 				[
-					// 					"identifier",
-					// 					"model",
-					// 					"permissionKey",
-					// 					"operations",
-					// 				].includes(key)
-					// 		)
-					// 	) {
-					// 		let method = "get";
-					// 		let path = dependency.operations[operation];
-					// 		if (path.includes(":")) {
-					// 			let pathSplit = path.split(":");
-					// 			method = pathSplit[0];
-					// 			path = pathSplit[1];
-					// 		}
-					// 		path = path.replace(
-					// 			"{teamSlug}/{projectSlug}",
-					// 			pluginVars.value.projectId
-					// 		);
-					// 		path = path.replace(
-					// 			`{${dependency.permissionKey}}`,
-					// 			dependencyList.value[dependency.identifier]
-					// 		);
-					// 		if (!apiOperations.value[dependency.identifier]) {
-					// 			apiOperations.value[dependency.identifier] = {};
-					// 		}
-					// 		apiOperations.value[dependency.identifier][operation] = {
-					// 			method: method,
-					// 			path: path,
-					// 			model_key: dependency.permissionKey,
-					// 		};
-					// 	}
-					// });
-				}
-				if (dependency.events && Object.keys(dependency.events).length > 0) {
+			dependencies.value.forEach((permission) => {
+				if (permission.events && Object.keys(permission.events).length > 0) {
 					// Create socket listeners for each event type
-					sockets[dependency.identifier] = {}
+					sockets[permission.identifier] = {}
 
-					Object.keys(dependency.events).forEach((eventType) => {
-						const eventName = dependency.events[eventType]
-						const channel = `private.${dependency.model}.${dependency.identifier}`
+					Object.keys(permission.events).forEach((eventType) => {
+						const eventName = permission.events[eventType]
+						const channel = `private.${permission.model}.${permission.identifier}`
 
-						sockets[dependency.identifier][eventType] = {
+						sockets[permission.identifier][eventType] = {
 							listen: function (callback) {
 								// Listen for the specific event on the primary socket
 								return primarySocket.on(eventName, (data) => {
@@ -445,7 +403,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 					})
 				} else {
 					// For dependencies without events, create empty listeners
-					sockets[dependency.identifier] = {
+					sockets[permission.identifier] = {
 						created: { listen: () => () => {} },
 						updated: { listen: () => () => {} },
 						deleted: { listen: () => () => {} },
@@ -500,7 +458,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			throw new Error(`DELETE ${endpoint}: ${error.message}`)
 		}
 	}
-	async function callApi(operationId, identifier, data = {}) {
+	async function callApi(operationId, permissionIdentifier, data = {}) {
 		// Initialize operations if not done
 		if (Object.keys(apiOperations.value).length === 0) {
 			await initializeApiOperations()
@@ -520,7 +478,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 		// Build context parameters from multiple sources:
 		// 1. Auto-inject teamSlug and projectSlug from portal context
-		// 2. Look up identifier value from dependencyList (if identifier provided)
+		// 2. Look up permissionIdentifier value from dependencyList (if permissionIdentifier provided)
 		// 3. Merge in additional data parameters
 
 		let projectTeamId = pluginVars.value?.projectId?.split("/")
@@ -537,14 +495,19 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		if (parameters.includes("form") && pluginVars.value?.formId) {
 			contextParams["form"] = pluginVars.value?.formId
 		}
-		// If identifier is provided, look up its value from dependencyList
-		// dependencyList stores parent object IDs as { 'identifier': idValue }
-		if (identifier !== null && identifier !== undefined) {
-			const identifierValue = dependencyList.value?.[identifier]
-			if (identifierValue !== undefined) {
-				// Add the identifier value using the identifier key as the param name
-				// e.g., identifier='form' with dependencyList.form='quiz-123' adds { form: 'quiz-123' }
-				contextParams[identifier] = identifierValue
+		// If permissionIdentifier is provided, look up its value from dependencyList
+		// dependencyList stores parent object IDs as { 'permissionIdentifier': idValue }
+		if (
+			permissionIdentifier !== null &&
+			permissionIdentifier !== undefined &&
+			permissionIdentifier !== "project"
+		) {
+			const permissionIdentifierValue =
+				dependencyList.value?.[permissionIdentifier]
+			if (permissionIdentifierValue !== undefined) {
+				// Add the permissionIdentifier value using the permissionIdentifier key as the param name
+				// e.g., permissionIdentifier='form' with dependencyList.form='quiz-123' adds { form: 'quiz-123' }
+				contextParams[permissionIdentifier] = permissionIdentifierValue
 			}
 		}
 		const parsedData = {}
@@ -582,9 +545,9 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		for (const param of parameters) {
 			delete bodyData[param]
 		}
-		// Also remove identifier from body if it was in data
-		if (identifier && bodyData[identifier] !== undefined) {
-			delete bodyData[identifier]
+		// Also remove permissionIdentifier from body if it was in data
+		if (permissionIdentifier && bodyData[permissionIdentifier] !== undefined) {
+			delete bodyData[permissionIdentifier]
 		}
 
 		try {
@@ -611,20 +574,6 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			)
 			throw new Error(`${method.toUpperCase()} ${resolvedPath}: ${message}`)
 		}
-
-		// try {
-		// 	const operationConfig = apiOperations.value[identifier][operation];
-		// 	if (!operationConfig) {
-		// 		throw new Error(`Operation not found: ${operation}`);
-		// 	}
-		// 	const response = await apiClient[operationConfig.method](
-		// 		operationConfig.path,
-		// 		data
-		// 	);
-		// 	return response.data;
-		// } catch (error) {
-		// 	throw new Error(`${method} ${endpoint}: ${error.message}`);
-		// }
 	}
 
 	// Utility methods
@@ -643,8 +592,8 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	function getState(key, fallback = null) {
 		return triggerState.value[key] || fallback
 	}
-	function findDependency(identifier) {
-		return dependencyList.value[identifier]
+	function findDependency(permissionIdentifier) {
+		return dependencyList.value[permissionIdentifier]
 	}
 	function hasPermission(flag) {
 		return permissionFlags.value.includes(flag)
