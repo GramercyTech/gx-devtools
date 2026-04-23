@@ -31,12 +31,42 @@ const {
 const globalConfig = loadGlobalConfig()
 
 // Set up yargs CLI
-yargs
-	.usage("$0 <command>")
+const cli = yargs
+	.scriptName("gxdev")
+	.usage(
+		[
+			"Usage: gxdev <command> [options]",
+			"",
+			"By default every command runs in the plain CLI. Pass --ui to any",
+			"command to launch it inside the interactive Terminal UI, or run",
+			"`gxdev ui` to open the TUI without starting anything.",
+		].join("\n"),
+	)
 	.config(globalConfig)
+	.option("ui", {
+		describe:
+			"Launch the interactive Terminal UI (auto-starts dev/socket/ext when paired with those commands)",
+		type: "boolean",
+		default: false,
+		global: true,
+	})
+	.command(
+		"ui",
+		"Open the interactive Terminal UI without auto-starting anything",
+		{},
+		() => {
+			// The dispatcher in bin/gx-devtools.js intercepts `ui` before yargs
+			// ever runs. Reaching this handler means the TUI bundle couldn't be
+			// launched (e.g. not built); bubble a helpful hint.
+			console.error(
+				'TUI is not available. Run "npm run build:tui" inside gx-devtools and try again.',
+			)
+			process.exit(1)
+		},
+	)
 	.command(
 		"init [name]",
-		"Initialize a new GxP project or update existing one",
+		"Initialize a new GxP project or update an existing one in the current directory",
 		{
 			name: {
 				describe: "Project name (for new projects)",
@@ -49,12 +79,13 @@ yargs
 			},
 			build: {
 				describe:
-					"AI build prompt - describe what to build for auto-scaffolding",
+					"Non-interactive AI scaffold: describe what to build and apply it directly",
 				type: "string",
 				alias: "b",
 			},
 			provider: {
-				describe: "AI provider for scaffolding (claude, codex, gemini)",
+				describe:
+					"AI provider for --build scaffolding (interactive mode picks from available CLIs)",
 				type: "string",
 				alias: "p",
 				choices: ["claude", "codex", "gemini"],
@@ -333,7 +364,31 @@ yargs
 		},
 		addDependencyCommand,
 	)
-	.demandCommand(1, "Please provide a valid command")
+	.command("$0", false, {}, () => {
+		cli.showHelp()
+	})
+	.example("gxdev init my-plugin", "Scaffold a new plugin called my-plugin")
+	.example(
+		"gxdev init",
+		"Add the toolkit to the current project (detects existing package.json)",
+	)
+	.example("gxdev dev", "Start Vite + Socket.IO in plain CLI mode")
+	.example("gxdev dev --ui", "Start the dev server inside the interactive TUI")
+	.example("gxdev ui", "Open the TUI without auto-starting anything")
+	.example("gxdev lint --all", "Lint configuration.json and app-manifest.json")
+	.example(
+		"gxdev extract-config",
+		"Sync app-manifest.json from gxp-string / gxp-src / store usage in src/",
+	)
+	.epilog(
+		[
+			"Docs:   https://docs.gxp.dev",
+			"AI/MCP: the gxp-api MCP server (bin: gxp-api-server) exposes 29 tools",
+			"        across API specs, config editing, docs search, and test helpers.",
+		].join("\n"),
+	)
 	.help("h")
 	.alias("h", "help")
-	.parse()
+	.strict(false)
+
+cli.parse()
