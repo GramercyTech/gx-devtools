@@ -171,7 +171,21 @@ function copyBundleFiles(projectPath, paths, overwrite = false) {
 		{
 			src: ".claude/settings.json",
 			dest: ".claude/settings.json",
-			desc: "Claude Code MCP settings (GxP API server)",
+			desc: "Claude Code project settings (auto-allow gxp-api MCP tools)",
+		},
+		// Canonical project-scoped MCP config files. The AI CLIs each look for
+		// their own file at the project root and auto-load the `gxp-api` server
+		// from there. The `gxp-api-server` binary is installed on PATH by
+		// @gxp-dev/tools, so no extra install step is required.
+		{
+			src: "mcp.json",
+			dest: ".mcp.json",
+			desc: ".mcp.json (Claude Code project-scoped MCP config)",
+		},
+		{
+			src: "gemini/settings.json",
+			dest: ".gemini/settings.json",
+			desc: ".gemini/settings.json (Gemini CLI project-scoped MCP config)",
 		},
 	]
 

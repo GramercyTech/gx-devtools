@@ -21,6 +21,8 @@ Ask clarifying questions instead of guessing. A 30-second question beats a 30-mi
 
 Use the `gxp-api` MCP server to ground the implementation in the real platform — never invent endpoints or event names.
 
+**Verify the MCP is live before planning anything** by calling `api_list_tags`. The server is defined in `.mcp.json` at the project root and provided by the `gxp-api-server` binary that ships with `@gxp-dev/tools` (on PATH — check with `which gxp-api-server`). If the `api_*` / `config_*` / `docs_*` tools aren't available, tell the user to run `claude mcp add gxp-api gxp-api-server` (or `codex mcp add …` / add it to `~/.gemini/settings.json`) and restart the session. Do not proceed without the MCP.
+
 - **Find endpoints** — `api_list_tags`, `api_list_operation_ids` (optionally scoped by tag), `search_api_endpoints` (keyword).
 - **Inspect a specific endpoint** — `api_get_operation_parameters`, `get_endpoint_details`.
 - **Find endpoints by payload shape** — `api_find_endpoints_by_schema` (search by request/response field names).

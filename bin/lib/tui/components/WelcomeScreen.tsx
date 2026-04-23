@@ -21,7 +21,21 @@ const LOGO = `
    ╚═════╝ ╚═╝  ╚═╝╚═╝
 `
 
-export default function WelcomeScreen() {
+interface UpdateInfo {
+	currentVersion: string
+	latestVersion: string | null
+	updateAvailable: boolean
+	lastCheckedAt: number | null
+}
+
+interface WelcomeScreenProps {
+	updateInfo?: UpdateInfo | null
+}
+
+export default function WelcomeScreen({ updateInfo }: WelcomeScreenProps = {}) {
+	const showUpdateBanner =
+		!!updateInfo && updateInfo.updateAvailable && !!updateInfo.latestVersion
+
 	return (
 		<Box
 			flexDirection="column"
@@ -38,6 +52,30 @@ export default function WelcomeScreen() {
 				</Text>
 				<Text dimColor>v{pkg.version}</Text>
 			</Box>
+
+			{showUpdateBanner && updateInfo && (
+				<Box
+					marginTop={1}
+					paddingX={2}
+					borderStyle="round"
+					borderColor="yellow"
+					flexDirection="column"
+					alignItems="center"
+				>
+					<Text>
+						<Text color="yellow">📦 </Text>
+						<Text bold color="yellow">
+							Update available:
+						</Text>{" "}
+						<Text>{updateInfo.currentVersion}</Text>
+						<Text color="gray"> → </Text>
+						<Text color="cyan">{updateInfo.latestVersion}</Text>
+					</Text>
+					<Text color="gray">
+						Run <Text color="cyan">npm i -g @gxp-dev/tools</Text> to update
+					</Text>
+				</Box>
+			)}
 
 			<Box marginTop={1}>
 				<Text color="gray">

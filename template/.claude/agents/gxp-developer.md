@@ -28,6 +28,8 @@ Ask clarifying questions. Don't guess — a single clarification prevents a larg
 
 The `gxp-api` MCP server is your source of truth for the platform. Never invent endpoints or event names.
 
+**Before anything else, confirm the MCP is live** — call `api_list_tags`. The server is configured in `.mcp.json` at the project root and provided by the `gxp-api-server` binary that ships with `@gxp-dev/tools` (on PATH; verify with `which gxp-api-server`). If the `api_*` / `config_*` / `docs_*` tools aren't available, tell the user to run `claude mcp add gxp-api gxp-api-server` and restart the session. Do not proceed without it.
+
 **API discovery:**
 
 - `api_list_tags` — enumerate tags so you can browse.

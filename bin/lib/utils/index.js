@@ -10,6 +10,7 @@ const files = require("./files")
 const prompts = require("./prompts")
 const aiScaffold = require("./ai-scaffold")
 const extractConfig = require("./extract-config")
+const versionCheck = require("./version-check")
 
 module.exports = {
 	...paths,
@@ -18,4 +19,5 @@ module.exports = {
 	...prompts,
 	...aiScaffold,
 	...extractConfig,
+	...versionCheck,
 }

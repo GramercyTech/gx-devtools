@@ -15,13 +15,25 @@
 const args = process.argv.slice(2)
 const command = args[0]
 
+// Kick off a best-effort npm version check on every gxdev invocation. The
+// util throttles itself to at most one network hit per 24 hours and stays
+// fully non-blocking — if it fails, the CLI is unaffected.
+const {
+	maybeRunBackgroundCheck,
+	registerCliExitReminder,
+	getCachedUpdateInfo,
+} = require("./lib/utils/version-check")
+maybeRunBackgroundCheck()
+
 // TUI activation: bare `ui` command OR any invocation with `--ui`.
 const uiFlagPresent = args.includes("--ui")
 const isBareUiCommand = command === "ui"
 const wantsUi = uiFlagPresent || isBareUiCommand
 
 if (!wantsUi) {
-	// Default path — delegate straight to yargs-driven CLI.
+	// Plain CLI path — have the utility print an update reminder on exit
+	// (stderr) if the cached info says we're behind.
+	registerCliExitReminder()
 	require("./lib/cli")
 	return
 }
@@ -75,7 +87,8 @@ switch (isBareUiCommand ? null : command) {
 ;(async () => {
 	try {
 		const { startTUI } = await import(tuiPath)
-		startTUI({ autoStart, args: tuiArgs })
+		const updateInfo = getCachedUpdateInfo()
+		startTUI({ autoStart, args: tuiArgs, updateInfo })
 	} catch (err) {
 		if (err && err.message === "NO_TTY") {
 			console.error("The GxP TUI requires an interactive terminal (TTY).")

@@ -43,12 +43,20 @@ interface ExtractedConfig {
 	}>
 }
 
+export interface UpdateInfo {
+	currentVersion: string
+	latestVersion: string | null
+	updateAvailable: boolean
+	lastCheckedAt: number | null
+}
+
 export interface AppProps {
 	autoStart?: string[]
 	args?: Record<string, unknown>
+	updateInfo?: UpdateInfo | null
 }
 
-export default function App({ autoStart, args }: AppProps) {
+export default function App({ autoStart, args, updateInfo }: AppProps) {
 	const { exit } = useApp()
 	const { stdout } = useStdout()
 	const [showAIPanel, setShowAIPanel] = useState(false)
@@ -808,7 +816,7 @@ Keyboard shortcuts:
 				{currentService ? (
 					<LogPanel logs={currentService.logs} maxHeight={logPanelHeight} />
 				) : (
-					<WelcomeScreen />
+					<WelcomeScreen updateInfo={updateInfo} />
 				)}
 			</Box>
 

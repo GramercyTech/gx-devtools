@@ -1,9 +1,5 @@
 {
-	"mcpServers": {
-		"gxp-api": {
-			"command": "gxp-api-server",
-			"args": [],
-			"env": {}
-		}
+	"permissions": {
+		"allow": ["mcp__gxp-api"]
 	}
 }

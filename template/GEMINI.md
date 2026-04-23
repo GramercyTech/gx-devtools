@@ -18,6 +18,8 @@ Before writing anything, clarify with the client:
 
 Ground the implementation in real platform endpoints and events. Do not invent API paths or event names.
 
+**Verify the MCP is live first** — call `api_list_tags`. The server is defined in `.gemini/settings.json` at the project root and provided by the `gxp-api-server` binary that ships with `@gxp-dev/tools` (on PATH). If the tools aren't available, tell the user to add `gxp-api` to `~/.gemini/settings.json` under `mcpServers` with command `gxp-api-server`, then restart the session.
+
 - Endpoints — `api_list_tags`, `api_list_operation_ids`, `search_api_endpoints`, `api_get_operation_parameters`, `get_endpoint_details`.
 - Find by payload shape — `api_find_endpoints_by_schema`.
 - WebSocket events — `api_find_events_for_operation` (maps operationId → events via `x-triggered-by`), `api_list_events`, `search_websocket_events`, `get_asyncapi_spec`. Run for every planned operationId so you subscribe instead of polling.

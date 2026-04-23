@@ -9,9 +9,17 @@ import { serviceManager } from "./services/index.js"
 // Load .env from the current working directory (project directory)
 dotenv.config({ path: path.join(process.cwd(), ".env") })
 
+export interface UpdateInfo {
+	currentVersion: string
+	latestVersion: string | null
+	updateAvailable: boolean
+	lastCheckedAt: number | null
+}
+
 interface TUIOptions {
 	autoStart?: string[] // Commands to auto-start (e.g., ['dev', 'socket'])
 	args?: Record<string, unknown> // Command arguments
+	updateInfo?: UpdateInfo | null // Cached npm version-check result (for landing page banner)
 }
 
 export function startTUI(options: TUIOptions = {}) {
@@ -30,7 +38,11 @@ export function startTUI(options: TUIOptions = {}) {
 	}
 
 	const { waitUntilExit } = render(
-		<App autoStart={options.autoStart} args={options.args} />,
+		<App
+			autoStart={options.autoStart}
+			args={options.args}
+			updateInfo={options.updateInfo}
+		/>,
 	)
 
 	waitUntilExit().then(() => {
