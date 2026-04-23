@@ -68,7 +68,8 @@ Use the MCP config tools to scaffold the form while building the plan — `confi
 
 Build against the plan:
 
-- Route **all** data through the GxP store — API calls, sockets, strings, assets, settings, state.
+- Route **all** data through the GxP store — API via `store.callApi(operationId, identifier, data)`, plus sockets, strings, assets, settings, state.
+- Declare every permission identifier used by `callApi` in `app-manifest.json` → `dependencies` + `permissions`. Use the reserved `"project"` identifier for project-wide / top-level creation operations and pass any required IDs in `data`.
 - Add `gxp-string` / `gxp-src` on every piece of admin-editable content so the configuration form actually controls something.
 - Keep code under `src/`. The runtime container is off-limits.
 - Update `app-manifest.json` with every key the plan listed.
@@ -164,38 +165,138 @@ store.getState("current_step", 0)
 store.hasPermission("admin")
 ```
 
-## API Calls - ALWAYS USE THE STORE
+## API Calls — `store.callApi(operationId, identifier, data)`
 
-**CRITICAL**: Never use axios or fetch directly. Always use the store's API methods which handle:
+**Every call to the GxP platform goes through `store.callApi`.** It is the primary, permission-aware API method. The low-level verb methods (`apiGet`/`apiPost`/...) still exist as escape hatches but they bypass the permission model — prefer `callApi` for all real work. Never use axios or fetch directly.
 
-- Authentication (Bearer token injection)
-- Base URL configuration based on environment
-- Proxy handling for CORS in development
-- Error handling and logging
+`callApi` takes three arguments:
 
 ```javascript
-const store = useGxpStore()
-
-// GET request
-const data = await store.apiGet("/api/v1/attendees", { event_id: 123 })
-
-// POST request
-const result = await store.apiPost("/api/v1/check-ins", {
-	attendee_id: 456,
-	station_id: "kiosk-1",
-})
-
-// PUT request
-await store.apiPut("/api/v1/attendees/456", { status: "checked_in" })
-
-// PATCH request
-await store.apiPatch("/api/v1/attendees/456", { badge_printed: true })
-
-// DELETE request
-await store.apiDelete("/api/v1/check-ins/789")
+await store.callApi(operationId, identifier, data)
 ```
 
-Before hand-rolling a URL, look it up via `search_api_endpoints` or `api_list_operation_ids`.
+### 1. `operationId` — the OpenAPI operation ID
+
+This is the `operationId` from the platform's OpenAPI spec. Look it up via MCP — do not invent one:
+
+- `api_list_operation_ids` (optionally filter by tag)
+- `search_api_endpoints` (keyword)
+- `api_get_operation_parameters` / `get_endpoint_details` for the full signature
+
+The store auto-prefixes bare operation IDs with `portal.v1.project.` if no exact match is found, so both `posts.index` and `portal.v1.project.posts.index` work.
+
+### 2. `identifier` — the permission identifier
+
+An identifier declared in `app-manifest.json` under `dependencies` and `permissions`. It is the contract between your plugin and the admin who installs it: the admin binds each identifier to a specific resource + permission set (read, create, update, delete).
+
+At runtime the store:
+
+- Looks up the bound resource ID from `dependencyList[identifier]` and injects it as a path parameter.
+- Runs the call with the permissions the admin granted to that identifier.
+
+**Pick identifiers by the role the resource plays in the plugin**, not by its real-world name. The admin chooses the actual resource later.
+
+#### Example — social streams plugin
+
+A plugin that pulls posts + images from one social stream and reposts them to another:
+
+```json
+// app-manifest.json
+{
+	"dependencies": [
+		{ "identifier": "social_stream_one", "model": "SocialStream" },
+		{ "identifier": "social_stream_two", "model": "SocialStream" }
+	],
+	"permissions": [
+		{ "identifier": "social_stream_one", "description": "Source stream — read posts" },
+		{ "identifier": "social_stream_two", "description": "Destination stream — create posts" }
+	]
+}
+```
+
+```javascript
+// Read from the source (admin grants read-only on stream A)
+const posts = await store.callApi("posts.index", "social_stream_one")
+
+// Re-post to the destination (admin grants create on stream B)
+for (const post of posts) {
+	await store.callApi("posts.store", "social_stream_two", {
+		body: post.body,
+		image_url: post.image_url,
+	})
+}
+```
+
+The plugin never hard-codes a stream ID. The admin wires `social_stream_one` → Stream A and `social_stream_two` → Stream B at install time.
+
+### 3. `data` — additional params
+
+Body fields for POST/PUT/PATCH, query params for GET/DELETE, and any path params that aren't supplied by the identifier. A value of the form `"pluginVars.keyName"` is resolved from `pluginVars` at call time — useful for settings-driven calls without plumbing.
+
+```javascript
+await store.callApi("posts.index", "social_stream_one", {
+	limit: 20,
+	search: "pluginVars.defaultSearchTerm", // resolved from settings at call time
+})
+```
+
+Auto-injected for free (do not pass manually):
+
+- `teamSlug` and `projectSlug` from `pluginVars.projectId`.
+- `form` from `pluginVars.formId` when the operation requires it.
+
+### The `"project"` identifier — project-wide / top-level operations
+
+Use the reserved identifier `"project"` when:
+
+- You are creating the parent resource itself (e.g. creating the social stream, not posting to one).
+- You are hitting any project-scoped operation that isn't bound to a specific dependency.
+
+With `"project"`, the call runs with project-wide permissions. You must provide any remaining path params in `data`, since there is no dependency to look them up from.
+
+```javascript
+// Create the social stream itself — top-level object under the project
+const stream = await store.callApi("social_streams.store", "project", {
+	name: "Launch Feed",
+	description: "Official launch posts",
+})
+
+// Now create a post under that newly created stream. The stream isn't in
+// dependencyList — pass its ID explicitly in data.
+await store.callApi("posts.store", "project", {
+	socialStreamId: stream.id,
+	body: "We're live!",
+})
+```
+
+Rule of thumb:
+
+- Operating on a resource the admin will bind → declare a dependency identifier, pass it.
+- Creating the parent itself, or anything genuinely project-wide → use `"project"` and pass the IDs in `data`.
+
+### Defining identifiers the right way
+
+When planning a feature (Phase 3), list every dependency + permission identifier the plugin needs, with the operations each one covers. Example:
+
+| Identifier            | Scope                    | Operations used                 | Permissions expected |
+| --------------------- | ------------------------ | ------------------------------- | -------------------- |
+| `social_stream_one`   | dependency (SocialStream)| `posts.index`, `posts.show`     | read                 |
+| `social_stream_two`   | dependency (SocialStream)| `posts.store`                   | create               |
+| `project`             | project-wide             | `social_streams.store`          | create on SocialStream |
+
+Use `api_generate_dependency` (MCP) to produce the canonical JSON for each dependency entry.
+
+### Low-level methods (avoid)
+
+```javascript
+await store.apiGet("/api/v1/endpoint", { params })
+await store.apiPost("/api/v1/endpoint", data)
+await store.apiPut("/api/v1/endpoint/id", data)
+await store.apiPatch("/api/v1/endpoint/id", data)
+await store.apiDelete("/api/v1/endpoint/id")
+```
+
+These bypass the permission model and take you off the MCP-verified operationId path. Only reach for them if you have a specific reason `callApi` won't work.
 
 ### API Environment Configuration
 
@@ -348,7 +449,8 @@ const data = ref(null)
 async function handleAction() {
 	loading.value = true
 	try {
-		data.value = await store.apiGet("/api/v1/endpoint")
+		// operationId + permission identifier — both from app-manifest.json
+		data.value = await store.callApi("posts.index", "social_stream_one")
 	} catch (error) {
 		console.error("API Error:", error)
 	} finally {

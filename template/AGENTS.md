@@ -45,7 +45,8 @@ Do not proceed to implementation until the client has reviewed the plan.
 
 Build against the plan:
 
-- Use the GxP store for **all** data access — API calls, sockets, strings, assets, settings, state. Never use `axios` or `fetch` directly.
+- Use the GxP store for **all** data access — `store.callApi(operationId, identifier, data)` for platform API calls, plus sockets, strings, assets, settings, state. Never use `axios` or `fetch` directly.
+- Declare every permission identifier used by `callApi` in `app-manifest.json` → `dependencies` + `permissions`. Use `"project"` for project-wide / top-level operations and pass any required IDs in `data`.
 - Wire every piece of user-facing text with `gxp-string` and every image with `gxp-src` so the admin form controls them.
 - Keep components under `src/`. The runtime container (layouts, routing, dev tools) is not yours to edit.
 - Add entries to `app-manifest.json` for every string/asset/setting/dependency the plan calls for.
@@ -93,22 +94,88 @@ import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
 const store = useGxpStore()
 ```
 
-## API Calls - ALWAYS Use Store Methods
+## API Calls — Use `store.callApi` with an Operation ID + Permission Identifier
 
-NEVER use axios or fetch directly. The store handles authentication, base URLs, and CORS:
+**Every call to the GxP platform goes through `store.callApi`.** It handles authorization, URL resolution, team/project scoping, and path-parameter substitution. You only provide three things:
 
 ```javascript
-// Correct - use store methods
-const data = await store.apiGet("/api/v1/endpoint", { param: "value" })
+await store.callApi(operationId, identifier, data)
+```
+
+| Argument      | Purpose                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `operationId` | The OpenAPI operationId for the call. Look it up with `api_list_operation_ids` or `search_api_endpoints` (MCP). Never invent one.  |
+| `identifier`  | A **permission identifier** declared in `app-manifest.json` → `dependencies` / `permissions`. Determines which resource's permissions the call runs under, and supplies the parent object ID that gets substituted into the path. |
+| `data`        | Additional params — body fields, query params, or path params not covered by the identifier. Pass `"pluginVars.someKey"` as a value to pull from settings at call time. |
+
+NEVER use axios/fetch directly. `apiGet`/`apiPost`/`apiPut`/`apiPatch`/`apiDelete` still exist as low-level escape hatches, but `callApi` is the default — only it participates in the permission model.
+
+### Permission identifiers
+
+Each identifier is declared in `app-manifest.json` and later bound by an admin to a specific resource + permission scope (read, create, update, delete). Pick identifiers that describe the **role the resource plays in the plugin**, not its name.
+
+Example — a plugin that reads posts from one social stream and creates posts on another:
+
+```json
+// app-manifest.json
+{
+	"dependencies": [
+		{ "identifier": "social_stream_one", "model": "SocialStream" },
+		{ "identifier": "social_stream_two", "model": "SocialStream" }
+	],
+	"permissions": [
+		{ "identifier": "social_stream_one", "description": "Source stream — read posts" },
+		{ "identifier": "social_stream_two", "description": "Destination stream — create posts" }
+	]
+}
+```
+
+```javascript
+// Read posts from the source stream
+const posts = await store.callApi("posts.index", "social_stream_one")
+
+// Create a post on the destination stream
+await store.callApi("posts.store", "social_stream_two", {
+	body: "Hello world",
+	image_url: imageUrl,
+})
+```
+
+The admin assigns `social_stream_one` read-only access to stream A and `social_stream_two` create access to stream B. The plugin code never hard-codes IDs.
+
+### The `project` identifier — project-wide, top-level operations
+
+When you need to create the parent resource itself (e.g. the social stream), or hit any endpoint scoped at the project level rather than to a specific dependency, use the reserved identifier `"project"`. `callApi` will run with project-wide permissions — but you must pass any path params the endpoint needs in `data`.
+
+```javascript
+// Create a new social stream under the project
+const stream = await store.callApi("social_streams.store", "project", {
+	name: "New Stream",
+})
+
+// Create a post directly against a known socialStreamId (no dependency binding)
+await store.callApi("posts.store", "project", {
+	socialStreamId: stream.id,
+	body: "First post",
+})
+```
+
+Rule of thumb:
+
+- Operating on a resource the admin will bind later → declare a dependency identifier and pass it.
+- Creating the parent resource itself, or acting across the whole project → use `"project"` and pass the relevant IDs in `data`.
+
+### Low-level methods (avoid unless necessary)
+
+```javascript
+await store.apiGet("/api/v1/endpoint", { param: "value" })
 await store.apiPost("/api/v1/endpoint", { data: "value" })
 await store.apiPut("/api/v1/endpoint/123", { data: "value" })
 await store.apiPatch("/api/v1/endpoint/123", { data: "value" })
 await store.apiDelete("/api/v1/endpoint/123")
-
-// WRONG - never do this
-// const response = await axios.get(...);  // NO!
-// const response = await fetch(...);      // NO!
 ```
+
+These bypass the permission model. Prefer `callApi`.
 
 ## Store Data Access
 
