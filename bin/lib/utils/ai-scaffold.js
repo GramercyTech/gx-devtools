@@ -953,6 +953,141 @@ async function runAIScaffolding(
 	return result.errors.length === 0
 }
 
+/**
+ * Build the initial prompt sent to an interactive AI CLI session.
+ * The prompt anchors the agent in the scaffolded project, points it at
+ * the project's instruction files (which describe the full tool set),
+ * and tells it to keep asking questions until it has enough detail.
+ *
+ * @param {string} projectName - Plugin name
+ * @param {string} description - Plugin description
+ * @param {string} provider - Selected AI provider (claude, codex, gemini)
+ * @returns {string} Prompt text
+ */
+function buildInteractiveInitialPrompt(projectName, description, provider) {
+	const instructionFile = provider === "gemini" ? "GEMINI.md" : "AGENTS.md"
+	const claudeAgentHint =
+		provider === "claude"
+			? " You can also delegate to the `gxp-developer` subagent defined in `.claude/agents/gxp-developer.md`."
+			: ""
+
+	return [
+		`I just ran \`gxdev init\` to scaffold a new GxP plugin called "${projectName}"${
+			description ? ` (${description})` : ""
+		} in this directory.`,
+		"",
+		`Start a new GxP plugin development session. First read \`${instructionFile}\` and \`app-instructions.md\` in this project — they describe the workflow, conventions, and the full set of tools available to you.${claudeAgentHint}`,
+		"",
+		"You have the `gxp-api` MCP server available with 29 tools across five families:",
+		"- **API spec discovery** — `search_api_endpoints`, `api_list_operation_ids`, `api_get_operation_parameters`, `api_find_endpoints_by_schema`, `api_generate_dependency`, `get_endpoint_details`.",
+		"- **WebSocket events** — `api_find_events_for_operation` (maps an operationId to the AsyncAPI events it triggers), `api_list_events`, `search_websocket_events`.",
+		"- **Config editing** — `config_add_card`, `config_add_field`, `config_list_field_types`, `config_get_field_schema`, `config_extract_strings`, `config_validate`, etc. Every mutation is linter-guarded against the schemas in `bin/lib/lint/schemas/`.",
+		"- **Docs search** — `docs_search`, `docs_get_page`, `docs_list_pages` (full-text search across docs.gxp.dev).",
+		"- **Test helpers** — `test_scaffold_component_test`, `test_api_route`.",
+		"",
+		"Follow the full workflow from the instructions: (1) understand the feature, (2) discover data sources via MCP, (3) plan including the admin configuration form, (4) implement, (5) **sync the manifest and build the admin form**, (6) test with real broadcasts, (7) final `gxdev lint --all`.",
+		"",
+		"Step 5 is not optional. Every time you add or change a `store.callApi`, `store.listen`, `gxp-string`, or `gxp-src`, close the loop:",
+		'- Call `config_extract_strings` with `writeTo: "app-manifest.json"` — it scans `src/` and merges every directive, store getter, and dependency identifier into the manifest (same logic as `gxdev extract-config`, linter-guarded).',
+		"- For every entry now in the manifest, add a matching field in `configuration.json` using the MCP `config_*` tools. Default mapping: `strings.default.*` → `text`/`textarea`, `assets.*` → `selectAsset`, each declared `dependencies[]` identifier → `asyncSelect` bound to the resource's list endpoint, colors → `colorPicker`, numbers → `number`, toggles → `boolean`. Field `name` must match the manifest key exactly.",
+		"- Run `gxdev lint --all` before moving on.",
+		"",
+		"Do NOT start implementing until you have enough detail. Keep asking me clarifying questions until you know:",
+		"- The user-facing outcome and who uses it (attendee, staff, admin)",
+		"- What real-world data it reads/writes — identify the concrete platform operationIds via the MCP, never invent them",
+		"- Which real-time events matter (use `api_find_events_for_operation` for each planned operationId)",
+		"- Every piece of admin-editable content: strings, assets, colors/thresholds/settings, feature toggles",
+		"",
+		"Then propose a plan — screens/components, data flow, admin configuration form, and the exact keys you'll add to `app-manifest.json` — and get my confirmation before implementing.",
+		"",
+		"Begin now by greeting me briefly and asking what I want to build. Ask one focused question at a time rather than dumping a full questionnaire.",
+	].join("\n")
+}
+
+/**
+ * Launch the selected AI CLI in interactive mode with an initial prompt.
+ * The user talks to the agent directly in the terminal; the agent is
+ * responsible for eliciting the feature spec and building it.
+ *
+ * @param {string} projectPath - Project directory (cwd for the spawned CLI)
+ * @param {string} projectName - Plugin name
+ * @param {string} description - Plugin description
+ * @param {string} provider - claude | codex | gemini
+ * @returns {Promise<boolean>} True if the CLI exited successfully
+ */
+function launchInteractiveAISession(
+	projectPath,
+	projectName,
+	description,
+	provider,
+) {
+	return new Promise((resolve) => {
+		const initialPrompt = buildInteractiveInitialPrompt(
+			projectName,
+			description,
+			provider,
+		)
+
+		let command
+		let args
+
+		switch (provider) {
+			case "claude":
+				command = "claude"
+				args = [initialPrompt]
+				break
+			case "codex":
+				command = "codex"
+				args = [initialPrompt]
+				break
+			case "gemini":
+				command = "gemini"
+				args = ["-i", initialPrompt]
+				break
+			default:
+				console.error(
+					`❌ Interactive AI sessions are not supported for provider: ${provider}`,
+				)
+				resolve(false)
+				return
+		}
+
+		console.log("")
+		console.log("─".repeat(50))
+		console.log(`🚀 Launching ${provider} in interactive mode...`)
+		console.log("─".repeat(50))
+		console.log("")
+		console.log(
+			"   The agent will read this project's instruction files, greet you,",
+		)
+		console.log(
+			"   and ask what you want to build. Answer its questions — it will",
+		)
+		console.log(
+			"   keep asking until it has enough detail, then plan, confirm, and",
+		)
+		console.log("   implement. Exit the agent when you're done.")
+		console.log("")
+
+		const child = spawn(command, args, {
+			cwd: projectPath,
+			stdio: "inherit",
+			shell: true,
+		})
+
+		child.on("close", (code) => {
+			console.log("")
+			console.log(`✅ ${provider} session ended.`)
+			resolve(code === 0)
+		})
+
+		child.on("error", (err) => {
+			console.error(`❌ Failed to launch ${provider}: ${err.message}`)
+			resolve(false)
+		})
+	})
+}
+
 module.exports = {
 	SCAFFOLD_SYSTEM_PROMPT,
 	AI_PROVIDERS,
@@ -961,4 +1096,6 @@ module.exports = {
 	applyScaffold,
 	generateScaffold,
 	runAIScaffolding,
+	buildInteractiveInitialPrompt,
+	launchInteractiveAISession,
 }

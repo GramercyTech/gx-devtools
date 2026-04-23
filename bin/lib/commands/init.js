@@ -9,8 +9,9 @@
  * 3. Run interactive configuration:
  *    - App name (prepopulated from package.json)
  *    - Description (prepopulated from package.json)
- *    - AI scaffolding (optional)
- * 4. Prompt to start the app
+ *    - SSL setup
+ *    - Launch AI agent (2nd-to-last — replaces the start-server step when chosen)
+ * 4. Start Development (skipped if an AI agent was launched)
  * 5. Prompt to launch browser with extension
  */
 
@@ -34,6 +35,7 @@ const {
 	generateSSLCertificates,
 	updateEnvWithCertPaths,
 	runAIScaffolding,
+	launchInteractiveAISession,
 	getAvailableProviders,
 } = require("../utils")
 
@@ -401,91 +403,7 @@ async function runInteractiveConfig(projectPath, initialName, isLocal = false) {
 	updatePackageJson(projectPath, appName, description)
 	updateAppManifest(projectPath, appName, description)
 
-	// 3. AI Scaffolding
-	console.log("")
-	console.log("─".repeat(50))
-	console.log("🤖 AI-Powered Scaffolding")
-	console.log("─".repeat(50))
-	console.log("   Describe what you want to build and AI will generate")
-	console.log("   starter components, views, and manifest configuration.")
-	console.log("")
-
-	// Check available AI providers
-	const providers = await getAvailableProviders()
-	const availableProviders = providers.filter((p) => p.available)
-
-	let aiChoice = "skip"
-	let selectedProvider = null
-
-	if (availableProviders.length === 0) {
-		console.log("   ⚠️  No AI providers available.")
-		console.log("   To enable AI scaffolding, set up one of:")
-		console.log(
-			"   • Claude CLI: npm install -g @anthropic-ai/claude-code && claude login",
-		)
-		console.log("   • Codex CLI: npm install -g @openai/codex && codex auth")
-		console.log("   • Gemini CLI: npm install -g @google/gemini-cli && gemini")
-		console.log("   • Gemini API: export GEMINI_API_KEY=your_key")
-		console.log("")
-		aiChoice = "skip"
-	} else {
-		// Build provider options
-		const providerOptions = [{ label: "Skip AI scaffolding", value: "skip" }]
-
-		for (const provider of availableProviders) {
-			let authInfo = ""
-			if (provider.id === "gemini") {
-				switch (provider.method) {
-					case "cli":
-						authInfo = "logged in"
-						break
-					case "api_key":
-						authInfo = "via API key"
-						break
-					case "gcloud":
-						authInfo = "via gcloud"
-						break
-					default:
-						authInfo = ""
-				}
-			} else {
-				authInfo = "logged in"
-			}
-			providerOptions.push({
-				label: `${provider.name}`,
-				value: provider.id,
-				description: `${authInfo}`,
-			})
-		}
-
-		aiChoice = await arrowSelectPrompt(
-			"Choose AI provider for scaffolding",
-			providerOptions,
-		)
-		if (aiChoice !== "skip") {
-			selectedProvider = aiChoice
-		}
-	}
-
-	let buildPrompt = ""
-	if (selectedProvider) {
-		buildPrompt = await multiLinePrompt(
-			"📝 Describe your plugin (what it does, key features, UI elements):",
-			"Press Enter twice when done",
-		)
-
-		if (buildPrompt) {
-			await runAIScaffolding(
-				projectPath,
-				appName,
-				description,
-				buildPrompt,
-				selectedProvider,
-			)
-		}
-	}
-
-	// 4. SSL Setup
+	// 3. SSL Setup
 	console.log("")
 	console.log("─".repeat(50))
 	console.log("🔒 SSL Configuration")
@@ -516,6 +434,87 @@ async function runInteractiveConfig(projectPath, initialName, isLocal = false) {
 			updateEnvWithCertPaths(projectPath, certs)
 			sslSetup = true
 		}
+	}
+
+	// 4. Build with an AI agent (2nd-to-last step)
+	//
+	// Launches the selected CLI in interactive mode with an initial prompt
+	// that points the agent at AGENTS.md / GEMINI.md in the scaffolded project
+	// and instructs it to greet the user, ask clarifying questions until it
+	// has enough detail, then plan and implement. When an agent is launched
+	// we skip the "Start Development" step — the agent session replaces it.
+	console.log("")
+	console.log("─".repeat(50))
+	console.log("🤖 Build with an AI Agent")
+	console.log("─".repeat(50))
+	console.log(
+		"   Launch an AI coding agent that already knows the GxP toolkit,",
+	)
+	console.log(
+		"   MCP tools, and workflow. The agent will ask you what you want",
+	)
+	console.log("   to build and then plan and implement it with you.")
+	console.log("")
+
+	// Check available AI providers
+	const providers = await getAvailableProviders()
+	const interactiveProviders = providers.filter(
+		(p) => p.available && (p.id !== "gemini" || p.method === "cli"),
+	)
+
+	let aiChoice = "skip"
+	let selectedProvider = null
+
+	if (interactiveProviders.length === 0) {
+		console.log("   ⚠️  No AI CLIs detected.")
+		console.log(
+			"   To use an AI agent here, install one of the following and retry:",
+		)
+		console.log(
+			"   • Claude CLI: npm install -g @anthropic-ai/claude-code && claude login",
+		)
+		console.log("   • Codex CLI: npm install -g @openai/codex && codex auth")
+		console.log("   • Gemini CLI: npm install -g @google/gemini-cli && gemini")
+		console.log("")
+		aiChoice = "skip"
+	} else {
+		// Build provider options
+		const providerOptions = [
+			{
+				label: "Skip — I'll build it myself",
+				value: "skip",
+				description: "You can launch an AI agent later from the project root",
+			},
+		]
+
+		for (const provider of interactiveProviders) {
+			providerOptions.push({
+				label: provider.name,
+				value: provider.id,
+				description: "logged in",
+			})
+		}
+
+		aiChoice = await arrowSelectPrompt(
+			"Launch an AI agent to build your plugin?",
+			providerOptions,
+		)
+		if (aiChoice !== "skip") {
+			selectedProvider = aiChoice
+		}
+	}
+
+	// If an AI agent was chosen, it becomes the last step — skip starting the
+	// dev server. The agent is responsible for driving the rest of the session.
+	if (selectedProvider) {
+		await launchInteractiveAISession(
+			projectPath,
+			appName,
+			description,
+			selectedProvider,
+		)
+		printFinalInstructions(projectPath, appName, sslSetup, isLocal)
+		return null
 	}
 
 	// 5. Start App

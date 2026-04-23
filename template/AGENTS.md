@@ -49,10 +49,30 @@ Build against the plan:
 - Declare every permission identifier used by `callApi` in `app-manifest.json` → `dependencies` + `permissions`. Use `"project"` for project-wide / top-level operations and pass any required IDs in `data`.
 - Wire every piece of user-facing text with `gxp-string` and every image with `gxp-src` so the admin form controls them.
 - Keep components under `src/`. The runtime container (layouts, routing, dev tools) is not yours to edit.
-- Add entries to `app-manifest.json` for every string/asset/setting/dependency the plan calls for.
-- Build the admin form in `configuration.json` using the MCP config tools (`config_add_card`, `config_add_field`, `config_get_field_schema`, `config_list_field_types`, `config_list_card_types`). Every mutation is linter-guarded — invalid writes are refused.
 
-### 5. Test with real broadcasts
+### 5. Sync the manifest and build the admin form
+
+As soon as you've added a new `store.callApi`, `store.listen`, `gxp-string`, or `gxp-src` — and before you move on to testing — close the loop on the admin-editable surface:
+
+1. **Extract the configurable surface into `app-manifest.json`.** Run the MCP tool `config_extract_strings` with `writeTo: "app-manifest.json"`. It scans `src/` for every `gxp-string`, `gxp-src`, `store.getString/getSetting/getAsset/getState`, and `store.callApi` identifier and merges the new keys into the manifest (linter-guarded; falls back to `gxdev extract-config` on the CLI if you need it). Do this every time you touch the plugin's public surface so the manifest never drifts from the code.
+
+2. **Build `configuration.json` from what's in the manifest.** For every entry in the manifest, add a matching field in the admin form using the MCP `config_*` tools — they validate each write against the schema. Default mappings:
+
+   | Manifest entry                                   | `configuration.json` field type                                                                  |
+   | ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+   | `strings.default.*`                              | `text` (or `textarea` for long copy)                                                             |
+   | `assets.*` (driven by `gxp-src`)                 | `selectAsset`                                                                                    |
+   | `dependencies[]` — each identifier               | `asyncSelect` wired to the matching resource list endpoint (so the admin binds to a real record) |
+   | `settings.*` that represent colors               | `colorPicker`                                                                                    |
+   | `settings.*` that represent thresholds / numbers | `number`                                                                                         |
+   | `settings.*` that represent feature toggles      | `boolean`                                                                                        |
+   | Anything else discussed with the client          | Pick with `config_list_field_types` / `config_get_field_schema`                                  |
+
+   Group related fields into `fields_list` cards (`config_add_card` + `config_add_field`). If you're unsure what field types exist, call `config_list_field_types` / `config_list_card_types` first. If a mutation is refused, read the validation error and fix the input — do not set `force: true`.
+
+3. **Lint.** Run `gxdev lint --all` and fix every error before moving on.
+
+### 6. Test with real broadcasts
 
 Before declaring done, exercise the plugin against real event shapes:
 
@@ -61,9 +81,9 @@ Before declaring done, exercise the plugin against real event shapes:
 - Hit endpoints against the local mock API via the `test_api_route` MCP tool.
 - Scaffold unit tests with `test_scaffold_component_test` for any non-trivial component.
 
-### 6. Lint
+### 7. Final lint
 
-Always finish by running the linter. `configuration.json` and `app-manifest.json` are validated against schemas in `bin/lib/lint/schemas/`.
+Step 5 already runs `gxdev lint --all`, but run it one more time after Step 6's test pass — test changes (adding mock payloads, tweaking identifiers) can re-introduce schema drift.
 
 ```bash
 gxdev lint           # validate default targets
@@ -102,11 +122,11 @@ const store = useGxpStore()
 await store.callApi(operationId, identifier, data)
 ```
 
-| Argument      | Purpose                                                                                                                            |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `operationId` | The OpenAPI operationId for the call. Look it up with `api_list_operation_ids` or `search_api_endpoints` (MCP). Never invent one.  |
+| Argument      | Purpose                                                                                                                                                                                                                           |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `operationId` | The OpenAPI operationId for the call. Look it up with `api_list_operation_ids` or `search_api_endpoints` (MCP). Never invent one.                                                                                                 |
 | `identifier`  | A **permission identifier** declared in `app-manifest.json` → `dependencies` / `permissions`. Determines which resource's permissions the call runs under, and supplies the parent object ID that gets substituted into the path. |
-| `data`        | Additional params — body fields, query params, or path params not covered by the identifier. Pass `"pluginVars.someKey"` as a value to pull from settings at call time. |
+| `data`        | Additional params — body fields, query params, or path params not covered by the identifier. Pass `"pluginVars.someKey"` as a value to pull from settings at call time.                                                           |
 
 NEVER use axios/fetch directly. `apiGet`/`apiPost`/`apiPut`/`apiPatch`/`apiDelete` still exist as low-level escape hatches, but `callApi` is the default — only it participates in the permission model.
 
@@ -124,8 +144,14 @@ Example — a plugin that reads posts from one social stream and creates posts o
 		{ "identifier": "social_stream_two", "model": "SocialStream" }
 	],
 	"permissions": [
-		{ "identifier": "social_stream_one", "description": "Source stream — read posts" },
-		{ "identifier": "social_stream_two", "description": "Destination stream — create posts" }
+		{
+			"identifier": "social_stream_one",
+			"description": "Source stream — read posts"
+		},
+		{
+			"identifier": "social_stream_two",
+			"description": "Destination stream — create posts"
+		}
 	]
 }
 ```
@@ -261,15 +287,37 @@ Every piece of admin-editable content goes through a directive — that's what m
 
 ## Admin Configuration Form (`configuration.json`)
 
-`configuration.json` defines the form admins use to customize the plugin after it ships. Every string, asset, color, and setting your plugin exposes must have a matching field here.
+`configuration.json` defines the form admins use to customize the plugin after it ships. Every string, asset, dependency, color, and setting your plugin exposes must have a matching field here.
 
-Build it with the MCP `config_*` tools — they validate against the schema before writing:
+The full workflow — run it whenever you've added/changed a `callApi`, `listen`, `gxp-string`, or `gxp-src`:
 
-- `config_list_card_types`, `config_list_field_types` — see what's available.
-- `config_get_field_schema` — get the shape of a specific field type.
-- `config_add_card`, `config_add_field`, `config_move_field`, `config_remove_field`.
-- `config_extract_strings` — pull hardcoded strings from components into the manifest.
+1. **Extract the configurable surface into `app-manifest.json`** — `config_extract_strings` with `writeTo: "app-manifest.json"` (same logic as `gxdev extract-config` on the CLI). It scans `src/` for directives and store usage and merges the new keys into the manifest, linter-guarded.
+2. **Add a form field in `configuration.json` for every manifest entry**, using the mapping below.
+3. **Validate** — `config_validate` on demand, or `gxdev lint --all` at the end.
+
+### Default field mapping
+
+| Manifest source                                  | `configuration.json` field                                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `strings.default.<key>`                          | `text` (short) or `textarea` (long)                                                         |
+| `assets.<key>` (driven by `gxp-src`)             | `selectAsset`                                                                               |
+| `dependencies[]` — each declared identifier      | `asyncSelect` bound to the matching resource list endpoint so the admin picks a real record |
+| `settings.<key>` representing a color            | `colorPicker`                                                                               |
+| `settings.<key>` representing a threshold/number | `number`                                                                                    |
+| `settings.<key>` representing a feature toggle   | `boolean`                                                                                   |
+| Any other setting discussed with the client      | Pick via `config_list_field_types` / `config_get_field_schema`                              |
+
+Group related fields into `fields_list` cards (`config_add_card` then `config_add_field`). Use the `name` of each field to exactly match the manifest key it controls — that's the contract the directives and store getters rely on.
+
+### Relevant tools
+
+- `config_list_card_types`, `config_list_field_types` — enumerate what's available.
+- `config_get_field_schema` — get the shape (required props, conditional rules) of a specific field type.
+- `config_add_card`, `config_add_field`, `config_move_field`, `config_remove_field`, `config_move_card`, `config_remove_card` — mutate the form. Linter-guarded; invalid writes are refused.
+- `config_extract_strings` — the manifest-sync entry point described above.
 - `config_validate` — validate a file on demand.
+
+If a mutation is refused, read the validation error and fix the input — do not reach for `force: true`.
 
 ## Component Kit
 

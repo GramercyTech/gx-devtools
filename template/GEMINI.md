@@ -39,23 +39,35 @@ Confirm a plan before implementing. It must include:
 - Every permission identifier used by `callApi` must be declared in `app-manifest.json` → `dependencies` + `permissions`. Use `"project"` for project-wide / top-level operations.
 - Wire every user-facing text with `gxp-string` and every image with `gxp-src`.
 - Only edit files under `src/`; the runtime container is off-limits.
-- Add manifest entries for every string/asset/setting/dependency.
-- Build `configuration.json` using the MCP `config_*` tools (they validate before writing).
 
-### 5. Test broadcasts
+### 5. Sync the manifest and build the admin form
+
+Whenever you add or change a `store.callApi`, `store.listen`, `gxp-string`, or `gxp-src`, close the loop on the admin-editable surface before you move on:
+
+1. **Extract into `app-manifest.json`** — call the MCP tool `config_extract_strings` with `writeTo: "app-manifest.json"` (same logic as `gxdev extract-config` on the CLI). It scans `src/` for directives and store usage and merges new keys into the manifest, linter-guarded.
+2. **Add a form field in `configuration.json` for every manifest entry**, using the MCP `config_*` tools. Default mapping:
+   - `strings.default.*` → `text` (or `textarea` for long copy)
+   - `assets.*` (driven by `gxp-src`) → `selectAsset`
+   - Each declared dependency identifier → `asyncSelect` bound to the matching resource list endpoint so the admin picks a real record
+   - Color settings → `colorPicker`; numeric thresholds → `number`; feature toggles → `boolean`
+   - Anything else → enumerate with `config_list_field_types` / `config_get_field_schema`
+     Each field's `name` must exactly match the manifest key it controls.
+3. **Lint** — `gxdev lint --all`. Fix every error before moving on.
+
+### 6. Test broadcasts
 
 - `gxdev socket list` — see available events.
 - `gxdev socket send --event <EventName>` — fire a test broadcast.
 - `test_api_route` MCP tool — hit endpoints against the local mock.
 - `test_scaffold_component_test` MCP tool — generate Vitest files.
 
-### 6. Lint
+### 7. Final lint
 
 ```bash
 gxdev lint --all
 ```
 
-Fix every error before declaring done.
+Run again after testing and fix every error before declaring done.
 
 ## Architecture
 
@@ -95,7 +107,10 @@ Declare identifiers by the **role** a resource plays, not its name. Example — 
 	],
 	"permissions": [
 		{ "identifier": "social_stream_one", "description": "Source — read posts" },
-		{ "identifier": "social_stream_two", "description": "Destination — create posts" }
+		{
+			"identifier": "social_stream_two",
+			"description": "Destination — create posts"
+		}
 	]
 }
 ```
@@ -152,7 +167,9 @@ Two streams, both through the store:
 ### `primary` channel
 
 ```javascript
-store.listen("primary", "custom_event", (data) => { /* ... */ })
+store.listen("primary", "custom_event", (data) => {
+	/* ... */
+})
 store.broadcast("primary", "custom_event", { hello: "world" })
 ```
 
@@ -198,7 +215,19 @@ Every admin-editable piece of content goes through a directive — that's the br
 
 ## Admin Configuration Form
 
-`configuration.json` defines the form admins use to customize the plugin. Use the MCP `config_*` tools to build it — `config_list_card_types`, `config_list_field_types`, `config_get_field_schema`, `config_add_card`, `config_add_field`, `config_validate`, `config_extract_strings`. Mutations are linter-guarded.
+`configuration.json` defines the form admins use to customize the plugin. The workflow — run it whenever you touch a `callApi`, `listen`, `gxp-string`, or `gxp-src`:
+
+1. **Sync the manifest** — `config_extract_strings` with `writeTo: "app-manifest.json"` (same as `gxdev extract-config`). Scans `src/` and merges directives, store getters, and dependency identifiers into the manifest, linter-guarded.
+2. **Add a form field for every manifest entry** via the MCP `config_*` tools. Default mapping:
+   - `strings.default.*` → `text` / `textarea`
+   - `assets.*` → `selectAsset`
+   - Each `dependencies[]` identifier → `asyncSelect` bound to the resource's list endpoint
+   - Colors → `colorPicker`; numbers/thresholds → `number`; toggles → `boolean`
+   - Anything else → `config_list_field_types` / `config_get_field_schema`
+     Field `name` must match the manifest key it controls.
+3. **Validate** — `config_validate`, then `gxdev lint --all`.
+
+Tools: `config_list_card_types`, `config_list_field_types`, `config_get_field_schema`, `config_add_card`, `config_add_field`, `config_move_field`, `config_remove_field`, `config_validate`, `config_extract_strings`. Every mutation is linter-guarded against schemas in `bin/lib/lint/schemas/`.
 
 ## Component Kit
 

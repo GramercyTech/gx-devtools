@@ -11,7 +11,7 @@ You are an expert GxP plugin developer. You help build Vue 3 components for the 
 
 ## Workflow — Follow This Every Time
 
-Every plugin feature goes through six phases. Do not skip phases. Do not implement before the plan is confirmed.
+Every plugin feature goes through seven phases. Do not skip phases. Do not implement before the plan is confirmed.
 
 ### Phase 1 — Understand the ask
 
@@ -74,11 +74,30 @@ Build against the plan:
 - Declare every permission identifier used by `callApi` in `app-manifest.json` → `dependencies` + `permissions`. Use the reserved `"project"` identifier for project-wide / top-level creation operations and pass any required IDs in `data`.
 - Add `gxp-string` / `gxp-src` on every piece of admin-editable content so the configuration form actually controls something.
 - Keep code under `src/`. The runtime container is off-limits.
-- Update `app-manifest.json` with every key the plan listed.
-- Build `configuration.json` via the MCP config mutation tools (`config_add_card`, `config_add_field`, `config_move_field`, etc.) — they validate against the schema before writing, so invalid structures are refused.
-- Extract any still-hardcoded strings with `config_extract_strings`.
 
-### Phase 5 — Test with real broadcasts
+### Phase 5 — Sync the manifest and build the admin form
+
+Run this loop every time you've added or changed a `callApi`, `store.listen`, `gxp-string`, or `gxp-src` — and always before Phase 6:
+
+1. **Sync the configurable surface into `app-manifest.json`.** Call the MCP tool `config_extract_strings` with `writeTo: "app-manifest.json"`. It scans `src/` for every directive and store usage and merges the new keys into the manifest. It's the same logic the CLI runs as `gxdev extract-config`, and the write is linter-guarded so it can't produce an invalid manifest.
+
+2. **Add a `configuration.json` field for every manifest entry.** Use the MCP `config_*` mutation tools — each write validates against the schema before hitting disk. Default mapping:
+
+   | Manifest entry                              | `configuration.json` field                                                                   |
+   | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
+   | `strings.default.<key>`                     | `text` (or `textarea` for long copy)                                                         |
+   | `assets.<key>` (driven by `gxp-src`)        | `selectAsset`                                                                                |
+   | `dependencies[]` — each declared identifier | `asyncSelect` bound to the matching resource list endpoint, so the admin picks a real record |
+   | `settings.<key>` color                      | `colorPicker`                                                                                |
+   | `settings.<key>` threshold / number         | `number`                                                                                     |
+   | `settings.<key>` feature toggle             | `boolean`                                                                                    |
+   | Anything else discussed with the client     | Look it up with `config_list_field_types` / `config_get_field_schema`                        |
+
+   Each field's `name` must exactly match the manifest key it controls — that's the contract the directives and `store.get*` getters rely on. Group related fields into `fields_list` cards with `config_add_card` + `config_add_field`.
+
+3. **Run `gxdev lint --all`** and fix every error before moving on. Do not `force: true` past a lint failure.
+
+### Phase 6 — Test with real broadcasts
 
 Before declaring done, cover every `callApi` and every `store.listen`:
 
@@ -89,9 +108,9 @@ Before declaring done, cover every `callApi` and every `store.listen`:
 - `test_scaffold_component_test` (MCP) — generate a Vitest + Vue Test Utils file for any non-trivial component.
 - Manual: Ctrl+Shift+D for in-browser dev tools; `window.gxDevTools.store()` to inspect store state.
 
-### Phase 6 — Lint
+### Phase 7 — Final lint
 
-Always finish with the linter. `configuration.json` and `app-manifest.json` are validated against JSON schemas in `bin/lib/lint/schemas/`. Any agent mutation through the MCP `config_*` tools already validates — but the final `gxdev lint` run catches drift.
+Phase 5 already ran the linter once. Run it again after Phase 6 — test changes (mock payloads, tweaked identifiers, extra socket events) can re-introduce schema drift.
 
 ```bash
 gxdev lint --all
@@ -213,8 +232,14 @@ A plugin that pulls posts + images from one social stream and reposts them to an
 		{ "identifier": "social_stream_two", "model": "SocialStream" }
 	],
 	"permissions": [
-		{ "identifier": "social_stream_one", "description": "Source stream — read posts" },
-		{ "identifier": "social_stream_two", "description": "Destination stream — create posts" }
+		{
+			"identifier": "social_stream_one",
+			"description": "Source stream — read posts"
+		},
+		{
+			"identifier": "social_stream_two",
+			"description": "Destination stream — create posts"
+		}
 	]
 }
 ```
@@ -283,11 +308,11 @@ Rule of thumb:
 
 When planning a feature (Phase 3), list every dependency + permission identifier the plugin needs, with the operations each one covers. Example:
 
-| Identifier            | Scope                    | Operations used                 | Permissions expected |
-| --------------------- | ------------------------ | ------------------------------- | -------------------- |
-| `social_stream_one`   | dependency (SocialStream)| `posts.index`, `posts.show`     | read                 |
-| `social_stream_two`   | dependency (SocialStream)| `posts.store`                   | create               |
-| `project`             | project-wide             | `social_streams.store`          | create on SocialStream |
+| Identifier          | Scope                     | Operations used             | Permissions expected   |
+| ------------------- | ------------------------- | --------------------------- | ---------------------- |
+| `social_stream_one` | dependency (SocialStream) | `posts.index`, `posts.show` | read                   |
+| `social_stream_two` | dependency (SocialStream) | `posts.store`               | create                 |
+| `project`           | project-wide              | `social_streams.store`      | create on SocialStream |
 
 Use `api_generate_dependency` (MCP) to produce the canonical JSON for each dependency entry.
 
@@ -367,12 +392,12 @@ Whenever you add a `callApi` call, immediately check whether the platform fires 
 
 MCP tools for this:
 
-| Tool                             | Purpose                                                                   |
-| -------------------------------- | ------------------------------------------------------------------------- |
-| `api_find_events_for_operation`  | Given an operationId, return every AsyncAPI message whose `x-triggered-by` matches. This is the primary lookup after wiring a `callApi`. |
-| `api_list_events`                | List every event in `components.messages`; optional `triggeredBy` filter. |
-| `search_websocket_events`        | Keyword search across event names + channels.                             |
-| `get_asyncapi_spec`              | Full AsyncAPI document when you need the raw payload schema.              |
+| Tool                            | Purpose                                                                                                                                  |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `api_find_events_for_operation` | Given an operationId, return every AsyncAPI message whose `x-triggered-by` matches. This is the primary lookup after wiring a `callApi`. |
+| `api_list_events`               | List every event in `components.messages`; optional `triggeredBy` filter.                                                                |
+| `search_websocket_events`       | Keyword search across event names + channels.                                                                                            |
+| `get_asyncapi_spec`             | Full AsyncAPI document when you need the raw payload schema.                                                                             |
 
 **Worked example — social streams:**
 
@@ -392,7 +417,7 @@ store.listen("SocialStreamPostCreated", "social_stream_two", (newPost) => {
 })
 ```
 
-That subscription covers posts created by *any* user, not just this one — which is usually what you want. No refetching, no drift.
+That subscription covers posts created by _any_ user, not just this one — which is usually what you want. No refetching, no drift.
 
 ### Testing broadcasts locally
 
@@ -456,22 +481,44 @@ Every admin-editable piece of content goes through a directive. The directive ke
 
 ## Admin Configuration Form (`configuration.json`)
 
-This is what admins see to customize the plugin after ship. Every `gxp-string`, `gxp-src`, or setting the plugin exposes belongs here as a field so it can be edited without a code change.
+This is what admins see to customize the plugin after ship. Every `gxp-string`, `gxp-src`, declared dependency, or setting the plugin exposes belongs here as a field so it can be edited without a code change.
 
-Always build it via the MCP `config_*` tools — every mutation validates against the schema before saving, so you cannot write an invalid config by accident.
+### The close-out workflow
 
-| Tool                                  | Purpose                                             |
-| ------------------------------------- | --------------------------------------------------- |
-| `config_list_card_types`              | See available card types.                           |
-| `config_list_field_types`             | See available field types.                          |
-| `config_get_field_schema`             | Get the schema for a specific field type.           |
-| `config_list_cards`, `config_list_fields` | Inspect the current form.                       |
-| `config_add_card`, `config_move_card`, `config_remove_card` | Mutate cards.                 |
-| `config_add_field`, `config_move_field`, `config_remove_field` | Mutate fields.             |
-| `config_extract_strings`              | Pull hardcoded strings out of components into the manifest + form. |
-| `config_validate`                     | Validate a file on demand.                          |
+Run every time you've added or changed a `callApi`, `store.listen`, `gxp-string`, or `gxp-src`:
 
-If a mutation is refused, read the validation error and fix the input — do not reach for `force: true`.
+1. **Sync the manifest** — `config_extract_strings` with `writeTo: "app-manifest.json"`. Same logic as `gxdev extract-config` on the CLI: scans `src/`, merges new directives/store usages/dependency identifiers into the manifest, and writes linter-guarded.
+2. **Add a matching field in `configuration.json`** for every manifest entry using the mapping below.
+3. **Validate** — `config_validate` on demand; `gxdev lint --all` before declaring done.
+
+### Default field mapping
+
+| Manifest source                             | `configuration.json` field                                                                   |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `strings.default.<key>`                     | `text` (or `textarea` for long copy)                                                         |
+| `assets.<key>` (driven by `gxp-src`)        | `selectAsset`                                                                                |
+| `dependencies[]` — each declared identifier | `asyncSelect` bound to the matching resource list endpoint, so the admin picks a real record |
+| `settings.<key>` color                      | `colorPicker`                                                                                |
+| `settings.<key>` threshold / number         | `number`                                                                                     |
+| `settings.<key>` feature toggle             | `boolean`                                                                                    |
+| Anything else discussed with the client     | Look it up with `config_list_field_types` / `config_get_field_schema`                        |
+
+Each field's `name` must exactly match the manifest key it controls — that's the contract the directives and store getters rely on. Group related fields into `fields_list` cards (`config_add_card` + `config_add_field`).
+
+### Tools
+
+| Tool                                                           | Purpose                                           |
+| -------------------------------------------------------------- | ------------------------------------------------- |
+| `config_list_card_types`                                       | See available card types.                         |
+| `config_list_field_types`                                      | See available field types.                        |
+| `config_get_field_schema`                                      | Get the schema for a specific field type.         |
+| `config_list_cards`, `config_list_fields`                      | Inspect the current form.                         |
+| `config_add_card`, `config_move_card`, `config_remove_card`    | Mutate cards.                                     |
+| `config_add_field`, `config_move_field`, `config_remove_field` | Mutate fields.                                    |
+| `config_extract_strings`                                       | Sync the manifest from `src/` (the Step 1 above). |
+| `config_validate`                                              | Validate a file on demand.                        |
+
+Every mutation is linter-guarded against `bin/lib/lint/schemas/`. If a write is refused, read the validation error and fix the input — do not reach for `force: true`.
 
 ## Component Template
 
@@ -555,7 +602,7 @@ The plugin's runtime config. Every key your components reference via `gxp-string
 
 ## Best Practices
 
-1. **Work the six-phase workflow** — understand, discover via MCP, plan (with the admin form), implement, test broadcasts, lint.
+1. **Work the seven-phase workflow** — understand, discover via MCP, plan (with the admin form), implement, sync the manifest + build the form + lint, test broadcasts, final lint.
 2. **Always use the store** — API, sockets, strings, assets, settings, state. Never `axios`/`fetch` directly.
 3. **Use `gxp-string` / `gxp-src` for all admin-editable content** — the configuration form is only as useful as the directives you wire up.
 4. **Ground everything in MCP discovery** — don't invent operationIds or event names.
