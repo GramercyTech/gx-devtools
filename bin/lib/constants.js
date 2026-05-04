@@ -22,6 +22,7 @@ const REQUIRED_DEV_DEPENDENCIES = {
 	prettier: "^3.8.3",
 	vitest: "^4.1.5",
 	"@vue/test-utils": "^2.4.6",
+	"happy-dom": "^15.11.0",
 }
 
 // Default scripts for package.json
@@ -30,7 +31,7 @@ const DEFAULT_SCRIPTS = {
 	"dev-app": "gxdev dev",
 	"dev-http": "gxdev dev --no-https",
 	build: "gxdev build",
-	test: "vitest run",
+	test: "vitest run --passWithNoTests",
 	"test:watch": "vitest",
 	lint: "gxdev lint --all",
 	"lint:js": "eslint .",

@@ -130,6 +130,11 @@ function copyBundleFiles(projectPath, paths, overwrite = false) {
 			desc: "vite.extend.js (customize the Vite runtime config)",
 		},
 		{
+			src: "vitest.config.js",
+			dest: "vitest.config.js",
+			desc: "vitest.config.js (Vitest config for `npm test`)",
+		},
+		{
 			src: "eslint.config.js",
 			dest: "eslint.config.js",
 			desc: "eslint.config.js (flat config for JS/Vue)",

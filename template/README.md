@@ -1,6 +1,6 @@
 # GxP Plugin Project
 
-This project was scaffolded by `@gxp-dev/tools` and includes the `@gramercytech/gx-componentkit` component library for rapid kiosk/plugin development.
+This project was scaffolded by `@gxp-dev/tools` and includes the `@gxp-dev/uikit` component library for rapid kiosk/plugin development.
 
 ## Quick Start
 
@@ -252,11 +252,7 @@ Full reference: [docs.gxp.dev/gx-devtools/app-manifest](https://docs.gxp.dev/gx-
 
 ## GX ComponentKit
 
-This project includes `@gramercytech/gx-componentkit`:
-
-- **Pages** — `GxPageStart`, `GxPageInstructions`, `GxPageCamera`, `GxPageResults`, `GxPageShare`, `GxPageFinal`, `GxPageLoading`
-- **UI** — `GxModal`, `GxCountdown`, `GxVideoPlayer`, `GxThemeWrapper`
-- **Composables** — `useMedia`, `useAnimations`, `useScanning`, `useErrors`
+This project includes `@gxp-dev/uikit`
 
 Theme CSS variables are auto-injected:
 

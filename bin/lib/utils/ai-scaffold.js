@@ -20,7 +20,7 @@ const SCAFFOLD_SYSTEM_PROMPT = `You are an expert GxP plugin developer assistant
 GxP plugins are Vue 3 Single File Components (SFCs) that run on kiosk displays. They use:
 - Vue 3 Composition API with <script setup>
 - Pinia for state management via the GxP Store
-- GxP Component Kit (@gramercytech/gx-componentkit) for UI components
+- GxP Component Kit (@gxp-dev/uikit) for UI components
 - gxp-string and gxp-src directives for dynamic content
 
 ## Key Components Available

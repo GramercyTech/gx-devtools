@@ -46,10 +46,8 @@ describe("constants", () => {
 			expect(REQUIRED_DEPENDENCIES).toHaveProperty("socket.io-client")
 		})
 
-		it("should include gx-componentkit", () => {
-			expect(REQUIRED_DEPENDENCIES).toHaveProperty(
-				"@gramercytech/gx-componentkit",
-			)
+		it("should include gxp-dev/uikit", () => {
+			expect(REQUIRED_DEPENDENCIES).toHaveProperty("@gxp-dev/uikit")
 		})
 
 		it("should have version strings for all dependencies", () => {

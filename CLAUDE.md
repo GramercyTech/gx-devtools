@@ -408,7 +408,7 @@ Key environment variables (set in `.env`):
 - Vite for building
 - Socket.IO for real-time communication
 - Ink (React-based TUI framework) for CLI interface
-- `@gramercytech/gx-componentkit` - Component library for kiosk UI
+- `@gxp-dev/uikit` - Component library for kiosk UI
 
 ## MCP Server for AI Assistants
 

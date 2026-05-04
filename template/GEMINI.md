@@ -266,8 +266,7 @@ Tools: `config_list_card_types`, `config_list_field_types`, `config_get_field_sc
 
 ## Component Kit
 
-Use `@gramercytech/gx-componentkit` for UI:
-GxButton, GxCard, GxInput, GxModal, GxSpinner, GxAlert, GxBadge, GxProgress, GxTabs
+Use `@gxp-dev/uikit` for UI
 
 ## API Specs
 

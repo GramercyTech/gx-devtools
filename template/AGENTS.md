@@ -426,20 +426,6 @@ Strings, assets, dependencies, colors → `additionalTabs`. Quiz/survey question
 
 Finish with `gxdev lint --all`. The linter validates both roots against the same card/field schema, so malformed questions fail in the same way malformed admin fields do.
 
-## Component Kit
-
-Import UI components from `@gramercytech/gx-componentkit`:
-
-```javascript
-import {
-	GxButton,
-	GxCard,
-	GxInput,
-	GxModal,
-	GxSpinner,
-} from "@gramercytech/gx-componentkit"
-```
-
 Available: GxButton, GxCard, GxInput, GxModal, GxSpinner, GxAlert, GxBadge, GxAvatar, GxProgress, GxTabs, GxAccordion
 
 ## Configuration Files
