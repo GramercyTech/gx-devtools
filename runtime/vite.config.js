@@ -481,6 +481,7 @@ export default defineConfig(async (ctx) => {
 				],
 				name: libName,
 				fileName: (format) => `plugin.${format}.js`,
+				cssFileName: "style.css",
 				formats: ["es"],
 			},
 			rollupOptions: {
