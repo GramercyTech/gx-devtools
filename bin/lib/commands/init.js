@@ -77,6 +77,11 @@ function copyTemplateFiles(projectPath, paths, overwrite = false) {
 			dest: "src/DemoPage.vue",
 			desc: "DemoPage.vue (Example component)",
 		},
+		{
+			src: "src/DemoExperience.vue",
+			dest: "src/DemoExperience.vue",
+			desc: "DemoExperience.vue (Example experience flow)",
+		},
 	]
 
 	// Copy template files
