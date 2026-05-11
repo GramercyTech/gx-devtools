@@ -63,6 +63,7 @@
 		"adm-zip": "^0.5.17",
 		"ajv": "^8.18.0",
 		"ajv-formats": "^3.0.1",
+		"axios": "^1.16.0",
 		"chrome-launcher": "^1.2.1",
 		"concurrently": "^9.2.1",
 		"cors": "^2.8.6",
