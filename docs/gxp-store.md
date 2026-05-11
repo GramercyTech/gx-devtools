@@ -21,16 +21,17 @@ const store = useGxpStore()
 
 The store contains several reactive sections populated from your `app-manifest.json` and the platform:
 
-| Section           | Description                   | Source                        |
-| ----------------- | ----------------------------- | ----------------------------- |
-| `pluginVars`      | Plugin settings/configuration | `settings` in manifest        |
-| `stringsList`     | Translatable strings          | `strings.default` in manifest |
-| `assetList`       | Asset URLs                    | `assets` in manifest          |
-| `triggerState`    | Dynamic runtime state         | `triggerState` in manifest    |
-| `dependencyList`  | External dependencies         | Platform-injected             |
-| `permissionFlags` | Granted permissions           | Platform-injected             |
-| `theme`           | Platform theme colors         | Platform-injected             |
-| `router`          | Navigation methods            | Platform-injected             |
+| Section           | Description                       | Source                        |
+| ----------------- | --------------------------------- | ----------------------------- |
+| `pluginVars`      | Plugin settings/configuration     | `settings` in manifest        |
+| `stringsList`     | Translatable strings              | `strings.default` in manifest |
+| `assetList`       | Asset URLs                        | `assets` in manifest          |
+| `triggerState`    | Dynamic runtime state             | `triggerState` in manifest    |
+| `dependencyList`  | External dependencies             | Platform-injected             |
+| `permissionFlags` | Granted permissions               | Platform-injected             |
+| `user`            | Logged-in user object (or `null`) | Platform-injected             |
+| `theme`           | Platform theme colors             | Platform-injected             |
+| `router`          | Navigation methods                | Platform-injected             |
 
 ## Getter Methods
 
@@ -87,6 +88,50 @@ if (store.hasPermission("bluetooth")) {
 }
 ```
 
+### `getUser()` / `getUserName(fallback)` / `getUserEmail(fallback)` / `isAuthenticated()`
+
+Access the currently logged-in user. In production the platform injects the
+real authenticated user; **when no user is logged in, `store.user` and
+`store.getUser()` both return `null`**.
+
+```javascript
+const user = store.getUser()
+if (user) {
+	console.log("Logged in as", user.id, user.email)
+}
+
+// Convenience helpers — return `fallback` (default `null`) when logged out
+const name = store.getUserName("Guest") // "Jane Developer"
+const email = store.getUserEmail() // "jane.developer@example.com"
+
+if (store.isAuthenticated()) {
+	// Gate user-only features behind this check
+}
+```
+
+The user object has this shape:
+
+```javascript
+{
+  id: string,
+  first_name: string,
+  last_name: string,
+  name: string,           // Display name
+  email: string,
+  avatar: string | null,  // URL
+  roles: string[],        // e.g. ["attendee", "admin"]
+}
+```
+
+:::tip Dev-only dummy user
+During `gxdev dev`, the store ships with a dummy authenticated user (`Jane
+Developer / jane.developer@example.com`) so plugins can develop against the
+happy path without a backend. Open Dev Tools (`Ctrl+Shift+D`) → **Logged-in
+User** to inspect it, or set `store.user = null` from the console to
+simulate the logged-out state. Production builds receive the real user from
+the platform.
+:::
+
 ## Update Methods
 
 ### `updateString(key, value)`
@@ -136,6 +181,10 @@ store.addDevAsset("temp_image", "screenshot.png")
 ## Dependency API Client
 
 The recommended way to make API calls is through the dependency system using `callApi()`. This method uses the operations defined in your `app-manifest.json` dependencies.
+
+:::info Platform owns admin configuration
+The GxP platform itself manages all admin configurations. **Forms, quizzes, surveys, and the quiz builder** are built by admins in the platform UI — your plugin doesn't define fields, questions, scoring rules, or leaderboards. At runtime, your plugin reads the admin-built artifacts (and their questions) through `callApi`. Relevant operation families: `forms.*` (`forms.show`, `forms.fields.index`, `forms.responses.store`, …), `quiz.*` (`quiz.state`, `quiz.questions`, `quiz.answer`, `quiz.leaderboard`, …), and `survey.*` (`survey.metrics`, `survey.live-results`, …). Discover them with the `gxp-api` MCP tools (`api_list_tags`, `search_api_endpoints`, `api_list_operation_ids`).
+:::
 
 ### `callApi(operationId, identifier, additionalData)`
 

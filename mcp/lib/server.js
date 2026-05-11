@@ -46,7 +46,8 @@ const SERVER_INFO = {
 }
 
 const SERVER_DESCRIPTION =
-	"GxP toolkit MCP server: API specs, data models, config/manifest editing, documentation search, and plugin test helpers for AI coding assistants. UIKit component/story tools are served by the uikit's own Storybook MCP (gxdev storybook)."
+	"GxP toolkit MCP server: API specs, data models, config/manifest editing, documentation search, and plugin test helpers for AI coding assistants. UIKit component/story tools are served by the uikit's own Storybook MCP (gxdev storybook).\n\n" +
+	"IMPORTANT context for plugin authors: GxP is a multi-tenant platform. The platform admin UI (not the plugin) owns all configuration of forms, quizzes, surveys, quiz builders, leaderboards, settings, strings, assets, and project metadata. Plugins do NOT define these — they consume them. At runtime the platform injects manifest data (settings, strings, assets, dependencies, permissions) and the logged-in user into the GxP store, and exposes platform-managed resources via the REST API documented in the OpenAPI spec. Plugins should access forms/quizzes/surveys and their admin-built questions exclusively through `store.callApi(operationId, identifier, data)` — for example `forms.show`, `forms.fields.index`, `forms.responses.store`, `quiz.state`, `quiz.questions`, `quiz.answer`, `quiz.leaderboard`, `survey.metrics`. Use the API spec tools (`search_api_endpoints`, `api_list_tags`, `get_endpoint_details`, `describe_data_models`) to discover the exact operationIds, parameters, and response schemas. The logged-in user is read via `store.user` / `store.getUser()` / `store.getUserName()` / `store.getUserEmail()` (null when logged out)."
 
 /* -------------------- API spec search helpers (in-file) ------------------- */
 
@@ -348,7 +349,10 @@ async function startServer() {
 
 	const server = new Server(
 		{ name: SERVER_INFO.name, version: SERVER_INFO.version },
-		{ capabilities: { tools: {} } },
+		{
+			capabilities: { tools: {} },
+			instructions: SERVER_DESCRIPTION,
+		},
 	)
 
 	server.setRequestHandler(ListToolsRequestSchema, async () => ({

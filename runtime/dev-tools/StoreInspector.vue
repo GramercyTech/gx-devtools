@@ -212,6 +212,31 @@
 			</div>
 		</div>
 
+		<div class="inspector-section">
+			<h3 class="section-title" @click="toggleSection('user')">
+				<span class="toggle-icon">{{ expandedSections.user ? "▼" : "▶" }}</span>
+				Logged-in User
+				<span class="item-count">{{ store.user ? "auth" : "null" }}</span>
+			</h3>
+			<div v-if="expandedSections.user" class="section-content">
+				<div v-if="!store.user" class="empty-state">
+					No user logged in (store.user === null)
+				</div>
+				<div v-else class="property-list">
+					<div
+						v-for="(value, key) in store.user"
+						:key="key"
+						class="property-item"
+					>
+						<span class="property-key">{{ key }}</span>
+						<span class="property-value" :class="getValueType(value)">
+							{{ formatValue(value) }}
+						</span>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<div class="inspector-actions">
 			<button
 				class="action-btn"
@@ -251,6 +276,7 @@ const expandedSections = reactive({
 	assetList: false,
 	triggerState: false,
 	dependencyList: false,
+	user: false,
 })
 
 const editingKey = ref(null)

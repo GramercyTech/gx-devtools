@@ -285,7 +285,7 @@ const CONFIG_TOOLS = [
 	{
 		name: "config_extract_strings",
 		description:
-			"Scan a plugin's src/ directory for GxP datastore usage and directives (gxp-string, gxp-src, store.getString/getSetting/getAsset/getState calls) and return the extracted keys. Optionally merge them into app-manifest.json (linter-guarded — invalid writes are refused unless force=true).",
+			"Scan a plugin's src/ directory for GxP datastore usage and directives (gxp-string, gxp-src, store.getString/getSetting/getAsset/getState calls) and return the extracted keys. Optionally merge them into app-manifest.json (linter-guarded — invalid writes are refused unless force=true). Note: store.getUser/getUserName/getUserEmail/isAuthenticated and store.user are also valid accessors but read the platform-injected logged-in user (null when logged out) and have no manifest entry.",
 		inputSchema: {
 			type: "object",
 			properties: {

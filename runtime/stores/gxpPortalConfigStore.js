@@ -94,6 +94,19 @@ function getApiConfig() {
 	}
 }
 
+// Dev-only fallback user. In production the platform injects the real
+// authenticated user (or null) — this dummy only ships when running under
+// the Vite dev server so plugins can develop against the happy-path shape.
+const DEV_DUMMY_USER = {
+	id: "dev-user-001",
+	first_name: "Jane",
+	last_name: "Developer",
+	name: "Jane Developer",
+	email: "jane.developer@example.com",
+	avatar: null,
+	roles: ["attendee"],
+}
+
 // Default values used when app-manifest.json doesn't exist or is missing keys
 const defaultData = {
 	pluginVars: {
@@ -108,6 +121,7 @@ const defaultData = {
 	triggerState: {},
 	auth: null,
 	userSession: null,
+	user: import.meta.env.DEV ? { ...DEV_DUMMY_USER } : null,
 	pluginData: {},
 	portalAssets: {},
 	portal: null,
@@ -126,6 +140,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	// User session data (injected by platform in production)
 	const auth = ref(defaultData.auth)
 	const userSession = ref(defaultData.userSession)
+	const user = ref(defaultData.user ? { ...defaultData.user } : null)
 	const pluginData = ref({ ...defaultData.pluginData })
 	const portalAssets = ref({ ...defaultData.portalAssets })
 	const portal = ref(defaultData.portal)
@@ -599,6 +614,46 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		return permissionFlags.value.includes(flag)
 	}
 
+	/**
+	 * Return the logged-in user object, or null when no user is authenticated.
+	 *
+	 * In production the platform injects the real user. In dev (Vite dev
+	 * server) a dummy user is provided so plugins can develop against the
+	 * happy path without a backend — clear it from the Dev Tools store
+	 * inspector to simulate the logged-out state.
+	 */
+	function getUser() {
+		return user.value ?? null
+	}
+
+	function isAuthenticated() {
+		return user.value !== null && user.value !== undefined
+	}
+
+	/**
+	 * Convenience helper — returns the user's display name (or `name`,
+	 * or `first_name + last_name` if `name` is absent). Returns `fallback`
+	 * when no user is logged in.
+	 */
+	function getUserName(fallback = null) {
+		const u = user.value
+		if (!u) {
+			return fallback
+		}
+		if (u.name) {
+			return u.name
+		}
+		const parts = [u.first_name, u.last_name].filter(Boolean)
+		return parts.length > 0 ? parts.join(" ") : fallback
+	}
+
+	/**
+	 * Returns the user's email, or `fallback` when no user is logged in.
+	 */
+	function getUserEmail(fallback = null) {
+		return user.value?.email ?? fallback
+	}
+
 	// Convenience method to add dev assets with proper URL
 	function addDevAsset(key, filename) {
 		const appPort =
@@ -640,9 +695,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			const callback = arg3
 			const primary = socketConnections.primary
 			if (!primary) {
-				console.warn(
-					"[GxP Store] listen(): primary socket not initialized",
-				)
+				console.warn("[GxP Store] listen(): primary socket not initialized")
 				return () => {}
 			}
 			if (
@@ -753,6 +806,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		permissionFlags,
 		auth,
 		userSession,
+		user,
 		pluginData,
 		portalAssets,
 		portal,
@@ -775,6 +829,10 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		getSetting,
 		getAsset,
 		getState,
+		getUser,
+		getUserName,
+		getUserEmail,
+		isAuthenticated,
 		hasPermission,
 		findDependency,
 

@@ -2,6 +2,16 @@
 
 This is a GxP plugin project for the GxP kiosk platform. Follow these guidelines when working with this codebase.
 
+## Platform vs. plugin — who owns what
+
+**The GxP platform itself owns all admin configuration.** Plugins are consumers, not configurators:
+
+- **Forms, quizzes, and surveys (including the quiz builder)** are built by admins in the platform UI. The plugin never defines fields, questions, scoring rules, leaderboards, or response schemas. At runtime the plugin reads the admin-built form/quiz/survey — and its questions — through `store.callApi`. Relevant operations: `forms.show`, `forms.fields.index`, `forms.responses.store/show/update`, `quiz.state`, `quiz.start`, `quiz.questions`, `quiz.answer`, `quiz.complete`, `quiz.leaderboard`, `survey.metrics`, `survey.live-results`. Discover the full set with `api_list_operation_ids` filtered by the `forms`/`quiz`/`survey` tags.
+- **Project settings, assets, strings, dependencies, permissions, and the logged-in user** are injected into the GxP store at boot — plugins read them, they don't create them.
+- The plugin's own `app-manifest.json` + `configuration.json` describe **what the admin must configure for THIS plugin instance** (text, images, colors, which form/quiz to bind to, etc.). Everything else lives upstream.
+
+When in doubt, search for the operation via `search_api_endpoints` / `api_list_tags` before inventing local state.
+
 ## Development Workflow
 
 Every task starts with understanding and ends with a validated, linted build. Do not skip steps.
@@ -221,6 +231,22 @@ store.updateSetting("key", "value")
 store.updateAsset("key", "url")
 store.updateState("key", "value")
 ```
+
+### Logged-in user
+
+```javascript
+const user = store.getUser() // Full user object, or `null` if logged out
+store.getUserName("Guest") // Display name with fallback
+store.getUserEmail() // Email or null
+store.isAuthenticated() // boolean
+// Or read the ref directly: store.user
+```
+
+`store.user` is **`null` when no user is authenticated** — always guard
+before dereferencing. Shape: `{ id, first_name, last_name, name, email,
+avatar, roles[] }`. In `gxdev dev` a dummy authenticated user is injected
+so the happy path renders without a backend; in production the platform
+injects the real user.
 
 ## Real-Time Events
 

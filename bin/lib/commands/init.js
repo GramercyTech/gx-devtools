@@ -174,6 +174,11 @@ function copyBundleFiles(projectPath, paths, overwrite = false) {
 			desc: "GEMINI.md (Gemini Code Assist instructions)",
 		},
 		{
+			src: "CLAUDE.md",
+			dest: "CLAUDE.md",
+			desc: "CLAUDE.md (Claude Code project instructions)",
+		},
+		{
 			src: ".claude/agents/gxp-developer.md",
 			dest: ".claude/agents/gxp-developer.md",
 			desc: "Claude Code subagent (GxP developer)",

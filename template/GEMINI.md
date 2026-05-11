@@ -2,6 +2,14 @@
 
 This is a GxP plugin project for the GxP kiosk platform built with Vue 3.
 
+## Platform vs. plugin
+
+The GxP platform owns admin configuration. Plugins consume it, they don't define it.
+
+- **Forms, quizzes, surveys (including the quiz builder) are built in the platform admin UI.** The plugin reads admin-built fields/questions/scoring/leaderboards at runtime via `store.callApi` — operations like `forms.show`, `forms.fields.index`, `forms.responses.store`, `quiz.state`, `quiz.questions`, `quiz.answer`, `quiz.leaderboard`, `survey.metrics`. Use `api_list_operation_ids` / `search_api_endpoints` to discover the full set.
+- **Project settings, assets, strings, dependencies, permissions, and the logged-in user** are injected into the GxP store at boot.
+- The plugin's `app-manifest.json` + `configuration.json` describe only what the admin needs to configure for this plugin instance (text, images, colors, which form/quiz to bind to). Don't reinvent platform features locally.
+
 ## Development Workflow
 
 Work through these steps in order. Do not skip.
@@ -157,6 +165,12 @@ store.updateString("key", "value")
 store.updateSetting("key", "value")
 store.updateAsset("key", "url")
 store.updateState("key", "value")
+
+// Logged-in user — returns `null` when no user is authenticated
+store.getUser() // Full user object or null
+store.getUserName("Guest") // Display name with fallback
+store.getUserEmail() // Email or null
+store.isAuthenticated() // boolean
 ```
 
 ## Real-Time Events
