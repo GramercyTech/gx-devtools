@@ -13,7 +13,12 @@
  *   - Docs tools         (docs-tools.js)
  *   - Test tools         (test-tools.js)
  *   - Model tools        (model-tools.js)
- *   - UIKit tools        (uikit-tools.js)
+ *
+ * UIKit component introspection has moved out of this server. The uikit
+ * ships @storybook/addon-mcp; when developers run `gxdev storybook` the
+ * uikit's Storybook exposes its own HTTP MCP server at
+ * http://localhost:6006/mcp, registered as `gxp-uikit-storybook` in the
+ * plugin project's mcp.json.
  */
 
 const { fetchSpec, getEnvironment, getEnvUrls } = require("./specs")
@@ -34,11 +39,6 @@ const {
 	handleModelToolCall,
 	isModelTool,
 } = require("./model-tools")
-const {
-	UIKIT_TOOLS,
-	handleUikitToolCall,
-	isUikitTool,
-} = require("./uikit-tools")
 
 const SERVER_INFO = {
 	name: "gxp-mcp-serve",
@@ -46,7 +46,7 @@ const SERVER_INFO = {
 }
 
 const SERVER_DESCRIPTION =
-	"GxP toolkit MCP server: API specs, data models, UIKit components, config/manifest editing, documentation search, and plugin test helpers for AI coding assistants."
+	"GxP toolkit MCP server: API specs, data models, config/manifest editing, documentation search, and plugin test helpers for AI coding assistants. UIKit component/story tools are served by the uikit's own Storybook MCP (gxdev storybook)."
 
 /* -------------------- API spec search helpers (in-file) ------------------- */
 
@@ -247,7 +247,6 @@ const TOOLS = [
 	...DOCS_TOOLS,
 	...TEST_TOOLS,
 	...MODEL_TOOLS,
-	...UIKIT_TOOLS,
 ]
 
 /* ------------------------------ tool dispatch ----------------------------- */
@@ -258,7 +257,6 @@ async function handleToolCall(name, args = {}) {
 	if (isDocsTool(name)) return handleDocsToolCall(name, args)
 	if (isTestTool(name)) return handleTestToolCall(name, args)
 	if (isModelTool(name)) return handleModelToolCall(name, args)
-	if (isUikitTool(name)) return handleUikitToolCall(name, args)
 
 	switch (name) {
 		case "get_openapi_spec": {

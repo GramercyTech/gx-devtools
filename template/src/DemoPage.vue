@@ -22,6 +22,19 @@
 				</p>
 			</header>
 
+			<!-- Cross-page demo: navigate to the experience-flow demo -->
+			<section class="panel demo-link-panel">
+				<h2>Experience Flow Demo <span class="tag">@gxp-dev/uikit</span></h2>
+				<p class="hint">
+					A full state-machine-driven kiosk flow showing how to use
+					<code>useExperience</code>, the page library, async actions, branching
+					paths, and slot customization — all in one annotated file.
+				</p>
+				<button class="btn primary" @click="$emit('navigate', 'experience')">
+					Open Experience Demo →
+				</button>
+			</section>
+
 			<!-- gxp-settings + gxp-string: read from manifest.settings instead of strings -->
 			<section class="panel">
 				<h2>Settings <span class="tag">gxp-settings</span></h2>
@@ -154,6 +167,8 @@
 
 .hero h1 {
 	margin: 0 0 8px 0;
+	font-size: 28px;
+	font-weight: 700;
 	color: v-bind('gxpStore.getSetting("primary_color")');
 }
 
@@ -344,6 +359,8 @@ code {
 defineOptions({
 	inheritAttrs: false,
 })
+
+defineEmits(["navigate"])
 
 import { ref, onMounted, onUnmounted } from "vue"
 import { useGxpStore } from "@/stores/gxpPortalConfigStore"

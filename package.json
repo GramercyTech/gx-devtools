@@ -58,6 +58,7 @@
 	"dependencies": {
 		"@faker-js/faker": "^9.9.0",
 		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
+		"@gxp-dev/uikit": "^0.1.0",
 		"@modelcontextprotocol/sdk": "^1.29.0",
 		"@vitejs/plugin-vue": "^6.0.6",
 		"adm-zip": "^0.5.17",

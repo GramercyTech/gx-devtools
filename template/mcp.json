@@ -3,6 +3,10 @@
 		"gxp-api": {
 			"command": "mcp-serve",
 			"args": []
+		},
+		"gxp-uikit-storybook": {
+			"type": "http",
+			"url": "http://localhost:6006/mcp"
 		}
 	}
 }

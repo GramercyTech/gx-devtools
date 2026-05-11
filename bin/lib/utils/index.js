@@ -11,6 +11,7 @@ const prompts = require("./prompts")
 const aiScaffold = require("./ai-scaffold")
 const extractConfig = require("./extract-config")
 const versionCheck = require("./version-check")
+const uikit = require("./uikit")
 
 module.exports = {
 	...paths,
@@ -20,4 +21,5 @@ module.exports = {
 	...aiScaffold,
 	...extractConfig,
 	...versionCheck,
+	...uikit,
 }

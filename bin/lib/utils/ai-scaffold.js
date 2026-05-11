@@ -997,7 +997,7 @@ function buildInteractiveInitialPrompt(projectName, description, provider) {
 		"- **Docs search** — `docs_search`, `docs_get_page`, `docs_list_pages` (full-text search across docs.gxp.dev).",
 		"- **Test helpers** — `test_scaffold_component_test`, `test_api_route`.",
 		"- **Data models** — `describe_data_models` (enumerate or detail OpenAPI components.schemas; walks allOf and resolves $ref by name).",
-		"- **UIKit** — `list_uikit_components` (list components exported by `@gxp-dev/uikit` installed in this project).",
+		"- **UIKit (via Storybook MCP)** — when `npm run storybook` is running, the uikit's `@storybook/addon-mcp` exposes `preview-stories`, `get-storybook-story-instructions`, `get-documentation`, `list-all-documentation`, and `run-story-tests` at http://localhost:6006/mcp (registered in mcp.json as `gxp-uikit-storybook`). Use these to discover available components and stories.",
 		"",
 		"Follow the full workflow from the instructions: (1) understand the feature, (2) discover data sources via MCP, (3) plan including the admin configuration form, (4) implement, (5) **sync the manifest and build the admin form**, (6) test with real broadcasts, (7) final `gxdev lint --all`.",
 		"",

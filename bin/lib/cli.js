@@ -25,6 +25,7 @@ const {
 	extractConfigCommand,
 	addDependencyCommand,
 	lintCommand,
+	storybookCommand,
 } = require("./commands")
 
 // Load global configuration
@@ -349,6 +350,19 @@ const cli = yargs
 			},
 		},
 		lintCommand,
+	)
+	.command(
+		"storybook",
+		"Run @gxp-dev/uikit Storybook from this project (port 6006)",
+		{
+			build: {
+				describe:
+					"Build a static Storybook bundle instead of starting the dev server",
+				type: "boolean",
+				default: false,
+			},
+		},
+		storybookCommand,
 	)
 	.command(
 		"add-dependency",

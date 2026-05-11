@@ -1,11 +1,17 @@
 <template>
 	<!-- Your Custom Plugin Content -->
-	<DemoPage :router="mockRouter" />
+	<DemoPage v-if="route === 'home'" :router="mockRouter" @navigate="navigate" />
+	<DemoExperience v-else-if="route === 'experience'" @navigate="navigate" />
 </template>
 
 <script setup>
 import { ref, shallowRef } from "vue"
 import DemoPage from "@/DemoPage.vue"
+import DemoExperience from "@/DemoExperience.vue"
+
+// Note: @gxp-dev/uikit ships its own stylesheet (Tailwind + theme tokens). The
+// experience-flow demo imports it inside DemoExperience.vue so it only loads
+// when that page is opened.
 
 // Initialize the GxP store
 // This import is externalized to window.useGxpStore during build for platform compatibility
@@ -15,6 +21,13 @@ const gxpStore = useGxpStore()
 gxpStore.sockets?.primary.listenForStateChange((event) => {
 	console.log("🔗 GXP Store: State change event received", event)
 })
+
+// Lightweight in-app routing between the two demo pages. Swap for vue-router
+// in a real plugin if you need URL-aware nav.
+const route = ref("home")
+const navigate = (next) => {
+	route.value = next
+}
 </script>
 
 <style>

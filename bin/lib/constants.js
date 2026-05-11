@@ -48,6 +48,8 @@ const DEFAULT_SCRIPTS = {
 	"datastore:add": "gxdev datastore add",
 	"datastore:scan": "gxdev datastore scan-strings",
 	"datastore:config": "gxdev datastore config",
+	storybook: "gxdev storybook",
+	"storybook:build": "gxdev storybook --build",
 }
 
 // Default ports
