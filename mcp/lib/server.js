@@ -1,0 +1,391 @@
+/**
+ * Shared MCP server runner.
+ *
+ * Used by both the primary `mcp-serve` bin and the deprecated
+ * `gxp-api-server` shim. Wires the official @modelcontextprotocol/sdk
+ * over StdioServerTransport. The SDK is ESM-only and this module is
+ * CommonJS, so the SDK is loaded via dynamic import() inside startServer().
+ *
+ * The full tool surface lives here:
+ *   - API spec tools     (openapi/asyncapi search, endpoint details, env)
+ *   - Extended API tools (api-tools.js)
+ *   - Config tools       (config-tools.js)
+ *   - Docs tools         (docs-tools.js)
+ *   - Test tools         (test-tools.js)
+ *   - Model tools        (model-tools.js)
+ *   - UIKit tools        (uikit-tools.js)
+ */
+
+const { fetchSpec, getEnvironment, getEnvUrls } = require("./specs")
+const {
+	CONFIG_TOOLS,
+	handleConfigToolCall,
+	isConfigTool,
+} = require("./config-tools")
+const {
+	EXT_API_TOOLS,
+	handleExtApiToolCall,
+	isExtApiTool,
+} = require("./api-tools")
+const { DOCS_TOOLS, handleDocsToolCall, isDocsTool } = require("./docs-tools")
+const { TEST_TOOLS, handleTestToolCall, isTestTool } = require("./test-tools")
+const {
+	MODEL_TOOLS,
+	handleModelToolCall,
+	isModelTool,
+} = require("./model-tools")
+const {
+	UIKIT_TOOLS,
+	handleUikitToolCall,
+	isUikitTool,
+} = require("./uikit-tools")
+
+const SERVER_INFO = {
+	name: "gxp-mcp-serve",
+	version: "2.1.0",
+}
+
+const SERVER_DESCRIPTION =
+	"GxP toolkit MCP server: API specs, data models, UIKit components, config/manifest editing, documentation search, and plugin test helpers for AI coding assistants."
+
+/* -------------------- API spec search helpers (in-file) ------------------- */
+
+function searchEndpoints(spec, query) {
+	const results = []
+	const queryLower = String(query).toLowerCase()
+
+	if (spec.paths) {
+		for (const [p, methods] of Object.entries(spec.paths)) {
+			for (const [method, details] of Object.entries(methods)) {
+				if (
+					typeof details === "object" &&
+					(p.toLowerCase().includes(queryLower) ||
+						details.summary?.toLowerCase().includes(queryLower) ||
+						details.description?.toLowerCase().includes(queryLower) ||
+						details.operationId?.toLowerCase().includes(queryLower) ||
+						details.tags?.some((t) => t.toLowerCase().includes(queryLower)))
+				) {
+					results.push({
+						path: p,
+						method: method.toUpperCase(),
+						summary: details.summary || "",
+						description: details.description || "",
+						operationId: details.operationId || "",
+						tags: details.tags || [],
+						parameters: details.parameters || [],
+						requestBody: details.requestBody || null,
+						responses: Object.keys(details.responses || {}),
+					})
+				}
+			}
+		}
+	}
+
+	return results
+}
+
+function searchEvents(spec, query) {
+	const results = []
+	const queryLower = String(query).toLowerCase()
+
+	const messages = spec?.components?.messages || {}
+	for (const [eventName, message] of Object.entries(messages)) {
+		if (typeof message !== "object" || message === null) continue
+		const trigger = message["x-triggered-by"] || ""
+		if (
+			eventName.toLowerCase().includes(queryLower) ||
+			message.summary?.toLowerCase().includes(queryLower) ||
+			message.description?.toLowerCase().includes(queryLower) ||
+			trigger.toLowerCase().includes(queryLower)
+		) {
+			results.push({
+				kind: "event",
+				eventName,
+				summary: message.summary || "",
+				description: message.description || "",
+				triggeredBy: trigger || null,
+				payloadRef: message.payload?.$ref || null,
+			})
+		}
+	}
+
+	if (spec.channels) {
+		for (const [channel, details] of Object.entries(spec.channels)) {
+			if (
+				channel.toLowerCase().includes(queryLower) ||
+				details.description?.toLowerCase().includes(queryLower)
+			) {
+				const operations = []
+				if (details.publish) {
+					operations.push({
+						type: "publish",
+						summary: details.publish.summary || "",
+						message: details.publish.message || null,
+					})
+				}
+				if (details.subscribe) {
+					operations.push({
+						type: "subscribe",
+						summary: details.subscribe.summary || "",
+						message: details.subscribe.message || null,
+					})
+				}
+
+				results.push({
+					kind: "channel",
+					channel,
+					description: details.description || "",
+					operations,
+				})
+			}
+		}
+	}
+
+	return results
+}
+
+function getEndpointDetails(spec, p, method) {
+	const methodLower = method.toLowerCase()
+	const endpoint = spec.paths?.[p]?.[methodLower]
+
+	if (!endpoint) {
+		return null
+	}
+
+	return {
+		path: p,
+		method: method.toUpperCase(),
+		summary: endpoint.summary || "",
+		description: endpoint.description || "",
+		operationId: endpoint.operationId || "",
+		tags: endpoint.tags || [],
+		parameters: endpoint.parameters || [],
+		requestBody: endpoint.requestBody || null,
+		responses: endpoint.responses || {},
+		security: endpoint.security || spec.security || [],
+	}
+}
+
+/* ------------------------------- tool schemas ----------------------------- */
+
+const API_TOOLS = [
+	{
+		name: "get_openapi_spec",
+		description:
+			"Fetch the full OpenAPI specification for the GxP API. Returns the complete spec including all endpoints, schemas, and documentation.",
+		inputSchema: { type: "object", properties: {}, required: [] },
+	},
+	{
+		name: "get_asyncapi_spec",
+		description:
+			"Fetch the AsyncAPI specification for GxP WebSocket events. Returns channel definitions, message schemas, and event documentation.",
+		inputSchema: { type: "object", properties: {}, required: [] },
+	},
+	{
+		name: "search_api_endpoints",
+		description:
+			"Search for API endpoints matching a query. Searches path, summary, description, operation ID, and tags.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description:
+						"Search term to find matching endpoints (e.g., 'attendee', 'check-in', 'event')",
+				},
+			},
+			required: ["query"],
+		},
+	},
+	{
+		name: "search_websocket_events",
+		description:
+			"Search AsyncAPI events matching a query. Searches components.messages (event name, summary, description, x-triggered-by) and channel definitions. The returned eventName is what you pass to store.listen(eventName, permissionIdentifier, callback).",
+		inputSchema: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description:
+						"Search term to find matching events (e.g., 'message', 'created', 'updated')",
+				},
+			},
+			required: ["query"],
+		},
+	},
+	{
+		name: "get_endpoint_details",
+		description:
+			"Get detailed information about a specific API endpoint including parameters, request body, and responses.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				path: {
+					type: "string",
+					description: "API endpoint path (e.g., '/api/v1/attendees')",
+				},
+				method: {
+					type: "string",
+					description: "HTTP method (GET, POST, PUT, PATCH, DELETE)",
+				},
+			},
+			required: ["path", "method"],
+		},
+	},
+	{
+		name: "get_api_environment",
+		description:
+			"Get the current API environment configuration including base URL and spec URLs.",
+		inputSchema: { type: "object", properties: {}, required: [] },
+	},
+]
+
+const TOOLS = [
+	...API_TOOLS,
+	...EXT_API_TOOLS,
+	...CONFIG_TOOLS,
+	...DOCS_TOOLS,
+	...TEST_TOOLS,
+	...MODEL_TOOLS,
+	...UIKIT_TOOLS,
+]
+
+/* ------------------------------ tool dispatch ----------------------------- */
+
+async function handleToolCall(name, args = {}) {
+	if (isConfigTool(name)) return handleConfigToolCall(name, args)
+	if (isExtApiTool(name)) return handleExtApiToolCall(name, args)
+	if (isDocsTool(name)) return handleDocsToolCall(name, args)
+	if (isTestTool(name)) return handleTestToolCall(name, args)
+	if (isModelTool(name)) return handleModelToolCall(name, args)
+	if (isUikitTool(name)) return handleUikitToolCall(name, args)
+
+	switch (name) {
+		case "get_openapi_spec": {
+			const spec = await fetchSpec("openapi")
+			return {
+				content: [{ type: "text", text: JSON.stringify(spec, null, 2) }],
+			}
+		}
+		case "get_asyncapi_spec": {
+			const spec = await fetchSpec("asyncapi")
+			return {
+				content: [{ type: "text", text: JSON.stringify(spec, null, 2) }],
+			}
+		}
+		case "search_api_endpoints": {
+			const spec = await fetchSpec("openapi")
+			const results = searchEndpoints(spec, args.query)
+			return {
+				content: [
+					{
+						type: "text",
+						text:
+							results.length > 0
+								? JSON.stringify(results, null, 2)
+								: `No endpoints found matching "${args.query}"`,
+					},
+				],
+			}
+		}
+		case "search_websocket_events": {
+			const spec = await fetchSpec("asyncapi")
+			const results = searchEvents(spec, args.query)
+			return {
+				content: [
+					{
+						type: "text",
+						text:
+							results.length > 0
+								? JSON.stringify(results, null, 2)
+								: `No events found matching "${args.query}"`,
+					},
+				],
+			}
+		}
+		case "get_endpoint_details": {
+			const spec = await fetchSpec("openapi")
+			const details = getEndpointDetails(spec, args.path, args.method)
+			return {
+				content: [
+					{
+						type: "text",
+						text: details
+							? JSON.stringify(details, null, 2)
+							: `Endpoint not found: ${args.method} ${args.path}`,
+					},
+				],
+			}
+		}
+		case "get_api_environment": {
+			const env = getEnvironment()
+			const urls = getEnvUrls()
+			return {
+				content: [
+					{
+						type: "text",
+						text: JSON.stringify({ environment: env, ...urls }, null, 2),
+					},
+				],
+			}
+		}
+		default:
+			throw new Error(`Unknown tool: ${name}`)
+	}
+}
+
+/* ------------------------------- entry point ------------------------------ */
+
+/**
+ * Boot the MCP server over stdio. Loads the official SDK via dynamic import
+ * because @modelcontextprotocol/sdk is ESM-only and this package is CJS.
+ */
+async function startServer() {
+	const sdkServer = await import("@modelcontextprotocol/sdk/server/index.js")
+	const sdkStdio = await import("@modelcontextprotocol/sdk/server/stdio.js")
+	const sdkTypes = await import("@modelcontextprotocol/sdk/types.js")
+	const { Server } = sdkServer
+	const { StdioServerTransport } = sdkStdio
+	const { ListToolsRequestSchema, CallToolRequestSchema } = sdkTypes
+
+	const server = new Server(
+		{ name: SERVER_INFO.name, version: SERVER_INFO.version },
+		{ capabilities: { tools: {} } },
+	)
+
+	server.setRequestHandler(ListToolsRequestSchema, async () => ({
+		tools: TOOLS,
+	}))
+
+	server.setRequestHandler(CallToolRequestSchema, async (request) => {
+		const { name, arguments: args } = request.params
+		try {
+			return await handleToolCall(name, args || {})
+		} catch (err) {
+			return {
+				isError: true,
+				content: [
+					{
+						type: "text",
+						text: `Error: ${err && err.message ? err.message : String(err)}`,
+					},
+				],
+			}
+		}
+	})
+
+	const transport = new StdioServerTransport()
+	await server.connect(transport)
+}
+
+module.exports = {
+	startServer,
+	TOOLS,
+	API_TOOLS,
+	SERVER_INFO,
+	SERVER_DESCRIPTION,
+	handleToolCall,
+	searchEndpoints,
+	searchEvents,
+	getEndpointDetails,
+}

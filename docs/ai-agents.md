@@ -56,7 +56,7 @@ The MCP configuration in `.claude/settings.json`:
 {
 	"mcpServers": {
 		"gxp-api": {
-			"command": "gxp-api-server",
+			"command": "mcp-serve",
 			"args": [],
 			"env": {}
 		}
@@ -188,16 +188,19 @@ This plugin uses the following conventions:
 
 ### MCP Server Not Working
 
-1. Ensure `gxp-api-server` is in your PATH:
+1. Ensure `mcp-serve` is in your PATH:
 
    ```bash
-   which gxp-api-server
+   which mcp-serve
    ```
+
+   (The legacy `gxp-api-server` bin still ships as a deprecation shim that
+   forwards to `mcp-serve` and writes a notice to stderr.)
 
 2. Test the server manually:
 
    ```bash
-   echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | gxp-api-server
+   echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | mcp-serve
    ```
 
 3. Check your `.env` file has a valid `VITE_API_ENV` value

@@ -180,8 +180,9 @@ function copyBundleFiles(projectPath, paths, overwrite = false) {
 		},
 		// Canonical project-scoped MCP config files. The AI CLIs each look for
 		// their own file at the project root and auto-load the `gxp-api` server
-		// from there. The `gxp-api-server` binary is installed on PATH by
-		// @gxp-dev/tools, so no extra install step is required.
+		// from there. The `mcp-serve` binary is installed on PATH by
+		// @gxp-dev/tools, so no extra install step is required. (The legacy
+		// `gxp-api-server` name still works as a deprecation shim.)
 		{
 			src: "mcp.json",
 			dest: ".mcp.json",

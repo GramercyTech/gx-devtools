@@ -973,10 +973,10 @@ function buildInteractiveInitialPrompt(projectName, description, provider) {
 
 	const mcpFixCommand =
 		{
-			claude: "claude mcp add gxp-api gxp-api-server",
-			codex: "codex mcp add gxp-api gxp-api-server",
+			claude: "claude mcp add gxp-api mcp-serve",
+			codex: "codex mcp add gxp-api mcp-serve",
 			gemini:
-				"add the `gxp-api` server to `~/.gemini/settings.json` under `mcpServers` with command `gxp-api-server`",
+				"add the `gxp-api` server to `~/.gemini/settings.json` under `mcpServers` with command `mcp-serve`",
 		}[provider] || "see the provider's MCP docs"
 
 	return [
@@ -986,16 +986,18 @@ function buildInteractiveInitialPrompt(projectName, description, provider) {
 		"",
 		`Start a new GxP plugin development session. First read \`${instructionFile}\` and \`app-instructions.md\` in this project — they describe the workflow, conventions, and the full set of tools available to you.${claudeAgentHint}`,
 		"",
-		"**Step 0 — smoke-test the `gxp-api` MCP server before asking me anything.** The server is defined in `.mcp.json` / `.gemini/settings.json` at the project root and provided by the `gxp-api-server` binary that ships with `@gxp-dev/tools` (already on your PATH — verify with `which gxp-api-server`). Call `api_list_tags` immediately:",
+		"**Step 0 — smoke-test the `gxp-api` MCP server before asking me anything.** The server is defined in `.mcp.json` / `.gemini/settings.json` at the project root and provided by the `mcp-serve` binary that ships with `@gxp-dev/tools` (already on your PATH — verify with `which mcp-serve`). Call `api_list_tags` immediately:",
 		"- If it returns a list of tags → the MCP is live; load the tag list into memory so your first question to me can be grounded in the platform's actual resources (attendees, events, quizzes, posts, forms, etc.) rather than abstract categories.",
 		`- If \`api_list_tags\` (or any other \`api_*\` / \`config_*\` / \`docs_*\` tool) is not available, the MCP didn't register. Tell me so and suggest I run \`${mcpFixCommand}\`, then restart this session. Do not proceed without the MCP — every operationId, event, and dependency you plan with must come from it.`,
 		"",
-		"You have the `gxp-api` MCP server available with 29 tools across five families:",
+		"You have the `gxp-api` MCP server available with 33 tools across seven families:",
 		"- **API spec discovery** — `search_api_endpoints`, `api_list_operation_ids`, `api_get_operation_parameters`, `api_find_endpoints_by_schema`, `api_generate_dependency`, `get_endpoint_details`, `api_list_tags`.",
 		"- **WebSocket events** — `api_find_events_for_operation` (maps an operationId to the AsyncAPI events it triggers), `api_list_events`, `search_websocket_events`.",
 		"- **Config editing** — `config_add_card`, `config_add_field`, `config_list_field_types`, `config_get_field_schema`, `config_extract_strings`, `config_validate`, etc. Every mutation is linter-guarded against the schemas in `bin/lib/lint/schemas/`.",
 		"- **Docs search** — `docs_search`, `docs_get_page`, `docs_list_pages` (full-text search across docs.gxp.dev).",
 		"- **Test helpers** — `test_scaffold_component_test`, `test_api_route`.",
+		"- **Data models** — `describe_data_models` (enumerate or detail OpenAPI components.schemas; walks allOf and resolves $ref by name).",
+		"- **UIKit** — `list_uikit_components` (list components exported by `@gxp-dev/uikit` installed in this project).",
 		"",
 		"Follow the full workflow from the instructions: (1) understand the feature, (2) discover data sources via MCP, (3) plan including the admin configuration form, (4) implement, (5) **sync the manifest and build the admin form**, (6) test with real broadcasts, (7) final `gxdev lint --all`.",
 		"",
@@ -1033,8 +1035,8 @@ function buildInteractiveInitialPrompt(projectName, description, provider) {
  */
 function registerMcpWithProviderCli(provider) {
 	const commands = {
-		claude: ["mcp", "add", "gxp-api", "gxp-api-server"],
-		codex: ["mcp", "add", "gxp-api", "gxp-api-server"],
+		claude: ["mcp", "add", "gxp-api", "mcp-serve"],
+		codex: ["mcp", "add", "gxp-api", "mcp-serve"],
 	}
 	const args = commands[provider]
 	if (!args) {
@@ -1117,7 +1119,7 @@ function launchInteractiveAISession(
 			"   The `gxp-api` MCP server is configured in .mcp.json / .gemini/settings.json",
 		)
 		console.log(
-			"   at the project root (binary: gxp-api-server, installed with @gxp-dev/tools).",
+			"   at the project root (binary: mcp-serve, installed with @gxp-dev/tools).",
 		)
 		console.log(
 			"   The agent will smoke-test it first, then greet you and ask what you want",

@@ -39,6 +39,7 @@
 	},
 	"bin": {
 		"gxdev": "bin/gx-devtools.js",
+		"mcp-serve": "mcp/mcp-serve.js",
 		"gxp-api-server": "mcp/gxp-api-server.js"
 	},
 	"keywords": [
@@ -57,6 +58,7 @@
 	"dependencies": {
 		"@faker-js/faker": "^9.9.0",
 		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
+		"@modelcontextprotocol/sdk": "^1.29.0",
 		"@vitejs/plugin-vue": "^6.0.6",
 		"adm-zip": "^0.5.17",
 		"ajv": "^8.18.0",

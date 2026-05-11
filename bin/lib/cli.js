@@ -383,8 +383,10 @@ const cli = yargs
 	.epilog(
 		[
 			"Docs:   https://docs.gxp.dev",
-			"AI/MCP: the gxp-api MCP server (bin: gxp-api-server) exposes 29 tools",
-			"        across API specs, config editing, docs search, and test helpers.",
+			"AI/MCP: the gxp-api MCP server (bin: mcp-serve) exposes 33 tools across",
+			"        API specs, config editing, docs search, test helpers, data",
+			"        models, and UIKit components. (gxp-api-server still works as a",
+			"        deprecation shim.)",
 		].join("\n"),
 	)
 	.help("h")

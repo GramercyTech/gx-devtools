@@ -93,20 +93,24 @@ It does **not** overwrite your source files (`src/`, `theme-layouts/`, etc.).
 - **Config linting** — AJV-based JSON Schema validation of `configuration.json` (form-builder definitions) and `app-manifest.json` (plugin metadata + defaults).
 - **Pre-commit hook** — `.githooks/pre-commit` runs Prettier, ESLint, and the GxP linter on staged files; configured automatically via the `prepare` npm script.
 - **Unit testing** — Vitest + `@vue/test-utils` wired out of the box; scaffolded tests via the MCP server.
-- **MCP server** — 29 tools for AI coding assistants (see below).
+- **MCP server** — 33 tools for AI coding assistants (see below).
 - **AI scaffolding** — pre-wired configs for Claude Code, Codex, and Gemini during `init`.
 
 ## MCP Server for AI assistants
 
-The toolkit ships `gxp-api-server` (bin `@gxp-dev/tools/mcp/gxp-api-server.js`), an MCP server exposing 29 tools across five families. Point your AI assistant at it to get API-aware, schema-aware, test-aware help inside plugin projects:
+The toolkit ships `mcp-serve` (bin `@gxp-dev/tools/mcp/mcp-serve.js`), an MCP server exposing 33 tools across seven families. It speaks MCP over stdio via the official `@modelcontextprotocol/sdk` `StdioServerTransport`. Point your AI assistant at it to get API-aware, schema-aware, test-aware help inside plugin projects:
 
 | Family                 | Tools                                                                                                                                                                                                                                                                                               |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **API spec** (6)       | `get_openapi_spec`, `get_asyncapi_spec`, `search_api_endpoints`, `search_websocket_events`, `get_endpoint_details`, `get_api_environment`                                                                                                                                                           |
-| **Extended API** (5)   | `api_list_tags`, `api_list_operation_ids`, `api_get_operation_parameters`, `api_find_endpoints_by_schema`, `api_generate_dependency`                                                                                                                                                                |
+| **Extended API** (7)   | `api_list_tags`, `api_list_operation_ids`, `api_get_operation_parameters`, `api_find_endpoints_by_schema`, `api_find_events_for_operation`, `api_list_events`, `api_generate_dependency`                                                                                                            |
 | **Config editor** (13) | `config_validate`, `config_list_field_types`, `config_list_card_types`, `config_get_field_schema`, `config_list_cards`, `config_list_fields`, `config_add_field`, `config_move_field`, `config_remove_field`, `config_add_card`, `config_move_card`, `config_remove_card`, `config_extract_strings` |
 | **Docs search** (3)    | `docs_list_pages`, `docs_search`, `docs_get_page` — full-text across `docs.gxp.dev` via its sitemap                                                                                                                                                                                                 |
 | **Test helpers** (2)   | `test_scaffold_component_test`, `test_api_route`                                                                                                                                                                                                                                                    |
+| **Data models** (1)    | `describe_data_models` — enumerate or detail OpenAPI `components.schemas` with $ref + allOf flattening                                                                                                                                                                                              |
+| **UIKit** (1)          | `list_uikit_components` — list components exported by `@gxp-dev/uikit` installed in the current project                                                                                                                                                                                             |
+
+The previous bin name `gxp-api-server` still ships as a deprecation shim — it prints a stderr notice and forwards to the same server. Update your `.mcp.json` / `.gemini/settings.json` to use `mcp-serve` going forward.
 
 Every config mutation is linter-guarded: invalid writes are refused unless `force: true`, so AI agents can't save broken state.
 
