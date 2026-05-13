@@ -172,6 +172,22 @@ export default defineConfig(async (ctx) => {
 	console.log(`📄 index.html: ${useLocalIndex ? "local" : "runtime"}`)
 	console.log(`📄 main.js: ${useLocalMain ? "local" : "runtime"}`)
 
+	// Build /@fs/ URLs that work regardless of whether the toolkit is inside
+	// the project's node_modules or installed globally. Vite's /@fs/ handler
+	// serves these via server.fs.allow (which already includes toolkitPath),
+	// so absolute paths outside process.cwd() just work.
+	const realRuntimeDir = (() => {
+		try {
+			return fs.realpathSync(runtimeDir)
+		} catch {
+			return runtimeDir
+		}
+	})().replace(/\\/g, "/")
+	const toFsUrl = (relPath) =>
+		`/@fs${realRuntimeDir.startsWith("/") ? "" : "/"}${realRuntimeDir}/${relPath}`
+	const runtimeMainFsUrl = toFsUrl("main.js")
+	const runtimeLogoFsUrl = toFsUrl("logo.png")
+
 	// Create plugin to serve runtime files (index.html and main.js) if no local ones exist
 	const runtimeFilesPlugin = {
 		name: "runtime-files",
@@ -205,15 +221,21 @@ export default defineConfig(async (ctx) => {
 				) {
 					const runtimeIndexPath = path.join(runtimeDir, "index.html")
 					if (fs.existsSync(runtimeIndexPath)) {
-						// Read and transform the runtime index.html
+						// Rewrite hard-coded references to runtime assets so they
+						// resolve via Vite's /@fs/ handler instead of a guessed
+						// /node_modules/... path. This is what makes the same
+						// runtime work for local, linked, and global installs.
+						let html = fs.readFileSync(runtimeIndexPath, "utf-8")
+						html = html
+							.split("/node_modules/@gxp-dev/tools/runtime/logo.png")
+							.join(runtimeLogoFsUrl)
+							.split("/@gx-runtime/main.js")
+							.join(useLocalMain ? "/main.js" : runtimeMainFsUrl)
 						server
-							.transformIndexHtml(
-								rawUrl,
-								fs.readFileSync(runtimeIndexPath, "utf-8"),
-							)
-							.then((html) => {
+							.transformIndexHtml(rawUrl, html)
+							.then((transformed) => {
 								res.setHeader("Content-Type", "text/html")
-								res.end(html)
+								res.end(transformed)
 							})
 							.catch((err) => {
 								console.error("Error transforming index.html:", err)
@@ -223,32 +245,24 @@ export default defineConfig(async (ctx) => {
 					}
 				}
 
-				// Serve runtime main.js for @gx-runtime/main.js requests (unless local main.js is opted in)
+				// Back-compat: anything still hitting the legacy
+				// `/@gx-runtime/main.js` URL (e.g. a hand-rolled index.html)
+				// is redirected to the /@fs/ URL. The old transformRequest
+				// approach passed an absolute filesystem path and only worked
+				// when runtimeDir was inside process.cwd() — i.e. for local
+				// installs but not global ones.
 				if (
 					!useLocalMain &&
-					(req.url === "/@gx-runtime/main.js" ||
-						req.url?.startsWith("/@gx-runtime/main.js?"))
+					(urlPath === "/@gx-runtime/main.js" ||
+						urlPath.startsWith("/@gx-runtime/main.js"))
 				) {
-					const runtimeMainPath = path.join(runtimeDir, "main.js")
-					if (fs.existsSync(runtimeMainPath)) {
-						// Use the real path to handle symlinks correctly
-						const realMainPath = fs.realpathSync(runtimeMainPath)
-						server
-							.transformRequest(realMainPath)
-							.then((result) => {
-								if (result) {
-									res.setHeader("Content-Type", "application/javascript")
-									res.end(result.code)
-								} else {
-									next()
-								}
-							})
-							.catch((err) => {
-								console.error("Error transforming main.js:", err)
-								next(err)
-							})
-						return
-					}
+					const query = rawUrl.includes("?")
+						? rawUrl.slice(rawUrl.indexOf("?"))
+						: ""
+					res.statusCode = 302
+					res.setHeader("Location", runtimeMainFsUrl + query)
+					res.end()
+					return
 				}
 
 				next()

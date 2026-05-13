@@ -218,6 +218,21 @@ function devCommand(argv) {
 	const paths = resolveGxPaths()
 	const projectPath = findProjectRoot()
 
+	// Surface which toolkit install is being used. resolveGxPaths() prefers
+	// <project>/node_modules/@gxp-dev/tools (local) and falls back to the
+	// CLI's own install location (global / npm link / workspace).
+	const localToolkitDir = path.join(
+		projectPath,
+		"node_modules",
+		"@gxp-dev",
+		"tools",
+	)
+	const installLocation =
+		paths.packageRoot === localToolkitDir ? "local" : "package"
+	logger.info(
+		`📦 Using ${installLocation} toolkit install: ${paths.packageRoot}`,
+	)
+
 	// Load .env file if it exists for default values
 	const envPath = path.join(projectPath, ".env")
 	const envExamplePath = path.join(projectPath, ".env.example")
