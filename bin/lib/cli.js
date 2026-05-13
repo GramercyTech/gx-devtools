@@ -157,6 +157,12 @@ const cli = yargs
 				default: false,
 				alias: "m",
 			},
+			json: {
+				describe:
+					"Emit all dev-server logs as newline-delimited JSON (one record per line) for cloud log collectors",
+				type: "boolean",
+				default: false,
+			},
 		},
 		devCommand,
 	)

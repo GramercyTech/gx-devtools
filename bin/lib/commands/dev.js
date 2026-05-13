@@ -7,6 +7,7 @@
 
 const path = require("path")
 const fs = require("fs")
+const { spawn } = require("child_process")
 const shell = require("shelljs")
 const dotenv = require("dotenv")
 const {
@@ -15,6 +16,123 @@ const {
 	resolveFilePath,
 	findExistingCertificates,
 } = require("../utils")
+
+const ANSI_REGEX = /\x1b\[[0-9;]*[a-zA-Z]/g
+
+/**
+ * Create a logger that either emits NDJSON lines or plain text.
+ * In JSON mode, every record is a single line: {timestamp, service, level, message}
+ */
+function createLogger(jsonMode) {
+	function emit(level, service, message) {
+		if (jsonMode) {
+			process.stdout.write(
+				JSON.stringify({
+					timestamp: new Date().toISOString(),
+					service,
+					level,
+					message,
+				}) + "\n",
+			)
+			return
+		}
+		const stream =
+			level === "error" || level === "warn" ? process.stderr : process.stdout
+		stream.write(message + "\n")
+	}
+	return {
+		jsonMode,
+		info: (message, service = "GXDEV") => emit("info", service, message),
+		warn: (message, service = "GXDEV") => emit("warn", service, message),
+		error: (message, service = "GXDEV") => emit("error", service, message),
+	}
+}
+
+/**
+ * Spawn a service and pipe each line of its stdout/stderr through the logger.
+ * Returns the child process.
+ */
+function spawnService(name, command, logger) {
+	const child = spawn(command, {
+		shell: true,
+		stdio: ["ignore", "pipe", "pipe"],
+		env: process.env,
+	})
+
+	function pipe(stream, level) {
+		let buffer = ""
+		stream.setEncoding("utf8")
+		stream.on("data", (chunk) => {
+			buffer += chunk
+			let idx
+			while ((idx = buffer.indexOf("\n")) !== -1) {
+				const line = buffer.slice(0, idx).replace(/\r$/, "")
+				buffer = buffer.slice(idx + 1)
+				const clean = line.replace(ANSI_REGEX, "")
+				if (clean.length > 0) {
+					logger[level](clean, name)
+				}
+			}
+		})
+		stream.on("end", () => {
+			if (buffer.length > 0) {
+				const clean = buffer.replace(ANSI_REGEX, "").trim()
+				if (clean) {
+					logger[level](clean, name)
+				}
+				buffer = ""
+			}
+		})
+	}
+
+	pipe(child.stdout, "info")
+	pipe(child.stderr, "error")
+	return child
+}
+
+/**
+ * Run a list of services concurrently, wiring up line-by-line JSON logging
+ * and best-effort shutdown when any one exits or the user hits Ctrl+C.
+ */
+function runServicesJson(services, logger) {
+	const children = services.map((svc) => {
+		logger.info(`starting ${svc.name}: ${svc.command}`, svc.name)
+		return { svc, child: spawnService(svc.name, svc.command, logger) }
+	})
+
+	let shuttingDown = false
+	function shutdown(code) {
+		if (shuttingDown) {
+			return
+		}
+		shuttingDown = true
+		for (const { child } of children) {
+			if (!child.killed && child.exitCode === null) {
+				child.kill("SIGTERM")
+			}
+		}
+		process.exit(code ?? 0)
+	}
+
+	for (const { svc, child } of children) {
+		child.on("exit", (code, signal) => {
+			logger.info(
+				`${svc.name} exited (code=${code ?? "null"}${
+					signal ? `, signal=${signal}` : ""
+				})`,
+				svc.name,
+			)
+			shutdown(code ?? 0)
+		})
+		child.on("error", (err) => {
+			logger.error(`${svc.name} failed to spawn: ${err.message}`, svc.name)
+			shutdown(1)
+		})
+	}
+
+	process.on("SIGINT", () => shutdown(130))
+	process.on("SIGTERM", () => shutdown(143))
+}
 
 /**
  * Get browser extension paths and commands
@@ -96,6 +214,7 @@ function getBrowserExtensionConfig(browser, projectPath, paths, options = {}) {
  * Development command - starts the dev server
  */
 function devCommand(argv) {
+	const logger = createLogger(!!argv.json)
 	const paths = resolveGxPaths()
 	const projectPath = findProjectRoot()
 
@@ -105,13 +224,13 @@ function devCommand(argv) {
 
 	// Load .env file into process.env
 	if (fs.existsSync(envPath)) {
-		console.log("📋 Loading environment variables from .env file")
+		logger.info("📋 Loading environment variables from .env file")
 		dotenv.config({ path: envPath })
 	} else if (fs.existsSync(envExamplePath)) {
-		console.log(
+		logger.info(
 			"💡 Tip: Create .env file from .env.example to customize your environment settings",
 		)
-		console.log("   cp .env.example .env")
+		logger.info("   cp .env.example .env")
 	}
 
 	// Check for SSL certificates unless explicitly disabled
@@ -124,32 +243,32 @@ function devCommand(argv) {
 		const existingCerts = findExistingCertificates(certsDir)
 
 		if (!existingCerts) {
-			console.log(
+			logger.warn(
 				"⚠ SSL certificates not found. Run 'npm run setup-ssl' to enable HTTPS",
 			)
-			console.log("🌐 Starting HTTP development server...")
+			logger.info("🌐 Starting HTTP development server...")
 			useHttps = false
 		} else {
-			console.log("🔒 Starting HTTPS development server...")
-			console.log(
+			logger.info("🔒 Starting HTTPS development server...")
+			logger.info(
 				`📁 Using certificate: ${path.basename(existingCerts.certPath)}`,
 			)
-			console.log(`🔑 Using key: ${path.basename(existingCerts.keyPath)}`)
+			logger.info(`🔑 Using key: ${path.basename(existingCerts.keyPath)}`)
 			certPath = existingCerts.certPath
 			keyPath = existingCerts.keyPath
 		}
 	} else {
-		console.log("🌐 Starting HTTP development server...")
+		logger.info("🌐 Starting HTTP development server...")
 	}
 
 	// Determine final port value (priority: CLI arg > .env > default)
 	const finalPort = argv.port || process.env.NODE_PORT || 3000
-	console.log(`🌐 Development server will start on port: ${finalPort}`)
+	logger.info(`🌐 Development server will start on port: ${finalPort}`)
 
 	// Check if mock API should be enabled
 	const withMock = argv["with-mock"]
 	if (withMock) {
-		console.log("🎭 Mock API will be enabled")
+		logger.info("🎭 Mock API will be enabled")
 	}
 
 	// Socket server starts by default unless --no-socket is passed
@@ -159,15 +278,15 @@ function devCommand(argv) {
 		// Check for local server.js first, then runtime directory
 		const serverJs = resolveFilePath("server.cjs", "", "runtime")
 		if (!fs.existsSync(serverJs.path)) {
-			console.warn("⚠ server.js not found. Skipping Socket.IO server.")
+			logger.warn("⚠ server.js not found. Skipping Socket.IO server.")
 		} else {
 			serverJsPath = serverJs.path
-			console.log(
+			logger.info(
 				`📡 Starting Socket.IO server with nodemon... (${
 					serverJs.isLocal ? "local" : "package"
 				} version)`,
 			)
-			console.log(`📁 Using: ${serverJsPath}`)
+			logger.info(`📁 Using: ${serverJsPath}`)
 		}
 	}
 
@@ -184,16 +303,16 @@ function devCommand(argv) {
 		fs.existsSync(path.join(projectPath, "vite.extend.mjs"))
 
 	if (hasLocalIndexHtml) {
-		console.log("📁 Using local index.html")
+		logger.info("📁 Using local index.html")
 	}
 	if (hasLocalMainJs) {
-		console.log("📁 Using local main.js")
+		logger.info("📁 Using local main.js")
 	}
 	if (hasLocalExtend) {
-		console.log("🧩 Extending vite config from vite.extend.js")
+		logger.info("🧩 Extending vite config from vite.extend.js")
 	}
 	if (!hasLocalIndexHtml && !hasLocalMainJs && !hasLocalExtend) {
-		console.log(
+		logger.info(
 			"📦 Using runtime dev files (create vite.extend.js to customize)",
 		)
 	}
@@ -234,11 +353,11 @@ function devCommand(argv) {
 			port: finalPort,
 		})
 		if (firefoxConfig) {
-			console.log("🦊 Firefox extension will launch with dev server")
-			console.log(`📁 Extension path: ${firefoxConfig.extensionPath}`)
-			console.log(`🌐 Start URL: ${firefoxConfig.startUrl}`)
+			logger.info("🦊 Firefox extension will launch with dev server")
+			logger.info(`📁 Extension path: ${firefoxConfig.extensionPath}`)
+			logger.info(`🌐 Start URL: ${firefoxConfig.startUrl}`)
 		} else {
-			console.warn("⚠️ Firefox extension not found, skipping")
+			logger.warn("⚠️ Firefox extension not found, skipping")
 		}
 	}
 
@@ -248,11 +367,11 @@ function devCommand(argv) {
 			port: finalPort,
 		})
 		if (chromeConfig) {
-			console.log("🚀 Chrome extension will launch with dev server")
-			console.log(`📁 Extension path: ${chromeConfig.extensionPath}`)
-			console.log(`🌐 Start URL: ${chromeConfig.startUrl}`)
+			logger.info("🚀 Chrome extension will launch with dev server")
+			logger.info(`📁 Extension path: ${chromeConfig.extensionPath}`)
+			logger.info(`🌐 Start URL: ${chromeConfig.startUrl}`)
 		} else {
-			console.warn("⚠️ Chrome extension not found, skipping")
+			logger.warn("⚠️ Chrome extension not found, skipping")
 		}
 	}
 
@@ -261,54 +380,58 @@ function devCommand(argv) {
 		process.env.CHROME_EXTENSION_PATH = chromeConfig.extensionPath
 	}
 
-	// Build the command based on what's requested
-	let command
-
-	// Collect all processes to run
-	const processes = []
-	const names = []
-	const colors = []
-
 	// Normalize path separators to forward slashes for cross-platform shell compatibility
 	const normalizedViteConfigPath = viteConfigPath.replace(/\\/g, "/")
 
-	// Vite is always included
-	const viteCommand = `npx vite dev --config "${normalizedViteConfigPath}"`
-	processes.push(`"${viteCommand}"`)
-	names.push("VITE")
-	colors.push("cyan")
+	// Build the canonical service list (raw commands, no concurrently wrapping)
+	const services = []
+	services.push({
+		name: "VITE",
+		color: "cyan",
+		command: `npx vite dev --config "${normalizedViteConfigPath}"`,
+	})
 
-	// Socket server (on by default, skip if --no-socket or server.js not found)
 	if (serverJsPath) {
 		const normalizedServerPath = serverJsPath.replace(/\\/g, "/")
-		processes.push(`"npx nodemon \\"${normalizedServerPath}\\""`)
-		names.push("SOCKET")
-		colors.push("green")
+		services.push({
+			name: "SOCKET",
+			color: "green",
+			command: `npx nodemon "${normalizedServerPath}"`,
+		})
 	}
 
-	// Firefox extension (optional)
 	if (firefoxConfig) {
-		processes.push(`"${firefoxConfig.command}"`)
-		names.push(firefoxConfig.name)
-		colors.push(firefoxConfig.color)
+		services.push({
+			name: firefoxConfig.name,
+			color: firefoxConfig.color,
+			command: firefoxConfig.command,
+		})
 	}
 
-	// Chrome extension (optional)
 	if (chromeConfig) {
-		processes.push(`"${chromeConfig.command}"`)
-		names.push(chromeConfig.name)
-		colors.push(chromeConfig.color)
+		services.push({
+			name: chromeConfig.name,
+			color: chromeConfig.color,
+			command: chromeConfig.command,
+		})
 	}
 
-	// Build the final command
-	if (processes.length > 1) {
-		// Use concurrently to run multiple processes
-		command = `npx concurrently --names "${names.join(
-			",",
-		)}" --prefix-colors "${colors.join(",")}" ${processes.join(" ")}`
+	// In JSON mode we orchestrate the children ourselves so we can wrap every
+	// stdout/stderr line as NDJSON. Concurrently's prefixed output would defeat
+	// that. Outside JSON mode, keep the legacy concurrently-based behavior.
+	if (logger.jsonMode) {
+		runServicesJson(services, logger)
+		return
+	}
+
+	let command
+	if (services.length > 1) {
+		const quoted = services.map((s) => `"${s.command}"`).join(" ")
+		const names = services.map((s) => s.name).join(",")
+		const colors = services.map((s) => s.color).join(",")
+		command = `npx concurrently --names "${names}" --prefix-colors "${colors}" ${quoted}`
 	} else {
-		// Just run Vite dev server alone
-		command = `npx vite dev --config "${normalizedViteConfigPath}"`
+		command = services[0].command
 	}
 
 	shell.exec(command)
