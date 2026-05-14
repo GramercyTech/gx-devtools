@@ -45,9 +45,15 @@ function findProjectRoot() {
 function resolveGxPaths() {
 	const projectRoot = findProjectRoot()
 
-	// Try local installation first
+	// Honor --use-global (propagated by cli.js as GXDEV_USE_GLOBAL=true) to
+	// force the CLI's own install location, even if a local node_modules copy
+	// of @gxp-dev/tools exists. Useful when the local version is stale or
+	// being debugged against the globally installed toolkit.
+	const forceGlobal = process.env.GXDEV_USE_GLOBAL === "true"
+
+	// Try local installation first (unless --use-global)
 	const localNodeModules = path.join(projectRoot, "node_modules", PACKAGE_NAME)
-	if (fs.existsSync(localNodeModules)) {
+	if (!forceGlobal && fs.existsSync(localNodeModules)) {
 		return {
 			gentoPath: path.join(localNodeModules, "bin", getBinaryName()),
 			viteConfigPath: path.join(localNodeModules, "runtime", "vite.config.js"),

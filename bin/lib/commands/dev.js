@@ -229,8 +229,11 @@ function devCommand(argv) {
 	)
 	const installLocation =
 		paths.packageRoot === localToolkitDir ? "local" : "package"
+	const forcedGlobal = process.env.GXDEV_USE_GLOBAL === "true"
 	logger.info(
-		`📦 Using ${installLocation} toolkit install: ${paths.packageRoot}`,
+		`📦 Using ${installLocation} toolkit install: ${paths.packageRoot}${
+			forcedGlobal ? " (forced via --use-global)" : ""
+		}`,
 	)
 
 	// Load .env file if it exists for default values

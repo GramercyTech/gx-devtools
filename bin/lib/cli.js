@@ -51,6 +51,18 @@ const cli = yargs
 		default: false,
 		global: true,
 	})
+	.option("use-global", {
+		describe:
+			"Force-use the global @gxp-dev/tools install (runtime, vite config, templates) and ignore any local node_modules copy",
+		type: "boolean",
+		default: false,
+		global: true,
+	})
+	.middleware((argv) => {
+		if (argv["use-global"]) {
+			process.env.GXDEV_USE_GLOBAL = "true"
+		}
+	})
 	.command(
 		"ui",
 		"Open the interactive Terminal UI without auto-starting anything",
