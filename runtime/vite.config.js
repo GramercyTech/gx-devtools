@@ -188,6 +188,59 @@ export default defineConfig(async (ctx) => {
 	const runtimeMainFsUrl = toFsUrl("main.js")
 	const runtimeLogoFsUrl = toFsUrl("logo.png")
 
+	// ---------------------------------------------------------------------
+	// Live log streaming for the developer hub IDE.
+	//
+	// The portal's Session page wants to surface gxdev's stdout/stderr (Vite
+	// build errors, HMR notices, custom console.log from the project, etc.)
+	// in a bottom dock so the developer doesn't have to `kubectl logs` from
+	// outside the cluster. We keep a small ring buffer of recent lines and
+	// fan them out to any number of SSE subscribers — the buffer is replayed
+	// to each new subscriber so they see context from before they connected.
+	//
+	// We hook process.stdout.write / process.stderr.write rather than
+	// Vite's customLogger so we also capture lines emitted by the user's
+	// plugins, the runtime mock-api, console.log from server-side code,
+	// etc. The patch is a wrapper, not a replacement — the original
+	// terminal output keeps working unchanged.
+	const LOG_BUFFER_MAX = 500
+	const logBuffer = []
+	const logSubscribers = new Set()
+
+	function pushLog(stream, chunk) {
+		const text = typeof chunk === "string" ? chunk : chunk.toString("utf-8")
+		if (!text) return
+		// Split on newlines so each line is its own SSE event. Trailing
+		// empty splits (from `foo\n`) become "" — skip them.
+		const lines = text.split(/\r?\n/)
+		const ts = Date.now()
+		for (const raw of lines) {
+			if (!raw) continue
+			const entry = { stream, line: raw, ts }
+			logBuffer.push(entry)
+			if (logBuffer.length > LOG_BUFFER_MAX) logBuffer.shift()
+			for (const send of logSubscribers) {
+				try {
+					send(entry)
+				} catch {
+					// subscriber errored — drop it on the floor; the
+					// `res.on("close")` cleanup handles dead clients.
+				}
+			}
+		}
+	}
+
+	const _originalStdoutWrite = process.stdout.write.bind(process.stdout)
+	const _originalStderrWrite = process.stderr.write.bind(process.stderr)
+	process.stdout.write = function (chunk, ...rest) {
+		pushLog("stdout", chunk)
+		return _originalStdoutWrite(chunk, ...rest)
+	}
+	process.stderr.write = function (chunk, ...rest) {
+		pushLog("stderr", chunk)
+		return _originalStderrWrite(chunk, ...rest)
+	}
+
 	// Create plugin to serve runtime files (index.html and main.js) if no local ones exist
 	const runtimeFilesPlugin = {
 		name: "runtime-files",
@@ -216,6 +269,55 @@ export default defineConfig(async (ctx) => {
 			return null
 		},
 		configureServer(server) {
+			// SSE endpoint that streams gxdev's stdout/stderr to the
+			// portal's IDE. CORS is wide open because the portal is on a
+			// different origin than the preview pod (dashboard.<env> vs
+			// <subdomain>.dev.<env>) and we already gate access at the
+			// network layer — the preview URLs are unguessable and live
+			// inside the cluster's preview namespace.
+			server.middlewares.use("/__logs", (req, res) => {
+				if (req.method === "OPTIONS") {
+					res.writeHead(204, {
+						"Access-Control-Allow-Origin": "*",
+						"Access-Control-Allow-Methods": "GET, OPTIONS",
+						"Access-Control-Allow-Headers": "*",
+					})
+					res.end()
+					return
+				}
+				if (req.method !== "GET") {
+					res.writeHead(405)
+					res.end()
+					return
+				}
+				res.writeHead(200, {
+					"Content-Type": "text/event-stream",
+					"Cache-Control": "no-cache, no-transform",
+					Connection: "keep-alive",
+					"Access-Control-Allow-Origin": "*",
+					"X-Accel-Buffering": "no",
+				})
+				// Replay buffered lines so the client gets context.
+				for (const entry of logBuffer) {
+					res.write(`data: ${JSON.stringify(entry)}\n\n`)
+				}
+				// Heartbeat every 25s to keep the connection alive
+				// through any intermediate idle-timeout (GCP LB defaults
+				// to 30s; we already bump it to 86400s via
+				// GCPBackendPolicy but the heartbeat is cheap insurance).
+				const heartbeat = setInterval(() => {
+					res.write(`: heartbeat\n\n`)
+				}, 25000)
+				const send = (entry) => {
+					res.write(`data: ${JSON.stringify(entry)}\n\n`)
+				}
+				logSubscribers.add(send)
+				req.on("close", () => {
+					clearInterval(heartbeat)
+					logSubscribers.delete(send)
+				})
+			})
+
 			server.middlewares.use((req, res, next) => {
 				// Serve runtime index.html for root requests and SPA navigation requests
 				// (unless local index.html is opted in). SPA fallback is required so
@@ -375,8 +477,24 @@ export default defineConfig(async (ctx) => {
 					exclude: [
 						// Consumer install (published toolkit from npm)
 						"**/node_modules/@gxp-dev/tools/**",
-						// Workspace / `npm link` / self-dev: the runtime source itself
+						// Workspace / `npm link` / self-dev: the runtime source itself,
+						// resolved via the @gx-runtime alias.
 						`${runtimeDir.replace(/\\/g, "/")}/**`,
+						// If the toolkit lives at a symlinked path (global install,
+						// `npm link`, monorepo workspace), Vite resolves modules to
+						// their realpath — match that too so the runtime source is
+						// not double-rewritten.
+						...(realRuntimeDir !== runtimeDir.replace(/\\/g, "/")
+							? [`${realRuntimeDir}/**`]
+							: []),
+						// `vue-demi` is the Vue 2/3 compat shim that Pinia (and many
+						// other libs) pull in transitively. Its `lib/index.mjs` does
+						// `export * from "vue"`, which rollup-plugin-external-globals
+						// can't rewrite ("Cannot export all properties from an
+						// external variable"). Leave it alone — Vite's `dedupe: ["vue"]`
+						// already ensures it imports the same Vue instance that we
+						// expose on `window.Vue`.
+						"**/node_modules/vue-demi/**",
 					],
 				},
 			),
