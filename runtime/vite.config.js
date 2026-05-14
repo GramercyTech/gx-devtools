@@ -191,6 +191,30 @@ export default defineConfig(async (ctx) => {
 	// Create plugin to serve runtime files (index.html and main.js) if no local ones exist
 	const runtimeFilesPlugin = {
 		name: "runtime-files",
+		// Resolve the legacy `/@gx-runtime/*` absolute-URL form used by
+		// runtime/index.html (and by any project index.html that hasn't
+		// migrated to the bare `@gx-runtime/...` specifier). Vite's
+		// resolve.alias map only catches bare specifiers, and the
+		// configureServer middleware below only catches HTTP requests —
+		// Vite's internal pre-transform of script-src URLs takes
+		// neither path and ends up logging
+		//   "Pre-transform error: Failed to load url /@gx-runtime/main.js"
+		// every render tick. Returning the real filesystem path here
+		// short-circuits the resolution entirely so pre-transform, the
+		// dep optimizer, and SSR all agree on where the file lives.
+		resolveId(id) {
+			if (typeof id !== "string") return null
+			if (id.startsWith("/@gx-runtime/")) {
+				const relative = id.slice("/@gx-runtime/".length)
+				if (!relative) return null
+				// Strip any query string (e.g. ?t=12345 from HMR) before
+				// resolving against the filesystem.
+				const [bare, query] = relative.split("?")
+				const resolved = path.resolve(runtimeDir, bare)
+				return query ? `${resolved}?${query}` : resolved
+			}
+			return null
+		},
 		configureServer(server) {
 			server.middlewares.use((req, res, next) => {
 				// Serve runtime index.html for root requests and SPA navigation requests
