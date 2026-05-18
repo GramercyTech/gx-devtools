@@ -7,7 +7,12 @@ import fs from "fs"
 import os from "os"
 
 // eslint-disable-next-line no-undef
-const { lintFile, detectSchema } = require("../../bin/lib/lint")
+const {
+	lintFile,
+	lintFiles,
+	lintData,
+	detectSchema,
+} = require("../../bin/lib/lint")
 
 const TMP_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "gxp-lint-"))
 
@@ -172,6 +177,115 @@ describe("lint app-manifest.json", () => {
 		expect(
 			result.errors.some(
 				(e) => e.code === "required" && e.params?.missingProperty === "default",
+			),
+		).toBe(true)
+	})
+})
+
+describe("lintFile edge cases", () => {
+	it("reports file-not-found without throwing", () => {
+		const result = lintFile("/definitely/does/not/exist/app-manifest.json")
+		expect(result.ok).toBe(false)
+		expect(result.errors[0].code).toBe("file-not-found")
+	})
+
+	it("returns skipped=true for files that don't match any schema name", () => {
+		const file = writeTmp("random.json", { hello: "world" })
+		const result = lintFile(file)
+		expect(result.skipped).toBe(true)
+		expect(result.reason).toBe("no-schema-for-filename")
+		// Note: ok remains true because nothing failed — it was simply skipped.
+		expect(result.ok).toBe(true)
+	})
+
+	it("annotates errors with line/column from the JSON source", () => {
+		// missing-name has type: 'text' but no `name` property; the error
+		// should point to the field within fieldsList.
+		const file = writeTmp("located.configuration.json", {
+			additionalTabs: [
+				{
+					type: "fields_list",
+					fieldsList: [{ type: "text" }],
+				},
+			],
+		})
+		const result = lintFile(file)
+		const err = result.errors.find(
+			(e) => e.code === "required" && e.params?.missingProperty === "name",
+		)
+		expect(err).toBeDefined()
+		expect(err.line).toBeGreaterThanOrEqual(1)
+		expect(err.column).toBeGreaterThanOrEqual(1)
+		expect(typeof err.instancePath).toBe("string")
+	})
+
+	it("emits each distinct violation only once (dedupes if/allOf duplicates)", () => {
+		const file = writeTmp("dupes.configuration.json", {
+			additionalTabs: [
+				{
+					type: "fields_list",
+					fieldsList: [{ type: "select", name: "role" }],
+				},
+			],
+		})
+		const result = lintFile(file)
+		expect(result.ok).toBe(false)
+		const missingOptions = result.errors.filter(
+			(e) => e.code === "required" && e.params?.missingProperty === "options",
+		)
+		expect(missingOptions.length).toBe(1)
+	})
+})
+
+describe("lintFiles aggregator", () => {
+	it("rolls up per-file results and a summary", () => {
+		const good = writeTmp("good.configuration.json", {
+			additionalTabs: [
+				{
+					type: "fields_list",
+					fieldsList: [{ type: "text", name: "first_name", label: "First" }],
+				},
+			],
+		})
+		const bad = writeTmp("bad.configuration.json", {
+			additionalTabs: [{ type: "fields_list", fieldsList: [{ type: "text" }] }],
+		})
+		const unrelated = writeTmp("notes.json", { just: "notes" })
+
+		const { results, summary } = lintFiles([good, bad, unrelated])
+
+		expect(results).toHaveLength(3)
+		expect(summary.totalFiles).toBe(3)
+		expect(summary.filesWithErrors).toBe(1)
+		expect(summary.skipped).toBe(1)
+		expect(summary.totalErrors).toBeGreaterThanOrEqual(1)
+	})
+})
+
+describe("lintData (parsed-value validator)", () => {
+	it("validates a parsed app-manifest object", () => {
+		const result = lintData(
+			{ name: "x", version: "1.0.0", strings: { default: {} } },
+			"/anywhere/app-manifest.json",
+		)
+		expect(result.ok).toBe(true)
+	})
+
+	it("returns skipped when pathHint doesn't match a known schema", () => {
+		const result = lintData({ anything: true }, "/random/file.json")
+		expect(result.skipped).toBe(true)
+		expect(result.reason).toBe("no-schema-for-filename")
+	})
+
+	it("flags structural errors without touching the filesystem", () => {
+		const result = lintData(
+			{ asset_dir: 12345, strings: { default: {} } },
+			"/x/app-manifest.json",
+		)
+		expect(result.ok).toBe(false)
+		expect(
+			result.errors.some(
+				(e) => e.code === "type" && /asset_dir/.test(e.instancePath),
 			),
 		).toBe(true)
 	})

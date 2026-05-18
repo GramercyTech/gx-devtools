@@ -7,9 +7,17 @@
 
 const path = require("path")
 const fs = require("fs")
-const { spawn } = require("child_process")
+const childProcess = require("child_process")
 const shell = require("shelljs")
 const dotenv = require("dotenv")
+
+// Module-private spawn reference so tests can swap in a stub via
+// `setSpawnForTesting`. Production code paths still call the real
+// `child_process.spawn` because the default closes over it.
+let _spawn = childProcess.spawn
+function setSpawnForTesting(fn) {
+	_spawn = fn || childProcess.spawn
+}
 const {
 	findProjectRoot,
 	resolveGxPaths,
@@ -53,7 +61,7 @@ function createLogger(jsonMode) {
  * Returns the child process.
  */
 function spawnService(name, command, logger) {
-	const child = spawn(command, {
+	const child = _spawn(command, {
 		shell: true,
 		stdio: ["ignore", "pipe", "pipe"],
 		env: process.env,
@@ -289,8 +297,9 @@ function devCommand(argv) {
 		logger.info("🎭 Mock API will be enabled")
 	}
 
-	// Socket server starts by default unless --no-socket is passed
-	const noSocket = argv["no-socket"]
+	// Socket server starts by default unless --no-socket is passed. See
+	// shouldDisableSocket() for the yargs-negation quirk it papers over.
+	const noSocket = shouldDisableSocket(argv)
 	let serverJsPath = ""
 	if (!noSocket) {
 		// Check for local server.js first, then runtime directory
@@ -340,9 +349,10 @@ function devCommand(argv) {
 	if (!process.env.NODE_LOG_LEVEL) {
 		process.env.NODE_LOG_LEVEL = argv["node-log-level"] || "info"
 	}
-	if (!process.env.NODE_PORT) {
-		process.env.NODE_PORT = String(finalPort)
-	}
+	// NODE_PORT is the source of truth for the socket server (server.cjs reads
+	// process.env). Always set it to the resolved finalPort so that a CLI
+	// `--port` overrides anything that dotenv loaded from .env earlier.
+	process.env.NODE_PORT = String(finalPort)
 	if (!process.env.COMPONENT_PATH) {
 		process.env.COMPONENT_PATH = argv["component-path"] || "./src/Plugin.vue"
 	}
@@ -401,12 +411,15 @@ function devCommand(argv) {
 	// Normalize path separators to forward slashes for cross-platform shell compatibility
 	const normalizedViteConfigPath = viteConfigPath.replace(/\\/g, "/")
 
-	// Build the canonical service list (raw commands, no concurrently wrapping)
+	// Build the canonical service list (raw commands, no concurrently wrapping).
+	// Pass --port to vite directly: vite's loadEnv() only reads .env files —
+	// it does NOT inherit from process.env — so setting NODE_PORT above isn't
+	// enough on its own. The CLI flag wins over the config every time.
 	const services = []
 	services.push({
 		name: "VITE",
 		color: "cyan",
-		command: `npx vite dev --config "${normalizedViteConfigPath}"`,
+		command: `npx vite dev --config "${normalizedViteConfigPath}" --port ${finalPort}`,
 	})
 
 	if (serverJsPath) {
@@ -455,6 +468,23 @@ function devCommand(argv) {
 	shell.exec(command)
 }
 
+/**
+ * Pure helper exposed for unit testing the `--no-socket` flag-parsing fix.
+ * yargs interprets `--no-socket` from the CLI as `argv.socket = false`
+ * (boolean negation), NOT as `argv["no-socket"] = true`. We accept either
+ * form so the flag behaves the way the help text advertises.
+ */
+function shouldDisableSocket(argv) {
+	return argv["no-socket"] === true || argv.socket === false
+}
+
 module.exports = {
 	devCommand,
+	// Exposed for unit testing. These are pure-ish helpers that drive the
+	// NDJSON logger and child-process orchestration used by `gxdev dev`.
+	createLogger,
+	spawnService,
+	runServicesJson,
+	shouldDisableSocket,
+	setSpawnForTesting,
 }

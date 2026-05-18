@@ -1,0 +1,118 @@
+name: Release
+
+# Tag-triggered publish. Pushing a SemVer tag like `v2.1.0` runs the full
+# verification chain (unit + e2e + tui build) and then `npm publish` if
+# everything is green. Mirrors @gxp-dev/uikit's release.yml.
+#
+# Replaces the old npm-publish.yml workflow, which auto-bumped the patch
+# version and published on every push to main. That behavior is intentionally
+# gone — version bumps are now an explicit human action (`npm version` +
+# `git push --tags`).
+#
+# Required repo secret:
+#   NPM_DEPLOY_TOKEN — an npm automation token with publish access to the
+#                      @gxp-dev scope.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  # Manual fallback: lets you re-publish without re-tagging if a previous
+  # run failed mid-flight. Whatever's in package.json gets published.
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Dry run (npm publish --dry-run; nothing actually goes to npm)"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # required for npm provenance
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+          registry-url: "https://registry.npmjs.org"
+          scope: "@gxp-dev"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Only enforce tag↔package.json version equality when this run was
+      # triggered by a tag push. Manual workflow_dispatch publishes whatever
+      # is in package.json verbatim.
+      - name: Verify package.json version matches tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION). Bump the version in package.json before tagging."
+            exit 1
+          fi
+          echo "Publishing version $PKG_VERSION"
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build the TUI
+        run: npm run build:tui
+
+      - name: CLI end-to-end tests
+        # Same harness as ci.yml's cli-e2e job — but blocking, here, so a
+        # broken `gxdev init/build/dev` never lands on npm.
+        env:
+          RUN_CLI_E2E: "1"
+        run: npm run test:e2e
+
+      - name: Verify required publish artifacts exist
+        run: |
+          test -f bin/gx-devtools.js || (echo "Missing bin/gx-devtools.js" && exit 1)
+          test -f mcp/mcp-serve.js || (echo "Missing mcp/mcp-serve.js" && exit 1)
+          test -d dist/tui || (echo "Missing dist/tui (run npm run build:tui)" && exit 1)
+          test -d runtime || (echo "Missing runtime/" && exit 1)
+          test -d template || (echo "Missing template/" && exit 1)
+
+      - name: Publish (dry run)
+        if: ${{ inputs.dry-run }}
+        run: npm publish --dry-run --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_DEPLOY_TOKEN }}
+
+      - name: Publish
+        if: ${{ !inputs.dry-run }}
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_DEPLOY_TOKEN }}
+
+      - name: Publish summary
+        if: ${{ !inputs.dry-run }}
+        run: |
+          {
+            echo "## Published"
+            echo ""
+            echo "**Package:** \`@gxp-dev/tools\`"
+            echo "**Version:** \`$(node -p "require('./package.json').version")\`"
+            echo ""
+            echo "### Install"
+            echo '```bash'
+            echo "npm install -g @gxp-dev/tools"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

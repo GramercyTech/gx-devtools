@@ -1,0 +1,71 @@
+name: CI
+
+# Runs on every push to main and every pull request. Lives next to (but
+# separate from) release.yml — this workflow never publishes; it just proves
+# the suite is green and the CLI smoke-tests pass end-to-end before a tag
+# triggers an actual publish.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the TUI
+        # build:tui compiles bin/lib/tui/*.tsx → dist/tui/*.js, which is what
+        # the published CLI ships. We don't strictly need it for unit tests
+        # (no test in tests/** imports the TUI) but running it here catches
+        # TypeScript regressions in the same job that catches Vitest ones.
+        run: npm run build:tui
+
+      - name: Run unit suite
+        run: npm test
+
+  cli-e2e:
+    name: CLI e2e (init → build → dev)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: unit
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+
+      - name: Install toolkit dependencies
+        run: npm ci
+
+      - name: Build the TUI
+        run: npm run build:tui
+
+      - name: Run end-to-end CLI suite
+        # The e2e suite scaffolds a real plugin project, runs `npm install`
+        # in it, then exercises gxdev build + gxdev dev against that fixture.
+        # See tests/e2e/cli.test.js for the harness.
+        env:
+          RUN_CLI_E2E: "1"
+        run: npm run test:e2e

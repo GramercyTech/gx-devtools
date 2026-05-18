@@ -11,6 +11,8 @@ const {
 	DEFAULT_PORTS,
 	ENVIRONMENT_URLS,
 	PACKAGE_NAME,
+	TAILWIND_VERSION,
+	BASE_FRAMEWORK,
 } = require("../../bin/lib/constants")
 
 describe("constants", () => {
@@ -34,19 +36,11 @@ describe("constants", () => {
 			expect(REQUIRED_DEPENDENCIES).not.toBeNull()
 		})
 
-		it("should include Vue", () => {
-			expect(REQUIRED_DEPENDENCIES).toHaveProperty("vue")
+		it("should include dotenv (consumed at runtime by the dev command)", () => {
+			expect(REQUIRED_DEPENDENCIES).toHaveProperty("dotenv")
 		})
 
-		it("should include Pinia", () => {
-			expect(REQUIRED_DEPENDENCIES).toHaveProperty("pinia")
-		})
-
-		it("should include socket.io-client", () => {
-			expect(REQUIRED_DEPENDENCIES).toHaveProperty("socket.io-client")
-		})
-
-		it("should include gxp-dev/uikit", () => {
+		it("should include @gxp-dev/uikit (component library)", () => {
 			expect(REQUIRED_DEPENDENCIES).toHaveProperty("@gxp-dev/uikit")
 		})
 
@@ -64,16 +58,29 @@ describe("constants", () => {
 			expect(REQUIRED_DEV_DEPENDENCIES).not.toBeNull()
 		})
 
-		it("should include gxp-dev/tools", () => {
+		it("should include @gxp-dev/tools (the toolkit itself)", () => {
 			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("@gxp-dev/tools")
 		})
 
-		it("should include nodemon", () => {
-			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("nodemon")
+		it("should include the eslint/prettier formatting stack", () => {
+			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("eslint")
+			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("eslint-plugin-vue")
+			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("prettier")
 		})
 
-		it("should include mkcert", () => {
-			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("mkcert")
+		it("should include the test harness (vitest + helpers)", () => {
+			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("vitest")
+			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("@vue/test-utils")
+			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("happy-dom")
+		})
+
+		it("should include the tailwind dev stack pinned to TAILWIND_VERSION", () => {
+			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("tailwindcss")
+			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("@tailwindcss/vite")
+			expect(REQUIRED_DEV_DEPENDENCIES.tailwindcss).toBe(TAILWIND_VERSION)
+			expect(REQUIRED_DEV_DEPENDENCIES["@tailwindcss/vite"]).toBe(
+				TAILWIND_VERSION,
+			)
 		})
 
 		it("should have version strings for all dev dependencies", () => {
@@ -81,6 +88,12 @@ describe("constants", () => {
 				expect(typeof version).toBe("string")
 				expect(version.length).toBeGreaterThan(0)
 			})
+		})
+	})
+
+	describe("BASE_FRAMEWORK", () => {
+		it("should be the tailwindcss@<version> string used in app-manifest", () => {
+			expect(BASE_FRAMEWORK).toBe(`tailwindcss@${TAILWIND_VERSION}`)
 		})
 	})
 
@@ -102,7 +115,8 @@ describe("constants", () => {
 			expect(DEFAULT_SCRIPTS).toHaveProperty("dev-http")
 		})
 
-		it("should include setup-ssl script", () => {
+		it("should include dev-http and setup-ssl scripts", () => {
+			expect(DEFAULT_SCRIPTS).toHaveProperty("dev-http")
 			expect(DEFAULT_SCRIPTS).toHaveProperty("setup-ssl")
 		})
 

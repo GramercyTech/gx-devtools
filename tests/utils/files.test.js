@@ -201,19 +201,19 @@ describe("files", () => {
 	})
 
 	describe("dependency constants", () => {
-		it("should have required dependencies", () => {
+		it("should have required runtime dependencies", () => {
 			const { REQUIRED_DEPENDENCIES } = require("../../bin/lib/constants")
 
-			expect(REQUIRED_DEPENDENCIES).toHaveProperty("vue")
-			expect(REQUIRED_DEPENDENCIES).toHaveProperty("pinia")
-			expect(REQUIRED_DEPENDENCIES).toHaveProperty("vite")
+			expect(REQUIRED_DEPENDENCIES).toHaveProperty("dotenv")
+			expect(REQUIRED_DEPENDENCIES).toHaveProperty("@gxp-dev/uikit")
 		})
 
 		it("should have required dev dependencies", () => {
 			const { REQUIRED_DEV_DEPENDENCIES } = require("../../bin/lib/constants")
 
 			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("@gxp-dev/tools")
-			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("nodemon")
+			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("vitest")
+			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("tailwindcss")
 		})
 
 		it("should have default scripts", () => {
