@@ -8,6 +8,12 @@
 const isWin = process.platform === "win32"
 const exportCmd = isWin ? "set" : "export"
 
+// Base CSS framework loaded by theme-layouts during development.
+// Versioned here so the same value lands in package.json devDependencies
+// AND the app-manifest's baseFramework field (platform reads the manifest
+// to know which CSS framework to provide for the live plugin).
+const TAILWIND_VERSION = "^4.3.0"
+
 // Required dependencies for GxP projects
 const REQUIRED_DEPENDENCIES = {
 	dotenv: "^16.4.5",
@@ -23,7 +29,11 @@ const REQUIRED_DEV_DEPENDENCIES = {
 	vitest: "^4.1.5",
 	"@vue/test-utils": "^2.4.6",
 	"happy-dom": "^15.11.0",
+	tailwindcss: TAILWIND_VERSION,
+	"@tailwindcss/vite": TAILWIND_VERSION,
 }
+
+const BASE_FRAMEWORK = `tailwindcss@${TAILWIND_VERSION}`
 
 // Default scripts for package.json
 const DEFAULT_SCRIPTS = {
@@ -131,4 +141,6 @@ module.exports = {
 	DEFAULT_PORTS,
 	PACKAGE_NAME,
 	ENVIRONMENT_URLS,
+	TAILWIND_VERSION,
+	BASE_FRAMEWORK,
 }

@@ -120,6 +120,28 @@ function hasLocalFile(fileName) {
  * concatenated, objects (resolve.alias, define, etc.) are merged key-by-key,
  * primitives are overwritten.
  */
+/**
+ * Try to load the `@tailwindcss/vite` plugin from the project's node_modules.
+ *
+ * Tailwind 4 ships as a dev-only base CSS framework — `tailwindcss` and
+ * `@tailwindcss/vite` are declared in the project's devDependencies and
+ * imported via `@import "tailwindcss";` inside the theme-layouts (which are
+ * dev-only; the production build entry is `src/Plugin.vue`). Loading the
+ * Vite plugin here lets that import generate utility CSS without each
+ * project having to wire it up in `vite.extend.js`. If the user has removed
+ * Tailwind we silently skip — the layouts work without it, just without
+ * Tailwind's default styling.
+ */
+async function loadTailwindPlugin() {
+	try {
+		const mod = await import("@tailwindcss/vite")
+		const plugin = mod.default ?? mod
+		return typeof plugin === "function" ? plugin() : null
+	} catch {
+		return null
+	}
+}
+
 async function loadExtensionConfig(ctx, runtimeConfig) {
 	const candidates = ["vite.extend.js", "vite.extend.mjs"]
 	for (const name of candidates) {
@@ -415,6 +437,12 @@ export default defineConfig(async (ctx) => {
 	// Determine if HTTPS is enabled
 	const useHttps = getHttpsConfig(env) !== undefined
 
+	// Load Tailwind 4 Vite plugin from the project's node_modules if present.
+	const tailwindPlugin = await loadTailwindPlugin()
+	if (tailwindPlugin) {
+		console.log("🎨 Tailwind: @tailwindcss/vite plugin loaded")
+	}
+
 	// Get API proxy target for non-mock environments
 	const apiProxyTarget = getApiProxyTarget(env)
 	if (apiProxyTarget) {
@@ -448,6 +476,8 @@ export default defineConfig(async (ctx) => {
 		},
 		plugins: [
 			runtimeFilesPlugin,
+			// Tailwind 4 Vite plugin (no-op if @tailwindcss/vite isn't installed).
+			...((tailwindPlugin && [tailwindPlugin]) || []),
 			// Source tracker must run BEFORE vue() to transform templates before compilation
 			...(useSourceTracker ? [gxpSourceTrackerPlugin()] : []),
 			vue(),

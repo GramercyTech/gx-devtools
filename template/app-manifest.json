@@ -4,6 +4,7 @@
 	"description": "GxToolkit Plugin",
 	"manifest_version": 3,
 	"asset_dir": "/src/public",
+	"baseFramework": "tailwindcss@^4.3.0",
 	"configurationFile": "configuration.json",
 	"appInstructionsFile": "app-instructions.md",
 	"defaultStylingFile": "default-styling.css",

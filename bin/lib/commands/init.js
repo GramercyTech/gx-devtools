@@ -29,6 +29,7 @@ const {
 	safeCopyFile,
 	createPackageJson,
 	updateAppManifest,
+	ensureBaseFramework,
 	installDependencies,
 	updateExistingProject,
 	ensureMkcertInstalled,
@@ -721,6 +722,7 @@ async function initCommand(argv) {
 			console.log("Updating existing project...")
 			updateExistingProject(projectPath)
 			copyBundleFiles(projectPath, paths, false)
+			ensureBaseFramework(projectPath)
 			console.log("✅ Project updated!")
 			return
 		}

@@ -11,6 +11,7 @@ const {
 	REQUIRED_DEPENDENCIES,
 	REQUIRED_DEV_DEPENDENCIES,
 	DEFAULT_SCRIPTS,
+	BASE_FRAMEWORK,
 } = require("../constants")
 const { loadGlobalConfig } = require("./paths")
 
@@ -89,6 +90,9 @@ function updateAppManifest(projectPath, projectName, description = "") {
 			manifest.description = `GxP Plugin: ${projectName}`
 		}
 
+		// Tell the platform which base CSS framework the layouts load.
+		manifest.baseFramework = BASE_FRAMEWORK
+
 		// Update strings with project name
 		if (manifest.strings && manifest.strings.default) {
 			manifest.strings.default.welcome_text = `Welcome to ${projectName}`
@@ -98,6 +102,33 @@ function updateAppManifest(projectPath, projectName, description = "") {
 		console.log("✓ Updated app-manifest.json with project details")
 	} catch (error) {
 		console.warn("⚠ Could not update app-manifest.json:", error.message)
+	}
+}
+
+/**
+ * Ensures app-manifest.json has the current baseFramework value.
+ * Used during existing-project updates where the manifest file is not overwritten.
+ * @param {string} projectPath - Path to project directory
+ */
+function ensureBaseFramework(projectPath) {
+	const manifestPath = path.join(projectPath, "app-manifest.json")
+	if (!fs.existsSync(manifestPath)) {
+		return
+	}
+
+	try {
+		const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
+		if (manifest.baseFramework === BASE_FRAMEWORK) {
+			return
+		}
+		manifest.baseFramework = BASE_FRAMEWORK
+		fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, "\t"))
+		console.log(`✓ Set baseFramework in app-manifest.json (${BASE_FRAMEWORK})`)
+	} catch (error) {
+		console.warn(
+			"⚠ Could not set baseFramework in app-manifest.json:",
+			error.message,
+		)
 	}
 }
 
@@ -244,6 +275,7 @@ module.exports = {
 	safeCopyFile,
 	createPackageJson,
 	updateAppManifest,
+	ensureBaseFramework,
 	installDependencies,
 	updateExistingProject,
 	isImageMagickInstalled,

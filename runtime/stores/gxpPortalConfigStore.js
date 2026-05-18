@@ -47,7 +47,7 @@ function getApiConfig() {
 	const projectId = import.meta.env.VITE_API_PROJECT_ID || ""
 	const useHttps = import.meta.env.VITE_USE_HTTPS !== "false"
 	const nodePort = import.meta.env.VITE_NODE_PORT || "3060"
-	const mockPort = import.meta.env.VITE_SOCKET_IO_PORT || "3061"
+	const mockPort = import.meta.env.VITE_SOCKET_IO_PORT || "3069"
 
 	// Check if we're in development mode (Vite dev server)
 	const isDev = import.meta.env.DEV
