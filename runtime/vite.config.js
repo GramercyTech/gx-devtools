@@ -123,16 +123,28 @@ function hasLocalFile(fileName) {
 /**
  * Try to load the `@tailwindcss/vite` plugin from the project's node_modules.
  *
- * Tailwind 4 ships as a dev-only base CSS framework — `tailwindcss` and
- * `@tailwindcss/vite` are declared in the project's devDependencies and
- * imported via `@import "tailwindcss";` inside the theme-layouts (which are
- * dev-only; the production build entry is `src/Plugin.vue`). Loading the
- * Vite plugin here lets that import generate utility CSS without each
- * project having to wire it up in `vite.extend.js`. If the user has removed
- * Tailwind we silently skip — the layouts work without it, just without
- * Tailwind's default styling.
+ * Tailwind 4 is a DEV-ONLY base CSS framework here — declared in the project's
+ * devDependencies and imported via `@import "tailwindcss";` inside the
+ * theme-layouts. We deliberately do not run it during `vite build`:
+ *
+ *   1. The layouts aren't part of the production build (entry is
+ *      `src/Plugin.vue`), so there's no `@import "tailwindcss"` reaching the
+ *      build graph and the generated utilities would have nowhere to live.
+ *   2. The plugin scans the whole project (including `node_modules`) for
+ *      candidate class names. `@gxp-dev/uikit` ships compiled Vue files
+ *      containing arbitrary-value classes like
+ *      `bg-[var(--keyboard_key_active_background_color,var(--primary))]`,
+ *      which Tailwind 4 lowers to CSS with spaces in the var name — invalid
+ *      CSS that breaks `lightningcss` minification at build time.
+ *
+ * In dev (`command === "serve"`) we load it; in build we skip and let the
+ * platform supply Tailwind at runtime (per `app-manifest.json.baseFramework`).
+ * Silently no-ops if the user has uninstalled Tailwind.
  */
-async function loadTailwindPlugin() {
+async function loadTailwindPlugin(command) {
+	if (command !== "serve") {
+		return null
+	}
 	try {
 		const mod = await import("@tailwindcss/vite")
 		const plugin = mod.default ?? mod
@@ -438,9 +450,10 @@ export default defineConfig(async (ctx) => {
 	const useHttps = getHttpsConfig(env) !== undefined
 
 	// Load Tailwind 4 Vite plugin from the project's node_modules if present.
-	const tailwindPlugin = await loadTailwindPlugin()
+	// Dev-only — production builds skip it (see loadTailwindPlugin docs).
+	const tailwindPlugin = await loadTailwindPlugin(ctx.command)
 	if (tailwindPlugin) {
-		console.log("🎨 Tailwind: @tailwindcss/vite plugin loaded")
+		console.log("🎨 Tailwind: @tailwindcss/vite plugin loaded (dev)")
 	}
 
 	// Get API proxy target for non-mock environments
