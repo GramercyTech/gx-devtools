@@ -304,9 +304,17 @@ await store.apiDelete("/endpoint")
 ### Socket Methods
 
 ```javascript
-store.emitSocket("primary", "event-name", data)
-store.listenSocket("primary", "event-name", callback)
-store.useSocketListener("dependency-id", "updated", callback)
+// Primary API — use these
+store.broadcast("primary", "event-name", data)
+store.listen("primary", "event-name", callback)
+
+// Platform API event (AsyncAPI event scoped to a permission identifier)
+store.listen("SomeEventName", "identifier", callback)
+
+// Deprecated aliases (still work, but prefer broadcast/listen above)
+// store.emitSocket("primary", "event-name", data)
+// store.listenSocket("primary", "event-name", callback)
+// store.useSocketListener("dependency-id", "updated", callback)
 ```
 
 ## Dev Tools
@@ -368,14 +376,23 @@ The `gxdev` command launches an interactive terminal UI:
 ### TUI Slash Commands
 
 - `/dev` - Start Vite + Socket.IO servers
-- `/dev --no-socket` - Start Vite only (no Socket.IO)
 - `/dev --no-https` - Start without SSL
+- `/dev --no-socket` - Start without Socket.IO
 - `/dev --with-mock` - Start with Mock API enabled
+- `/dev --chrome` - Start + launch Chrome extension
+- `/dev --firefox` - Start + launch Firefox extension
+- `/mock` - Shorthand for `/socket --with-mock`
 - `/socket` - Start Socket.IO server
+- `/socket --with-mock` - Start Socket.IO + Mock API
+- `/socket send <event>` - Send a socket event
+- `/socket list` - List available socket events
 - `/ext chrome` - Launch Chrome extension
 - `/ext firefox` - Launch Firefox extension
-- `/stop <service>` - Stop a running service
+- `/extract-config` - Extract GxP config from `src/` into `app-manifest.json`
+- `/extract-config -d` - Dry run (preview changes without writing)
+- `/stop [service]` - Stop current or specified service
 - `/clear` - Clear current tab's logs
+- `/help` - Show all commands
 - `/quit` - Exit application
 
 ### Keyboard Shortcuts

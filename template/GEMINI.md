@@ -31,7 +31,7 @@ Ground the implementation in real platform endpoints and events. Do not invent A
 - Endpoints — `api_list_tags`, `api_list_operation_ids`, `search_api_endpoints`, `api_get_operation_parameters`, `get_endpoint_details`.
 - Find by payload shape — `api_find_endpoints_by_schema`.
 - WebSocket events — `api_find_events_for_operation` (maps operationId → events via `x-triggered-by`), `api_list_events`, `search_websocket_events`, `get_asyncapi_spec`. Run for every planned operationId so you subscribe instead of polling.
-- Canonical dependency JSON — `api_generate_dependency`.
+- Canonical dependency JSON — `api_generate_dependency`. Or run `gxdev add-dependency` for an interactive CLI wizard that writes the entry directly to `app-manifest.json`.
 - Documentation — `docs_list_pages`, `docs_search`, `docs_get_page`.
 
 ### 3. Plan with the client
@@ -67,7 +67,7 @@ Whenever you add or change a `store.callApi`, `store.listen`, `gxp-string`, or `
 ### 6. Test broadcasts
 
 - `gxdev socket list` — see available events.
-- `gxdev socket send --event <EventName>` — fire a test broadcast.
+- `gxdev socket send --event <EventName>` — fire a test broadcast. Add `--identifier <id>` to target a specific channel.
 - `test_api_route` MCP tool — hit endpoints against the local mock.
 - `test_scaffold_component_test` MCP tool — generate Vitest files.
 
@@ -280,7 +280,19 @@ Tools: `config_list_card_types`, `config_list_field_types`, `config_get_field_sc
 
 ## Component Kit
 
-Use `@gxp-dev/uikit` for UI
+Use `@gxp-dev/uikit` for all UI components. Run `gxdev storybook` to browse available components at `http://localhost:6006`. When storybook is running, the `gxp-uikit-storybook` MCP server (registered in `.mcp.json`) provides tools to inspect stories and documentation.
+
+Key components: `GxButton`, `GxCard`, `GxInput`, `GxModal`, `GxSpinner`, `GxAlert`, `GxBadge`, `GxAvatar`, `GxProgress`, `GxTabs`, `GxAccordion`
+
+## API Environments
+
+Set `VITE_API_ENV` in `.env`:
+
+- `mock` - Local mock server (default)
+- `local` - https://dashboard.eventfinity.test
+- `develop` - https://api.zenith-develop.env.eventfinity.app
+- `staging` - https://api.efz-staging.env.eventfinity.app
+- `production` - https://api.gramercy.cloud
 
 ## API Specs
 

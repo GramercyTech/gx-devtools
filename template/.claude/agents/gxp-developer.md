@@ -685,7 +685,7 @@ async function handleAction() {
 
 onMounted(() => {
 	// Listen for real-time updates
-	store.listenSocket("primary", "DataUpdated", (eventData) => {
+	store.listen("primary", "DataUpdated", (eventData) => {
 		data.value = eventData
 	})
 })
@@ -743,11 +743,18 @@ npm run dev          # HTTPS with Socket.IO
 npm run dev-http     # HTTP only
 
 # Test socket events
-gxdev socket list              # List available events
-gxdev socket send --event Name # Send test broadcast
+gxdev socket list                           # List available events
+gxdev socket send --event Name              # Send test broadcast
+gxdev socket send --event Name --identifier id  # Send to a specific channel
+
+# Dependencies
+gxdev add-dependency                        # Interactive wizard: search endpoints and add dependency to app-manifest.json
+
+# UIKit components
+gxdev storybook                             # Browse components at http://localhost:6006
 
 # Lint
-gxdev lint --all               # Validate configuration.json + app-manifest.json
+gxdev lint --all                            # Validate configuration.json + app-manifest.json
 
 # Build for production
 gxdev build          # Creates dist/ with .gxpapp package
