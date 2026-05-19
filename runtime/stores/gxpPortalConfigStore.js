@@ -498,6 +498,9 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 		let projectTeamId = pluginVars.value?.projectId?.split("/")
 		if (!projectTeamId || projectTeamId.length !== 2) {
+			console.log(
+				`[GxP Store] Invalid projectId format in pluginVars: ${pluginVars.value?.projectId}, expected "teamSlug/projectSlug"`,
+			)
 			return []
 		}
 		let teamSlug = projectTeamId[0]
