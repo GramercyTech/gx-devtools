@@ -842,7 +842,7 @@ Key environment variables recognized by gxdev:
 
 | Environment  | API Base URL                                     |
 | ------------ | ------------------------------------------------ |
-| `mock`       | `https://localhost:3060/mock-api`                |
+| `mock`       | `https://localhost:3060/api`                     |
 | `local`      | `https://dashboard.eventfinity.test`             |
 | `develop`    | `https://api.zenith-develop.env.eventfinity.app` |
 | `staging`    | `https://api.efz-staging.env.eventfinity.app`    |

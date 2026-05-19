@@ -57,12 +57,21 @@ function getApiConfig() {
 		const protocol = useHttps ? "https" : "http"
 		return {
 			apiDocsBaseUrl: ENVIRONMENT_URLS.production.apiBaseUrl,
-			apiBaseUrl: `${protocol}://localhost:${mockPort}/mock-api`,
+			apiBaseUrl: `${protocol}://localhost:${mockPort}/api`,
 			authToken: generateMockToken(),
 			projectId: "team/project",
 		}
 	}
-
+	if (apiEnv === "dev-mock") {
+		// Mock API: use local dev server with random token
+		const protocol = useHttps ? "https" : "http"
+		return {
+			apiDocsBaseUrl: ENVIRONMENT_URLS.production.apiBaseUrl,
+			apiBaseUrl: `/api`,
+			authToken: generateMockToken(),
+			projectId: "team/project",
+		}
+	}
 	// For non-mock environments in development, use the local Vite proxy
 	// The proxy handles CORS and injects the Authorization header
 	if (isDev) {

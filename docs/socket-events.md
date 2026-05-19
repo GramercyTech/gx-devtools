@@ -397,7 +397,7 @@ gxdev dev --with-socket --with-mock
 
 The mock API provides:
 
-- `/mock-api/*` endpoints
+- `/api/*` endpoints
 - Automatic response generation
 - Request logging
 

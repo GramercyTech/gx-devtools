@@ -336,7 +336,7 @@ function generateObject(schema, spec, depth) {
  */
 function generateArray(schema, spec, depth) {
 	const minItems = schema.minItems ?? 1
-	const maxItems = schema.maxItems ?? 5
+	const maxItems = schema.maxItems ?? 50
 	const count = faker.number.int({ min: minItems, max: maxItems })
 
 	const items = []
