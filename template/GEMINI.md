@@ -93,8 +93,10 @@ The plugin runs inside a container provided by the `gxdev` server. Only edit fil
 
 Every call to the GxP platform goes through `store.callApi(operationId, identifier, data)`. It handles auth, URL resolution, team/project scoping, and path-parameter substitution.
 
+**`src/stores/gxpPortalConfigStore.js` does NOT exist in the project** — it is a platform-provided runtime interface. Do not try to read that path. Call the MCP tool `describe_store_api` for the complete API reference.
+
 ```javascript
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
+import { useGxpStore } from "@/stores/gxpPortalConfigStore"
 const store = useGxpStore()
 
 await store.callApi(operationId, identifier, data)
@@ -153,24 +155,26 @@ await store.callApi("posts.store", "project", {
 
 ## Store Data Access
 
+For the complete API call `describe_store_api` (MCP tool). Quick reference:
+
 ```javascript
 // Getters
-store.getString("key", "default") // UI strings
-store.getSetting("key", "default") // Settings
-store.getAsset("key", "/fallback.jpg") // Asset URLs
-store.getState("key", null) // Runtime state
+store.getString("key", "default") // stringsList[key] or default
+store.getSetting("key", "default") // pluginVars[key] or default
+store.getAsset("key", "/fallback.jpg") // assetList[key] or default
+store.getState("key", null) // triggerState[key] or default
+store.hasPermission("flag") // boolean
+store.findDependency("identifier") // bound resource ID for an identifier
 
-// Setters
-store.updateString("key", "value")
-store.updateSetting("key", "value")
-store.updateAsset("key", "url")
-store.updateState("key", "value")
-
-// Logged-in user — returns `null` when no user is authenticated
-store.getUser() // Full user object or null
-store.getUserName("Guest") // Display name with fallback
-store.getUserEmail() // Email or null
+// Logged-in user — returns null when no user is authenticated
+store.getUser() // full user object or null
+store.getUserName("Guest") // display name with fallback
+store.getUserEmail() // email or null
 store.isAuthenticated() // boolean
+
+// Write to triggerState only (the only section plugins should write to)
+store.triggerState["my_key"] = "value"
+// Do NOT write to pluginVars, stringsList, or assetList — platform-managed
 ```
 
 ## Real-Time Events

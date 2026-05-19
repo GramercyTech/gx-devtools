@@ -174,7 +174,11 @@ project/
 
 ## The GxP Store (gxpPortalConfigStore)
 
-The store is the central hub for every piece of data the plugin touches — API responses, sockets, strings, assets, settings, runtime state. Import it in any component:
+The store is the central hub for every piece of data the plugin touches — API responses, sockets, strings, assets, settings, runtime state.
+
+**`src/stores/gxpPortalConfigStore.js` does NOT exist in the project.** Only `src/stores/index.js` exists (a re-export shim). In production the import is externalized to `window.useGxpStore` injected by the platform. **Do not attempt to read this file from disk.** Call the MCP tool `describe_store_api` for the complete API reference whenever you need to know what methods or state the store exposes.
+
+Import it in any component:
 
 ```javascript
 import { useGxpStore } from "@/stores/gxpPortalConfigStore"

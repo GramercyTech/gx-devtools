@@ -146,7 +146,146 @@ async function describeDataModels({ name, query } = {}) {
 	return { ok: true, count: models.length, models }
 }
 
+const STORE_API_REFERENCE = `# GxP Store API Reference
+
+The GxP store (\`gxpPortalConfigStore\`) is the **platform-provided** interface between a plugin and the GxP platform.
+
+## IMPORTANT — This file does not exist in the plugin project
+
+\`src/stores/gxpPortalConfigStore.js\` does NOT exist. Only \`src/stores/index.js\` exists, and it re-exports from the toolkit runtime. In production builds the import is externalized to \`window.useGxpStore\` injected by the platform. **Do not try to read or modify the store source.** Use this reference instead.
+
+## Import
+
+\`\`\`javascript
+import { useGxpStore } from "@/stores/gxpPortalConfigStore"
+const store = useGxpStore()
+\`\`\`
+
+## Reactive State (read directly)
+
+| Property | Type | Source |
+|----------|------|--------|
+| \`store.pluginVars\` | Object | \`app-manifest.json → settings\` + platform-injected vars (\`projectId\`, \`formId\`, \`apiBaseUrl\`, etc.) |
+| \`store.stringsList\` | Object | \`app-manifest.json → strings.default\` |
+| \`store.assetList\` | Object | \`app-manifest.json → assets\` |
+| \`store.dependencyList\` | Object | \`{ [identifier]: resourceId }\` — populated by the platform at runtime |
+| \`store.permissionFlags\` | Array | \`app-manifest.json → permissions\` |
+| \`store.triggerState\` | Object | \`app-manifest.json → triggerState\` — readable AND writable by the plugin |
+| \`store.user\` | Object\|null | Authenticated user or null. Shape: \`{ id, first_name, last_name, name, email, avatar, roles[] }\` |
+| \`store.theme\` | Object | Computed theme from pluginVars: \`{ background_color, text_color, primary_color, start_background_color, start_text_color, final_background_color, final_text_color }\` |
+| \`store.manifestLoaded\` | boolean | true once app-manifest.json has been processed |
+| \`store.portal\` | Object\|null | Platform portal context (injected by platform) |
+
+## Data Getters
+
+\`\`\`javascript
+store.getString(key, fallback = "")     // stringsList[key] or fallback
+store.getSetting(key, fallback = null)  // pluginVars[key] or fallback
+store.getAsset(key, fallback = "")      // assetList[key] or fallback
+store.getState(key, fallback = null)    // triggerState[key] or fallback
+store.hasPermission(flag)               // boolean — permissionFlags.includes(flag)
+store.findDependency(identifier)        // returns the bound resource ID for an identifier
+\`\`\`
+
+## User / Auth Getters
+
+\`\`\`javascript
+store.getUser()                    // user object or null
+store.getUserName(fallback = null) // display name: user.name → first_name+last_name → fallback
+store.getUserEmail(fallback = null)// user.email or fallback
+store.isAuthenticated()            // boolean
+\`\`\`
+
+user is null when not authenticated — always guard before dereferencing. In gxdev dev a dummy user is provided; in production the platform injects the real authenticated user.
+
+## Platform API — store.callApi
+
+Every call to the GxP platform goes through callApi. It handles auth, URL resolution, team/project scoping, and path-parameter substitution.
+
+\`\`\`javascript
+const result = await store.callApi(operationId, identifier, data)
+\`\`\`
+
+| Arg | Description |
+|-----|-------------|
+| operationId | OpenAPI operationId (e.g. "posts.index", "forms.show"). Auto-prefixes with portal.v1.project. if bare ID not found. Discover with api_list_operation_ids / search_api_endpoints. |
+| identifier | Permission identifier from app-manifest.json → dependencies (e.g. "quiz_form") OR the reserved "project" for project-wide operations. |
+| data | Body/query/path params. A value like "pluginVars.keyName" is resolved from pluginVars at call time. teamSlug, projectSlug, and form (when pluginVars.formId exists) are auto-injected. |
+
+Returns parsed response data. Throws on HTTP errors.
+
+## Low-Level HTTP (avoid unless necessary — bypasses permission model)
+
+\`\`\`javascript
+await store.apiGet(endpoint, params = {})
+await store.apiPost(endpoint, data = {})
+await store.apiPut(endpoint, data = {})
+await store.apiPatch(endpoint, data = {})
+await store.apiDelete(endpoint)
+\`\`\`
+
+## Real-Time Events
+
+### store.listen (polymorphic)
+
+Form 1 — named socket (e.g. primary peer channel):
+\`\`\`javascript
+const unsub = store.listen("primary", "cursor_moved", (data) => { ... })
+unsub() // unsubscribe
+\`\`\`
+
+Form 2 — platform AsyncAPI event scoped to a permission identifier:
+\`\`\`javascript
+const unsub = store.listen("SomeEventName", "identifier", (data) => { ... })
+// identifier must be declared in app-manifest.json → dependencies, or "project"
+\`\`\`
+
+Returns an unsubscribe function. Logs a warning if the identifier is not bound in dependencyList.
+
+### store.broadcast
+
+\`\`\`javascript
+store.broadcast("primary", "event-name", data)  // returns boolean
+\`\`\`
+
+## Writable State
+
+triggerState is the only section designed to be written by plugins at runtime (Pinia unwraps the ref):
+
+\`\`\`javascript
+store.triggerState['current_step'] = 3
+store.triggerState['is_active'] = true
+\`\`\`
+
+Do NOT write to pluginVars, stringsList, or assetList — these are platform-managed and will be overwritten on manifest reload.
+
+## Dev-Only Helpers
+
+\`\`\`javascript
+store.addDevAsset(key, filename)  // adds /dev-assets/images/<filename> with dev-server URL prefix
+store.listAssets()                // logs all assetList entries to console, returns the object
+\`\`\`
+
+## Deprecated (do not use — kept for backwards compatibility only)
+
+\`\`\`javascript
+store.emitSocket(...)         // → store.broadcast(...)
+store.listenSocket(...)       // → store.listen(...)
+store.useSocketListener(...)  // → store.listen(...)
+\`\`\`
+`
+
+function describeStoreApi() {
+	return { ok: true, reference: STORE_API_REFERENCE }
+}
+
 const MODEL_TOOLS = [
+	{
+		name: "describe_store_api",
+		description:
+			"Returns the complete GxP store (gxpPortalConfigStore) API reference: all reactive state, getter methods, callApi signature, listen/broadcast, writable state, and deprecated aliases. Call this before writing any store-related code — the store file does NOT exist in plugin projects and must not be read from disk.",
+		inputSchema: { type: "object", properties: {} },
+	},
 	{
 		name: "describe_data_models",
 		description:
@@ -171,6 +310,8 @@ const MODEL_TOOLS = [
 
 async function handleModelToolCall(name, args = {}) {
 	switch (name) {
+		case "describe_store_api":
+			return contentResult(describeStoreApi())
 		case "describe_data_models":
 			return contentResult(await describeDataModels(args))
 		default:
@@ -186,6 +327,7 @@ module.exports = {
 	MODEL_TOOLS,
 	handleModelToolCall,
 	isModelTool,
+	describeStoreApi,
 	describeDataModels,
 	summarizeProperties,
 	resolveRef,

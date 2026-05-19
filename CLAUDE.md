@@ -260,7 +260,7 @@ The devtools provides Vue directives for reactive string and asset replacement f
 
 ## GxP Store (gxpPortalConfigStore.js)
 
-The Pinia store provides reactive state management:
+The Pinia store is a **platform-provided runtime interface** — `src/stores/gxpPortalConfigStore.js` does NOT exist in plugin projects. Agents must not attempt to read that path; call the MCP tool `describe_store_api` for the full API reference. The runtime source lives at `runtime/stores/gxpPortalConfigStore.js` in this repo.
 
 ### Store Sections
 
@@ -282,14 +282,20 @@ store.getState("is_active", false)
 store.hasPermission("admin")
 ```
 
-### Update Methods (for programmatic updates)
+### Writing State
+
+`triggerState` is the only section designed to be written by plugins (the Pinia setup store exposes refs directly):
 
 ```javascript
-store.updateString("welcome_title", "New Title")
-store.updateSetting("primary_color", "#FF0000")
-store.updateAsset("hero_image", "/new-image.jpg")
-store.updateState("is_active", true)
-store.addDevAsset("logo", "logo.png") // Adds with dev server URL prefix
+store.triggerState["my_key"] = "new value"
+```
+
+`pluginVars`, `stringsList`, and `assetList` are platform-managed — do not write to them from plugin code; they will be overwritten on manifest reload.
+
+Dev-only helper:
+
+```javascript
+store.addDevAsset("logo", "logo.png") // Adds /dev-assets/images/logo.png with dev server URL prefix
 ```
 
 ### API Client
@@ -429,18 +435,18 @@ Key environment variables (set in `.env`):
 
 ## MCP Server for AI Assistants
 
-The toolkit ships an MCP server (`mcp/mcp-serve.js`, bin name `mcp-serve`) that exposes 32 tools to AI coding assistants across six families. It speaks MCP over stdio via the official `@modelcontextprotocol/sdk` `StdioServerTransport`. Configure it in your AI tool's MCP settings to get API-aware, schema-aware, test-aware assistance inside plugin projects. The previous bin name `gxp-api-server` still ships as a deprecation shim that prints a stderr notice and forwards to the same server.
+The toolkit ships an MCP server (`mcp/mcp-serve.js`, bin name `mcp-serve`) that exposes 33 tools to AI coding assistants across six families. It speaks MCP over stdio via the official `@modelcontextprotocol/sdk` `StdioServerTransport`. Configure it in your AI tool's MCP settings to get API-aware, schema-aware, test-aware assistance inside plugin projects. The previous bin name `gxp-api-server` still ships as a deprecation shim that prints a stderr notice and forwards to the same server.
 
 UIKit component introspection is no longer served here — `@gxp-dev/uikit` ships `@storybook/addon-mcp`, which exposes an HTTP MCP server at `http://localhost:6006/mcp` whenever `gxdev storybook` is running. `template/mcp.json` registers it as `gxp-uikit-storybook` alongside `gxp-api`, so AI assistants pick up storybook tools (preview-stories, get-storybook-story-instructions, get-documentation, run-story-tests) automatically when storybook is up.
 
-| Family            | Count | Tools                                                                                                                                                                                                                                                                                               | Purpose                                                                                                                                                           |
-| ----------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **API spec**      | 6     | `get_openapi_spec`, `get_asyncapi_spec`, `search_api_endpoints`, `search_websocket_events`, `get_endpoint_details`, `get_api_environment`                                                                                                                                                           | Raw spec access + keyword search. Respects `VITE_API_ENV` from the project's `.env`.                                                                              |
-| **Extended API**  | 7     | `api_list_tags`, `api_list_operation_ids`, `api_get_operation_parameters`, `api_find_endpoints_by_schema`, `api_find_events_for_operation`, `api_list_events`, `api_generate_dependency`                                                                                                            | Structured discovery (by tag, by request/response field shape, by triggered events) plus generation of the canonical GxP dependency JSON for `app-manifest.json`. |
-| **Config editor** | 13    | `config_validate`, `config_list_field_types`, `config_list_card_types`, `config_get_field_schema`, `config_list_cards`, `config_list_fields`, `config_add_field`, `config_move_field`, `config_remove_field`, `config_add_card`, `config_move_card`, `config_remove_card`, `config_extract_strings` | Read + mutate `configuration.json` / `app-manifest.json`. Every mutation is linter-guarded — invalid writes are refused unless `force: true`.                     |
-| **Docs search**   | 3     | `docs_list_pages`, `docs_search`, `docs_get_page`                                                                                                                                                                                                                                                   | Full-text search across `docs.gxp.dev` (discovered via sitemap.xml, 30-min page cache).                                                                           |
-| **Test helpers**  | 2     | `test_scaffold_component_test`, `test_api_route`                                                                                                                                                                                                                                                    | Generate Vitest + Vue Test Utils files; hit the local mock API at `localhost:3069/api` by operationId.                                                            |
-| **Data models**   | 1     | `describe_data_models`                                                                                                                                                                                                                                                                              | Enumerate or detail OpenAPI `components.schemas`. Walks `allOf` and resolves `$ref` by name so referenced models are visible in one call.                         |
+| Family            | Count | Tools                                                                                                                                                                                                                                                                                               | Purpose                                                                                                                                                                                                         |
+| ----------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API spec**      | 6     | `get_openapi_spec`, `get_asyncapi_spec`, `search_api_endpoints`, `search_websocket_events`, `get_endpoint_details`, `get_api_environment`                                                                                                                                                           | Raw spec access + keyword search. Respects `VITE_API_ENV` from the project's `.env`.                                                                                                                            |
+| **Extended API**  | 7     | `api_list_tags`, `api_list_operation_ids`, `api_get_operation_parameters`, `api_find_endpoints_by_schema`, `api_find_events_for_operation`, `api_list_events`, `api_generate_dependency`                                                                                                            | Structured discovery (by tag, by request/response field shape, by triggered events) plus generation of the canonical GxP dependency JSON for `app-manifest.json`.                                               |
+| **Config editor** | 13    | `config_validate`, `config_list_field_types`, `config_list_card_types`, `config_get_field_schema`, `config_list_cards`, `config_list_fields`, `config_add_field`, `config_move_field`, `config_remove_field`, `config_add_card`, `config_move_card`, `config_remove_card`, `config_extract_strings` | Read + mutate `configuration.json` / `app-manifest.json`. Every mutation is linter-guarded — invalid writes are refused unless `force: true`.                                                                   |
+| **Docs search**   | 3     | `docs_list_pages`, `docs_search`, `docs_get_page`                                                                                                                                                                                                                                                   | Full-text search across `docs.gxp.dev` (discovered via sitemap.xml, 30-min page cache).                                                                                                                         |
+| **Test helpers**  | 2     | `test_scaffold_component_test`, `test_api_route`                                                                                                                                                                                                                                                    | Generate Vitest + Vue Test Utils files; hit the local mock API at `localhost:3069/api` by operationId.                                                                                                          |
+| **Data models**   | 2     | `describe_store_api`, `describe_data_models`                                                                                                                                                                                                                                                        | `describe_store_api` — complete GxP store API reference (state, getters, callApi, listen/broadcast). `describe_data_models` — enumerate/detail OpenAPI `components.schemas`, walks `allOf` and resolves `$ref`. |
 
 The linter (shared with `gxdev lint`) is the authority for validity: `configuration.json` and `app-manifest.json` schemas live at `bin/lib/lint/schemas/` and are composed via `$ref`. Config-family mutation tools validate in-memory via `lintData(...)` before touching disk, so agents can't save broken state.
 

@@ -119,10 +119,12 @@ src/
 
 ## Core Principle: Use the GxP Store for Everything
 
-The `gxpPortalConfigStore` is the central hub for every piece of data — API, sockets, strings, assets, settings, state. Import it in any component:
+The `gxpPortalConfigStore` is the central hub for every piece of data — API, sockets, strings, assets, settings, state. It is a **platform-provided runtime interface** — `src/stores/gxpPortalConfigStore.js` does NOT exist in the project. Never try to read that path. Call the MCP tool `describe_store_api` for the complete API reference.
+
+Import it in any component:
 
 ```javascript
-import { useGxpStore } from "@gx-runtime/stores/gxpPortalConfigStore"
+import { useGxpStore } from "@/stores/gxpPortalConfigStore"
 const store = useGxpStore()
 ```
 
@@ -217,19 +219,20 @@ These bypass the permission model. Prefer `callApi`.
 
 ## Store Data Access
 
-```javascript
-// Get values with fallbacks
-store.getString("key", "default") // From stringsList
-store.getSetting("key", "default") // From pluginVars
-store.getAsset("key", "/fallback.jpg") // From assetList
-store.getState("key", null) // From triggerState
-store.hasPermission("admin") // Check permissions
+For the complete store API call `describe_store_api` (MCP tool). Quick reference:
 
-// Update values
-store.updateString("key", "value")
-store.updateSetting("key", "value")
-store.updateAsset("key", "url")
-store.updateState("key", "value")
+```javascript
+// Getters
+store.getString("key", "default") // stringsList[key] or default
+store.getSetting("key", "default") // pluginVars[key] or default
+store.getAsset("key", "/fallback.jpg") // assetList[key] or default
+store.getState("key", null) // triggerState[key] or default
+store.hasPermission("flag") // boolean
+store.findDependency("identifier") // bound resource ID for an identifier
+
+// Write to triggerState (the only section plugins should write to)
+store.triggerState["my_key"] = "value"
+// Do NOT write to pluginVars, stringsList, or assetList — platform-managed
 ```
 
 ### Logged-in user
