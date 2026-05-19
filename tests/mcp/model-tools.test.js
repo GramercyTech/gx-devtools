@@ -69,8 +69,12 @@ function parseResult(res) {
 }
 
 describe("tool registry", () => {
-	it("registers describe_data_models", () => {
-		expect(MODEL_TOOLS.map((t) => t.name)).toEqual(["describe_data_models"])
+	it("registers all model tools", () => {
+		expect(MODEL_TOOLS.map((t) => t.name)).toEqual([
+			"describe_store_api",
+			"describe_data_models",
+		])
+		expect(isModelTool("describe_store_api")).toBe(true)
 		expect(isModelTool("describe_data_models")).toBe(true)
 		expect(isModelTool("unknown_tool")).toBe(false)
 	})
@@ -175,5 +179,26 @@ describe("handleModelToolCall", () => {
 		await expect(handleModelToolCall("nope", {})).rejects.toThrow(
 			/Unknown model tool/,
 		)
+	})
+})
+
+describe("describe_store_api", () => {
+	it("returns ok with a non-empty reference string", async () => {
+		const res = await handleModelToolCall("describe_store_api", {})
+		expect(res.content[0].type).toBe("text")
+		const parsed = parseResult(res)
+		expect(parsed.ok).toBe(true)
+		expect(typeof parsed.reference).toBe("string")
+		expect(parsed.reference.length).toBeGreaterThan(100)
+	})
+
+	it("reference contains key store concepts", async () => {
+		const res = await handleModelToolCall("describe_store_api", {})
+		const { reference } = parseResult(res)
+		expect(reference).toContain("does NOT exist")
+		expect(reference).toContain("callApi")
+		expect(reference).toContain("store.listen")
+		expect(reference).toContain("store.broadcast")
+		expect(reference).toContain("triggerState")
 	})
 })
