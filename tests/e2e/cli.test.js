@@ -17,7 +17,7 @@
  * release.yml's pre-publish verification.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { spawn, spawnSync } from "child_process"
+import { execSync, spawn, spawnSync } from "child_process"
 import fs from "fs"
 import http from "http"
 import net from "net"
@@ -115,7 +115,11 @@ beforeAll(async () => {
 
 afterAll(() => {
 	if (fixtureDir && fs.existsSync(fixtureDir)) {
-		fs.rmSync(fixtureDir, { recursive: true, force: true })
+		try {
+			execSync(`rm -rf "${fixtureDir}"`, { stdio: "ignore" })
+		} catch {
+			// Best-effort cleanup — don't fail the suite if the shell remove fails
+		}
 	}
 })
 
