@@ -580,12 +580,22 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			let response
 			if (method === "get" || method === "delete") {
 				// GET/DELETE: params go in query string
-				response = await apiClient[method]("/api" + resolvedPath, {
-					params: bodyData,
-				})
+				response = await apiClient[method](
+					resolvedPath.startsWith("/api")
+						? resolvedPath
+						: "/api" + resolvedPath,
+					{
+						params: bodyData,
+					},
+				)
 			} else {
 				// POST/PUT/PATCH: params go in body
-				response = await apiClient[method]("/api" + resolvedPath, bodyData)
+				response = await apiClient[method](
+					resolvedPath.startsWith("/api")
+						? resolvedPath
+						: "/api" + resolvedPath,
+					bodyData,
+				)
 			}
 			return response.data
 		} catch (error) {
