@@ -48,6 +48,7 @@ function getApiConfig() {
 	const useHttps = import.meta.env.VITE_USE_HTTPS !== "false"
 	const nodePort = import.meta.env.VITE_NODE_PORT || "3060"
 	const mockPort = import.meta.env.VITE_SOCKET_IO_PORT || "3069"
+	const socketUrl = import.meta.env.SOCKET_URL || `/`
 
 	// Check if we're in development mode (Vite dev server)
 	const isDev = import.meta.env.DEV
@@ -67,7 +68,7 @@ function getApiConfig() {
 		const protocol = useHttps ? "https" : "http"
 		return {
 			apiDocsBaseUrl: ENVIRONMENT_URLS.production.apiBaseUrl,
-			apiBaseUrl: `/api`,
+			apiBaseUrl: `${protocol}://${socketUrl}/api`,
 			authToken: generateMockToken(),
 			projectId: "team/project",
 		}
@@ -580,22 +581,12 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			let response
 			if (method === "get" || method === "delete") {
 				// GET/DELETE: params go in query string
-				response = await apiClient[method](
-					resolvedPath.startsWith("/api")
-						? resolvedPath
-						: "/api" + resolvedPath,
-					{
-						params: bodyData,
-					},
-				)
+				response = await apiClient[method](resolvedPath, {
+					params: bodyData,
+				})
 			} else {
 				// POST/PUT/PATCH: params go in body
-				response = await apiClient[method](
-					resolvedPath.startsWith("/api")
-						? resolvedPath
-						: "/api" + resolvedPath,
-					bodyData,
-				)
+				response = await apiClient[method](resolvedPath, bodyData)
 			}
 			return response.data
 		} catch (error) {
