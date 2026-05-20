@@ -189,13 +189,31 @@ const expandedSections = reactive({
 })
 
 const themeColors = reactive({
-	background_color: "#ffffff",
-	text_color: "#333333",
-	primary_color: "#FFD600",
-	start_background_color: "#667eea",
-	start_text_color: "#ffffff",
-	final_background_color: "#4CAF50",
-	final_text_color: "#ffffff",
+	primary: "#FFD600",
+	page_background_color: "#000466",
+	page_text_color: "#ffffff",
+	input_field_background_color: "#03054a",
+	input_field_text_color: "#ffffff",
+	input_field_border_color: "#888c92",
+	primary_button_background_color: "#ffffff",
+	primary_button_text_color: "#000596",
+	primary_button_border_color: "#ffffff",
+	secondary_button_background_color: "#000466",
+	secondary_button_text_color: "#ffffff",
+	secondary_button_border_color: "#ffffff",
+	tertiary_button_background_color: "#ffffff00",
+	tertiary_button_text_color: "#ffffff",
+	tertiary_button_border_color: "#ffffff00",
+	spinner_background_color: "#03054a",
+	spinner_color: "#ffffff",
+	modal_background_color: "#ffffff",
+	modal_text_color: "#222222",
+	modal_primary_button_background_color: "#000596",
+	modal_primary_button_text_color: "#ffffff",
+	modal_primary_button_border_color: "#000596",
+	modal_secondary_button_background_color: "#ffffff",
+	modal_secondary_button_text_color: "#000596",
+	modal_secondary_button_border_color: "#000596",
 })
 
 const navigationItems = reactive([

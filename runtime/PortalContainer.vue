@@ -102,6 +102,7 @@ import "@layouts/AdditionalStyling.css"
 import SystemLayout from "@layouts/SystemLayout.vue"
 import PrivateLayout from "@layouts/PrivateLayout.vue"
 import PublicLayout from "@layouts/PublicLayout.vue"
+import { storeToRefs } from "pinia"
 
 // Dev Tools
 import DevToolsModal from "./dev-tools/DevToolsModal.vue"
@@ -145,6 +146,7 @@ gxpStore.sockets?.primary?.listenForStateChange?.((event) => {
 	console.log("🔗 GXP Store: State change event received", event)
 })
 
+const { theme } = storeToRefs(gxpStore)
 // Navigation functions
 const goToPage = (page) => {
 	currentPage.value = page
@@ -200,13 +202,31 @@ const userLanguage = ""
 
 // Theme configuration
 const themeSettings = {
-	background_color: "#ffffff",
-	text_color: "#333333",
-	primary_color: "#FFD600",
-	start_background_color: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-	start_text_color: "#ffffff",
-	final_background_color: "#4CAF50",
-	final_text_color: "#ffffff",
+	primary: "#FFD600",
+	page_background_color: "#000466",
+	page_text_color: "#ffffff",
+	input_field_background_color: "#03054a",
+	input_field_text_color: "#ffffff",
+	input_field_border_color: "#888c92",
+	primary_button_background_color: "#ffffff",
+	primary_button_text_color: "#000596",
+	primary_button_border_color: "#ffffff",
+	secondary_button_background_color: "#000466",
+	secondary_button_text_color: "#ffffff",
+	secondary_button_border_color: "#ffffff",
+	tertiary_button_background_color: "#ffffff00",
+	tertiary_button_text_color: "#ffffff",
+	tertiary_button_border_color: "#ffffff00",
+	spinner_background_color: "#03054a",
+	spinner_color: "#ffffff",
+	modal_background_color: "#ffffff",
+	modal_text_color: "#222222",
+	modal_primary_button_background_color: "#000596",
+	modal_primary_button_text_color: "#ffffff",
+	modal_primary_button_border_color: "#000596",
+	modal_secondary_button_background_color: "#ffffff",
+	modal_secondary_button_text_color: "#000596",
+	modal_secondary_button_border_color: "#000596",
 }
 
 const themeColors = {
@@ -348,3 +368,53 @@ onUnmounted(() => {
 	delete window.changeLayout
 })
 </script>
+<style>
+/* Theme CSS Variables */
+:root {
+	--primary: v-bind("theme.primary");
+	--page_background_color: v-bind("theme.page_background_color");
+	--page_text_color: v-bind("theme.page_text_color");
+	--input_field_background_color: v-bind("theme.input_field_background_color");
+	--input_field_text_color: v-bind("theme.input_field_text_color");
+	--input_field_border_color: v-bind("theme.input_field_border_color");
+	--primary_button_background_color: v-bind(
+		"theme.primary_button_background_color"
+	);
+	--primary_button_text_color: v-bind("theme.primary_button_text_color");
+	--primary_button_border_color: v-bind("theme.primary_button_border_color");
+	--secondary_button_background_color: v-bind(
+		"theme.secondary_button_background_color"
+	);
+	--secondary_button_text_color: v-bind("theme.secondary_button_text_color");
+	--secondary_button_border_color: v-bind(
+		"theme.secondary_button_border_color"
+	);
+	--tertiary_button_background_color: v-bind(
+		"theme.tertiary_button_background_color"
+	);
+	--tertiary_button_text_color: v-bind("theme.tertiary_button_text_color");
+	--tertiary_button_border_color: v-bind("theme.tertiary_button_border_color");
+	--spinner_background_color: v-bind("theme.spinner_background_color");
+	--spinner_color: v-bind("theme.spinner_color");
+	--modal_background_color: v-bind("theme.modal_background_color");
+	--modal_text_color: v-bind("theme.modal_text_color");
+	--modal_primary_button_background_color: v-bind(
+		"theme.modal_primary_button_background_color"
+	);
+	--modal_primary_button_text_color: v-bind(
+		"theme.modal_primary_button_text_color"
+	);
+	--modal_primary_button_border_color: v-bind(
+		"theme.modal_primary_button_border_color"
+	);
+	--modal_secondary_button_background_color: v-bind(
+		"theme.modal_secondary_button_background_color"
+	);
+	--modal_secondary_button_text_color: v-bind(
+		"theme.modal_secondary_button_text_color"
+	);
+	--modal_secondary_button_border_color: v-bind(
+		"theme.modal_secondary_button_border_color"
+	);
+}
+</style>
