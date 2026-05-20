@@ -21,7 +21,7 @@ const REQUIRED_DEPENDENCIES = {
 }
 
 const REQUIRED_DEV_DEPENDENCIES = {
-	"@gxp-dev/tools": "^2.0.0",
+	"@gxp-dev/tools": "^2.1.0",
 	eslint: "^10.2.1",
 	"eslint-plugin-vue": "^10.9.0",
 	globals: "^17.5.0",

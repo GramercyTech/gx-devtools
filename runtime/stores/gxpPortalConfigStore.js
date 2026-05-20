@@ -504,11 +504,10 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		// 1. Auto-inject teamSlug and projectSlug from portal context
 		// 2. Look up permissionIdentifier value from dependencyList (if permissionIdentifier provided)
 		// 3. Merge in additional data parameters
-
-		let projectTeamId = pluginVars.value?.projectId?.split("/")
+		let projectTeamId = apiConfig.projectId?.split("/")
 		if (!projectTeamId || projectTeamId.length !== 2) {
 			console.log(
-				`[GxP Store] Invalid projectId format in pluginVars: ${pluginVars.value?.projectId}, expected "teamSlug/projectSlug"`,
+				`[GxP Store] Invalid projectId format in apiConfig: ${apiConfig.projectId}, expected "teamSlug/projectSlug"`,
 			)
 			return []
 		}
