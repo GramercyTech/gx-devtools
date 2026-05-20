@@ -67,7 +67,7 @@ function getApiConfig() {
 		// cloud dev mock
 		const protocol = useHttps ? "https" : "http"
 		return {
-			apiDocsBaseUrl: ENVIRONMENT_URLS.production.apiBaseUrl,
+			apiDocsBaseUrl: ENVIRONMENT_URLS.develop.apiBaseUrl,
 			apiBaseUrl: `https://${socketUrl}/api`,
 			authToken: generateMockToken(),
 			projectId: "team/project",
