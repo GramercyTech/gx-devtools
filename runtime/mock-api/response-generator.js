@@ -34,6 +34,73 @@ function resolveRef(ref, spec) {
 }
 
 /**
+ * Resolve an x-faker directive to a callable faker function.
+ * Supports dot-notation paths ('internet.ipv4', 'person.firstName') and
+ * bare method names ('ipv4', 'firstName') searched across faker namespaces.
+ * @param {string} xFaker - Faker method path
+ * @returns {Function|null} Bound faker function, or null if not found
+ */
+function resolveXFaker(xFaker) {
+	if (!xFaker || typeof xFaker !== "string") {
+		return null
+	}
+
+	if (xFaker.includes(".")) {
+		const parts = xFaker.split(".")
+		let current = faker
+		for (const part of parts) {
+			if (current == null || !(part in current)) {
+				console.warn(`⚠️  x-faker: could not resolve path "${xFaker}"`)
+				return null
+			}
+			current = current[part]
+		}
+		if (typeof current !== "function") {
+			console.warn(`⚠️  x-faker: "${xFaker}" does not resolve to a function`)
+			return null
+		}
+		return current
+	}
+
+	const namespaces = [
+		"internet",
+		"person",
+		"location",
+		"company",
+		"phone",
+		"date",
+		"string",
+		"number",
+		"datatype",
+		"lorem",
+		"image",
+		"color",
+		"finance",
+		"commerce",
+		"database",
+		"git",
+		"hacker",
+		"music",
+		"science",
+		"system",
+		"vehicle",
+		"word",
+		"helpers",
+	]
+
+	for (const ns of namespaces) {
+		if (faker[ns]?.[xFaker] && typeof faker[ns][xFaker] === "function") {
+			return faker[ns][xFaker].bind(faker[ns])
+		}
+	}
+
+	console.warn(
+		`⚠️  x-faker: method "${xFaker}" not found in any faker namespace`,
+	)
+	return null
+}
+
+/**
  * Generate a value for a primitive type with optional format
  * @param {string} type - JSON Schema type
  * @param {string} format - Optional format hint
@@ -54,6 +121,14 @@ function generateValue(type, format, schema = {}) {
 	// Handle default values
 	if (schema.default !== undefined) {
 		return schema.default
+	}
+
+	// Handle x-faker directive — takes precedence over format-based generation
+	if (schema["x-faker"]) {
+		const fn = resolveXFaker(schema["x-faker"])
+		if (fn) {
+			return fn()
+		}
 	}
 
 	switch (type) {
@@ -402,4 +477,5 @@ module.exports = {
 	generateValue,
 	generateErrorResponse,
 	resolveRef,
+	resolveXFaker,
 }
