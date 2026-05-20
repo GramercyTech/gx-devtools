@@ -47,7 +47,7 @@ Confirm a plan before implementing. It must include:
 
 - All data goes through the GxP store — `store.callApi(operationId, identifier, data)` for platform APIs, plus sockets, strings, assets, settings, state. No direct `axios`/`fetch`.
 - Every permission identifier used by `callApi` must be declared in `app-manifest.json` → `dependencies` + `permissions`. Use `"project"` for project-wide / top-level operations.
-- Wire every user-facing text with `gxp-string` and every image with `gxp-src`.
+- Wire **every string literal a user will see** with `gxp-string` — button labels, headings, paragraph copy, tab names, empty-state messages, placeholder text, error messages, tooltip text. The only exceptions are text rendered directly from an API response and internal/debug strings. If you're typing a visible string into a template, it needs `gxp-string`. Wire every image with `gxp-src`.
 - Only edit files under `src/`; the runtime container is off-limits.
 
 ### 5. Sync the manifest and build the admin form
@@ -223,15 +223,29 @@ gxdev socket send --event EventName
 
 ## Vue Directives
 
-Every admin-editable piece of content goes through a directive — that's the bridge between the component and the admin form.
+**Rule: every string literal a user sees in the UI must use `gxp-string`.** Button labels, headings, paragraph copy, tab names, empty-state messages, placeholder text, error strings, tooltip text — all of it. The fallback text inside the element is the default value. The only exceptions are text rendered directly from an API response and internal/debug strings.
 
 ```html
-<!-- Dynamic text from strings -->
-<h1 gxp-string="welcome_title">Default</h1>
+<!-- Heading -->
+<h1 gxp-string="welcome_title">Welcome</h1>
 
-<!-- Dynamic images from assets -->
+<!-- Button label -->
+<button><span gxp-string="start_button">Get Started</span></button>
+
+<!-- Paragraph / body copy -->
+<p gxp-string="intro_text">Complete the form below.</p>
+
+<!-- Empty-state message -->
+<p gxp-string="no_results_text">No results found.</p>
+
+<!-- Text from settings (pluginVars) -->
+<span gxp-string="company_name" gxp-settings>Company</span>
+
+<!-- Images -->
 <img gxp-src="hero_image" src="/placeholder.jpg" />
 ```
+
+Does NOT need `gxp-string`: values from API data (`{{ post.title }}`), v-for variables, computed values derived from store state.
 
 ## Admin Configuration Form
 

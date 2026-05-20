@@ -87,7 +87,7 @@ Build against the plan:
 
 - Route **all** data through the GxP store — API via `store.callApi(operationId, identifier, data)`, plus sockets, strings, assets, settings, state.
 - Declare every permission identifier used by `callApi` in `app-manifest.json` → `dependencies` + `permissions`. Use the reserved `"project"` identifier for project-wide / top-level creation operations and pass any required IDs in `data`.
-- Add `gxp-string` / `gxp-src` on every piece of admin-editable content so the configuration form actually controls something.
+- **Every string literal a user will see must use `gxp-string`** — button labels, headings, paragraph copy, tab names, empty-state messages, placeholder text, error strings, tooltip text. The fallback text inside the element is the default value and is never wasted. The only exceptions are text rendered directly from an API response and purely internal/debug strings. If you're about to type a visible string into a template without `gxp-string`, stop and add the directive. Wire every image with `gxp-src`.
 - Keep code under `src/`. The runtime container is off-limits.
 
 ### Phase 5 — Sync the manifest and build the admin form
@@ -481,21 +481,37 @@ Generate this with `api_generate_dependency` (MCP) — pass the `eventNames` arr
 
 ## Vue Directives for Dynamic Content
 
-Every admin-editable piece of content goes through a directive. The directive key is the same key the admin form in `configuration.json` writes to.
+**Rule: every string literal a user sees in the UI must use `gxp-string`.** This is not optional — it's what makes the plugin configurable without a code change. Button labels, headings, paragraph copy, tab names, empty-state messages, placeholder text, error strings, tooltip text — every visible string you would otherwise type directly into the template. The fallback text inside the element is the default value and is never wasted.
+
+The only strings that do NOT need `gxp-string`: text interpolated directly from an API response (`{{ post.title }}`), values from v-for loop variables, and computed display values derived from store state at runtime.
 
 ### gxp-string - Text Replacement
 
 ```html
-<!-- Replace from stringsList -->
-<h1 gxp-string="welcome_title">Default Title</h1>
+<!-- Heading -->
+<h1 gxp-string="welcome_title">Welcome</h1>
 
-<!-- Replace from pluginVars (settings) -->
+<!-- Button label — always wrap button text -->
+<button type="submit">
+	<span gxp-string="submit_button">Submit</span>
+</button>
+
+<!-- Paragraph / body copy -->
+<p gxp-string="intro_text">Complete the form below to register.</p>
+
+<!-- Tab or section title -->
+<span gxp-string="results_tab">Results</span>
+
+<!-- Empty-state / zero-data message -->
+<p gxp-string="no_results_text">No results found.</p>
+
+<!-- Error or status message -->
+<p gxp-string="error_text">Something went wrong. Please try again.</p>
+
+<!-- From pluginVars (settings) instead of stringsList -->
 <span gxp-string="company_name" gxp-settings>Company</span>
 
-<!-- Replace from assetList -->
-<span gxp-string="logo_url" gxp-assets>/default/logo.png</span>
-
-<!-- Replace from triggerState -->
+<!-- From triggerState -->
 <span gxp-string="current_status" gxp-state>idle</span>
 ```
 
@@ -733,7 +749,7 @@ The plugin's runtime config. Every key your components reference via `gxp-string
 
 1. **Work the seven-phase workflow** — understand, discover via MCP, plan (with the admin form), implement, sync the manifest + build the form + lint, test broadcasts, final lint.
 2. **Always use the store** — API, sockets, strings, assets, settings, state. Never `axios`/`fetch` directly.
-3. **Use `gxp-string` / `gxp-src` for all admin-editable content** — the configuration form is only as useful as the directives you wire up.
+3. **Every visible string literal in a template must use `gxp-string`** — button labels, headings, body copy, tab names, empty-state messages, placeholder text, error strings, tooltips. If you're typing a string a user will see directly into a template, add `gxp-string`. Only skip it for text interpolated from API data or v-for variables. Wire every image with `gxp-src`.
 4. **Ground everything in MCP discovery** — don't invent operationIds or event names.
 5. **Validate as you build** — the MCP config mutation tools already lint; finish with `gxdev lint --all`.
 6. **Test with real broadcasts** — `gxdev socket send --event EventName` + `test_api_route`.
