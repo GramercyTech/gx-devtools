@@ -28,7 +28,7 @@ function getApiProxyTarget(env) {
 	}
 
 	// Mock uses local mock-api server (no proxy needed, handled separately)
-	if (apiEnv === "mock") {
+	if (apiEnv === "mock" || apiEnv === "dev-mock") {
 		return null
 	}
 

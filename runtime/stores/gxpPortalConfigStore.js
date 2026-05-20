@@ -64,11 +64,11 @@ function getApiConfig() {
 		}
 	}
 	if (apiEnv === "dev-mock") {
-		// Mock API: use local dev server with random token
+		// cloud dev mock
 		const protocol = useHttps ? "https" : "http"
 		return {
 			apiDocsBaseUrl: ENVIRONMENT_URLS.production.apiBaseUrl,
-			apiBaseUrl: `${protocol}://${socketUrl}/api`,
+			apiBaseUrl: `https://${socketUrl}/api`,
 			authToken: generateMockToken(),
 			projectId: "team/project",
 		}
