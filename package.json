@@ -63,6 +63,7 @@
 		"@gxp-dev/uikit": "^0.1.0",
 		"@modelcontextprotocol/sdk": "^1.29.0",
 		"@vitejs/plugin-vue": "^6.0.6",
+		"@vue/test-utils": "^2.4.6",
 		"adm-zip": "^0.5.17",
 		"ajv": "^8.18.0",
 		"ajv-formats": "^3.0.1",
@@ -71,8 +72,12 @@
 		"concurrently": "^9.2.1",
 		"cors": "^2.8.6",
 		"dotenv": "^16.6.1",
+		"eslint": "^10.2.1",
 		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-vue": "^10.9.0",
 		"express": "^4.22.1",
+		"globals": "^17.5.0",
+		"happy-dom": "^15.11.0",
 		"ink": "^5.2.1",
 		"ink-text-input": "^6.0.0",
 		"json-schema-faker": "^0.6.1",
@@ -87,6 +92,7 @@
 		"socket.io": "^4.8.3",
 		"socket.io-client": "^4.8.3",
 		"vite": "^8.0.9",
+		"vitest": "^4.1.5",
 		"vue": "^3.5.27",
 		"web-ext": "^10.1.0",
 		"yargs": "^17.7.2"
@@ -98,17 +104,10 @@
 		"@eslint/markdown": "^8.0.1",
 		"@types/react": "^18.3.28",
 		"@vitest/coverage-v8": "^4.1.5",
-		"eslint": "^10.2.1",
-		"eslint-plugin-vue": "^10.9.0",
-		"globals": "^17.5.0",
 		"memfs": "^4.56.10",
-		"mkcert": "^3.2.0",
-		"nodemon": "^3.1.7",
-		"prettier": "3.8.3",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.59.0",
-		"vitest": "^4.1.5"
+		"typescript-eslint": "^8.59.0"
 	},
 	"overrides": {
 		"cheerio": {

@@ -22,6 +22,8 @@ const { extractConfigCommand } = require("./extract-config")
 const { addDependencyCommand } = require("./add-dependency")
 const { lintCommand } = require("./lint")
 const { storybookCommand } = require("./storybook")
+const { execCommand } = require("./exec")
+const { testCommand } = require("./test")
 
 module.exports = {
 	initCommand,
@@ -40,4 +42,6 @@ module.exports = {
 	addDependencyCommand,
 	lintCommand,
 	storybookCommand,
+	execCommand,
+	testCommand,
 }

@@ -30,6 +30,23 @@ const uiFlagPresent = args.includes("--ui")
 const isBareUiCommand = command === "ui"
 const wantsUi = uiFlagPresent || isBareUiCommand
 
+// Pass-through commands: `exec` and `test` forward all subsequent args
+// verbatim to the underlying tool. Routing them through yargs would let it
+// consume things like `--version`, `--help`, or `--watch` as gxdev flags
+// before the tool sees them. Dispatch them directly instead.
+if (command === "exec" || command === "test") {
+	registerCliExitReminder()
+	const handlerArgs = args.slice(1)
+	if (command === "exec") {
+		const { execCommand } = require("./lib/commands/exec")
+		execCommand({ _: ["exec", ...handlerArgs], tool: handlerArgs[0] })
+	} else {
+		const { testCommand } = require("./lib/commands/test")
+		testCommand({ _: ["test", ...handlerArgs] })
+	}
+	return
+}
+
 if (!wantsUi) {
 	// Plain CLI path — have the utility print an update reminder on exit
 	// (stderr) if the cached info says we're behind.

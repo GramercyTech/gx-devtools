@@ -26,6 +26,8 @@ const {
 	addDependencyCommand,
 	lintCommand,
 	storybookCommand,
+	execCommand,
+	testCommand,
 } = require("./commands")
 
 // Load global configuration
@@ -381,6 +383,29 @@ const cli = yargs
 			},
 		},
 		storybookCommand,
+	)
+	.command(
+		"exec <tool> [args..]",
+		"Run a bundled tool binary (prettier, eslint, etc.), resolving from the project, then the toolkit's own node_modules, then PATH",
+		{
+			tool: {
+				describe: "Tool name to run (e.g. prettier, eslint)",
+				type: "string",
+			},
+		},
+		execCommand,
+	)
+	.command(
+		"test [args..]",
+		"Run vitest with the toolkit's bundled test environment (works without local node_modules)",
+		{
+			watch: {
+				describe: "Run in watch mode instead of one-shot",
+				type: "boolean",
+				default: false,
+			},
+		},
+		testCommand,
 	)
 	.command(
 		"add-dependency",

@@ -7,9 +7,25 @@
 #   2. Fix lintable JS/Vue with ESLint --fix.
 #   3. Validate staged GxP config JSON with `gxdev lint`.
 #
+# All three steps go through `gxdev`, which resolves the tool binary from
+# the project's node_modules first, then the toolkit's own node_modules,
+# then PATH — so the hook works whether @gxp-dev/tools is installed
+# locally or globally.
+#
 # Any non-zero exit aborts the commit.
 
 set -e
+
+# Locate gxdev. Prefer the project-local install (matches whatever version
+# the project pins), then fall back to the global install on PATH.
+if [ -x "./node_modules/.bin/gxdev" ]; then
+  GXDEV="./node_modules/.bin/gxdev"
+elif command -v gxdev >/dev/null 2>&1; then
+  GXDEV="gxdev"
+else
+  echo "pre-commit: gxdev not found. Install @gxp-dev/tools locally or globally." >&2
+  exit 1
+fi
 
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 [ -z "$staged" ] && exit 0
@@ -17,21 +33,21 @@ staged=$(git diff --cached --name-only --diff-filter=ACMR)
 # Prettier — everything it can format
 prettier_targets=$(echo "$staged" | grep -Ei '\.(js|jsx|ts|tsx|vue|css|scss|json|md|yml|yaml|html)$' || true)
 if [ -n "$prettier_targets" ]; then
-  echo "$prettier_targets" | xargs ./node_modules/.bin/prettier --write --ignore-unknown
+  echo "$prettier_targets" | xargs "$GXDEV" exec prettier --write --ignore-unknown
   echo "$prettier_targets" | xargs git add
 fi
 
 # ESLint — JS and Vue only, with --fix so formatting fixes don't block the commit
 eslint_targets=$(echo "$staged" | grep -Ei '\.(js|jsx|mjs|cjs|vue)$' || true)
 if [ -n "$eslint_targets" ]; then
-  echo "$eslint_targets" | xargs ./node_modules/.bin/eslint --fix --no-warn-ignored
+  echo "$eslint_targets" | xargs "$GXDEV" exec eslint --fix --no-warn-ignored
   echo "$eslint_targets" | xargs git add
 fi
 
 # GxP template linter — configuration.json and app-manifest.json
 gxp_targets=$(echo "$staged" | grep -Ei '(configuration\.json|app-manifest\.json)$' || true)
 if [ -n "$gxp_targets" ]; then
-  echo "$gxp_targets" | xargs npx --no-install gxdev lint
+  echo "$gxp_targets" | xargs "$GXDEV" lint
 fi
 
 exit 0
