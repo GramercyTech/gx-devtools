@@ -634,6 +634,24 @@ export default defineConfig(async (ctx) => {
 			fs: {
 				allow: [process.cwd(), toolkitPath, fs.realpathSync(toolkitPath)],
 			},
+			// chokidar's native inotify backend misses cross-process writes
+			// into mounted volumes — file-gateway writes a .vue file, the
+			// kernel fires the event on file-gateway's fd, and Vite (running
+			// in a different container in the same pod) never sees it.
+			// Result: the file on disk has the new content but Vite's
+			// transformRequest cache keeps serving the old transform to
+			// every browser, indefinitely, until the pod restarts.
+			//
+			// Polling fixes this. The 200ms interval keeps perceived edit
+			// latency low; binaryInterval is bumped because images/fonts
+			// don't need fast detection. Setting both via env so a local
+			// host-mode dev run (where native inotify works fine) can opt
+			// out with VITE_USE_POLLING=false.
+			watch: {
+				usePolling: env.VITE_USE_POLLING !== "false",
+				interval: parseInt(env.VITE_WATCH_INTERVAL) || 200,
+				binaryInterval: parseInt(env.VITE_WATCH_BINARY_INTERVAL) || 1000,
+			},
 			// API proxy for non-mock environments
 			proxy: apiProxyTarget
 				? {
