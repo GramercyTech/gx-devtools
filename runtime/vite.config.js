@@ -146,7 +146,17 @@ async function loadTailwindPlugin(command) {
 		return null
 	}
 	try {
-		const mod = await import("@tailwindcss/vite")
+		// Resolve from the project root, not the toolkit's location.
+		// A bare import("@tailwindcss/vite") resolves relative to this config
+		// file's directory (inside the toolkit), so it fails for global and
+		// npm-linked installs where the toolkit's node_modules is separate from
+		// the project's. createRequire roots the lookup at process.cwd() instead.
+		const { createRequire } = await import("module")
+		const projectRequire = createRequire(
+			path.resolve(process.cwd(), "package.json"),
+		)
+		const resolved = projectRequire.resolve("@tailwindcss/vite")
+		const mod = await import(pathToFileURL(resolved).href)
 		const plugin = mod.default ?? mod
 		return typeof plugin === "function" ? plugin() : null
 	} catch {
