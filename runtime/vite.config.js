@@ -150,6 +150,9 @@ async function loadTailwindPlugin(command) {
 		const plugin = mod.default ?? mod
 		return typeof plugin === "function" ? plugin() : null
 	} catch {
+		console.warn(
+			"⚠ @tailwindcss/vite plugin not found in project dependencies, skipping Tailwind integration (dev only)",
+		)
 		return null
 	}
 }
