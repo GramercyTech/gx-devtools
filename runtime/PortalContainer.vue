@@ -539,6 +539,44 @@ const bridgeHandlers = {
 		}
 		return { key: p?.key, value: p?.value }
 	},
+	/**
+	 * Runtime mutation of any object-shaped store section
+	 * (pluginVars, stringsList, assetList, triggerState, dependencyList).
+	 * Used by the host dev-tools modal's editable Store view so a
+	 * developer can preview a different value live without redeploying
+	 * the plugin. Edits aren't persisted — production values still flow
+	 * from the admin panel — but the preview iframe reflects the change
+	 * immediately via Pinia reactivity. Returns an `{ ok: false, error }`
+	 * shape (instead of throwing) so the host can render a clean inline
+	 * error without unwinding the postMessage round-trip as a generic
+	 * exception.
+	 */
+	setStoreValue: (p) => {
+		const section = p?.section
+		const key = p?.key
+		if (!section || key == null) {
+			return { ok: false, error: "section and key are required" }
+		}
+		// Whitelist the sections we expose for editing so a stray
+		// `setStoreValue({section:"$state"})` can't corrupt the Pinia
+		// internals or sockets/auth refs the agent shouldn't touch.
+		const EDITABLE_SECTIONS = new Set([
+			"pluginVars",
+			"stringsList",
+			"assetList",
+			"triggerState",
+			"dependencyList",
+		])
+		if (!EDITABLE_SECTIONS.has(section)) {
+			return { ok: false, error: `Section "${section}" is not editable` }
+		}
+		const target = gxpStore[section]
+		if (!target || typeof target !== "object") {
+			return { ok: false, error: `Section "${section}" is not an object` }
+		}
+		target[key] = p.value
+		return { ok: true, section, key, value: p.value }
+	},
 	// Convenience proxy so the host can hit the dev-server source-edit API
 	// through the same channel (avoids cross-origin fetch juggling host-side).
 	api: async (p) => {

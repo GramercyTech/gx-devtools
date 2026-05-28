@@ -159,25 +159,26 @@ const store = await command("getStore") // serializable store snapshot
 
 ### Actions
 
-| Action                       | Payload                               | Result / effect                                              |
-| ---------------------------- | ------------------------------------- | ------------------------------------------------------------ |
-| `ping`                       | —                                     | `{ embedded, mode }`                                         |
-| `setMode`                    | `{ mode: "off"\|"select"\|"locate" }` | enters/leaves a mode → `{ mode }`                            |
-| `select`                     | —                                     | shorthand for `setMode({mode:"select"})`                     |
-| `locate`                     | —                                     | shorthand for `setMode({mode:"locate"})`                     |
-| `exit`                       | —                                     | leaves inspection                                            |
-| `describeSelection`          | —                                     | full description of the current selection (or `null`)        |
-| `highlight`                  | `{ loc }`                             | highlight + select the element at a `data-gxp-loc`           |
-| `clearHighlight`             | —                                     | clear the selection highlight                                |
-| `getComponentTree`           | —                                     | flat `[{ name, depth, loc }]` component tree                 |
-| `getLayouts`                 | —                                     | `["public","private","system"]`                              |
-| `getLayout`                  | —                                     | current layout name                                          |
-| `setLayout`                  | `{ layout }`                          | switch layout → `{ layout }`                                 |
-| `openConfig` / `closeConfig` | —                                     | show/hide the built-in config modal (optional)               |
-| `getStore`                   | —                                     | snapshot of all store sections                               |
-| `getState`                   | `{ key, fallback }`                   | a single `triggerState` value                                |
-| `setState`                   | `{ key, value }`                      | write a `triggerState` value                                 |
-| `api`                        | `{ method?, endpoint, body? }`        | proxy a call to `/__gxp-inspector/*` (e.g. `update-element`) |
+| Action                       | Payload                               | Result / effect                                                                                                                                                                                  |
+| ---------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ping`                       | —                                     | `{ embedded, mode }`                                                                                                                                                                             |
+| `setMode`                    | `{ mode: "off"\|"select"\|"locate" }` | enters/leaves a mode → `{ mode }`                                                                                                                                                                |
+| `select`                     | —                                     | shorthand for `setMode({mode:"select"})`                                                                                                                                                         |
+| `locate`                     | —                                     | shorthand for `setMode({mode:"locate"})`                                                                                                                                                         |
+| `exit`                       | —                                     | leaves inspection                                                                                                                                                                                |
+| `describeSelection`          | —                                     | full description of the current selection (or `null`)                                                                                                                                            |
+| `highlight`                  | `{ loc }`                             | highlight + select the element at a `data-gxp-loc`                                                                                                                                               |
+| `clearHighlight`             | —                                     | clear the selection highlight                                                                                                                                                                    |
+| `getComponentTree`           | —                                     | flat `[{ name, depth, loc }]` component tree                                                                                                                                                     |
+| `getLayouts`                 | —                                     | `["public","private","system"]`                                                                                                                                                                  |
+| `getLayout`                  | —                                     | current layout name                                                                                                                                                                              |
+| `setLayout`                  | `{ layout }`                          | switch layout → `{ layout }`                                                                                                                                                                     |
+| `openConfig` / `closeConfig` | —                                     | show/hide the built-in config modal (optional)                                                                                                                                                   |
+| `getStore`                   | —                                     | snapshot of all store sections                                                                                                                                                                   |
+| `getState`                   | `{ key, fallback }`                   | a single `triggerState` value                                                                                                                                                                    |
+| `setState`                   | `{ key, value }`                      | write a `triggerState` value                                                                                                                                                                     |
+| `setStoreValue`              | `{ section, key, value }`             | write a value into an object-shaped store section (runtime-only, not persisted). Sections: `pluginVars`, `stringsList`, `assetList`, `triggerState`, `dependencyList`. Returns `{ ok, error? }`. |
+| `api`                        | `{ method?, endpoint, body? }`        | proxy a call to `/__gxp-inspector/*` (e.g. `update-element`)                                                                                                                                     |
 
 The `api` proxy lets the host perform source edits/extraction through the same
 channel — e.g. to persist an edit after building your own editor from an
