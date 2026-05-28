@@ -17,7 +17,7 @@ const TAILWIND_VERSION = "^4.3.0"
 // Required dependencies for GxP projects
 const REQUIRED_DEPENDENCIES = {
 	dotenv: "^16.4.5",
-	"@gxp-dev/uikit": "^0.1.0",
+	"@gxp-dev/app-ui": "^0.1.0",
 }
 
 const REQUIRED_DEV_DEPENDENCIES = {

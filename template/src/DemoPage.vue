@@ -24,7 +24,7 @@
 
 			<!-- Cross-page demo: navigate to the experience-flow demo -->
 			<section class="panel demo-link-panel">
-				<h2>Experience Flow Demo <span class="tag">@gxp-dev/uikit</span></h2>
+				<h2>Experience Flow Demo <span class="tag">@gxp-dev/app-ui</span></h2>
 				<p class="hint">
 					A full state-machine-driven kiosk flow showing how to use
 					<code>useExperience</code>, the page library, async actions, branching

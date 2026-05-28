@@ -20,7 +20,7 @@ const SCAFFOLD_SYSTEM_PROMPT = `You are an expert GxP plugin developer assistant
 GxP plugins are Vue 3 Single File Components (SFCs) that run on kiosk displays. They use:
 - Vue 3 Composition API with <script setup>
 - Pinia for state management via the GxP Store
-- GxP Component Kit (@gxp-dev/uikit) for UI components
+- GxP Component Kit (@gxp-dev/app-ui) for UI components
 - gxp-string and gxp-src directives for dynamic content
 
 ## Key Components Available
@@ -997,7 +997,7 @@ function buildInteractiveInitialPrompt(projectName, description, provider) {
 		"- **Docs search** — `docs_search`, `docs_get_page`, `docs_list_pages` (full-text search across docs.gxp.dev).",
 		"- **Test helpers** — `test_scaffold_component_test`, `test_api_route`.",
 		"- **Data models** — `describe_data_models` (enumerate or detail OpenAPI components.schemas; walks allOf and resolves $ref by name).",
-		"- **UIKit (via Storybook MCP)** — when `npm run storybook` is running, the uikit's `@storybook/addon-mcp` exposes `preview-stories`, `get-storybook-story-instructions`, `get-documentation`, `list-all-documentation`, and `run-story-tests` at http://localhost:6006/mcp (registered in mcp.json as `gxp-uikit-storybook`). Use these to discover available components and stories.",
+		"- **AppUI (via Storybook MCP)** — when `npm run storybook` is running, app-ui's `@storybook/addon-mcp` exposes `preview-stories`, `get-storybook-story-instructions`, `get-documentation`, `list-all-documentation`, and `run-story-tests` at http://localhost:6006/mcp (registered in mcp.json as `gxp-app-ui-storybook`). Use these to discover available components and stories.",
 		"",
 		"Follow the full workflow from the instructions: (1) understand the feature, (2) discover data sources via MCP, (3) plan including the admin configuration form, (4) implement, (5) **sync the manifest and build the admin form**, (6) test with real broadcasts, (7) final `gxdev lint --all`.",
 		"",

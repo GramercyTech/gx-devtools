@@ -9,7 +9,7 @@ import { ref, shallowRef } from "vue"
 import DemoPage from "@/DemoPage.vue"
 import DemoExperience from "@/DemoExperience.vue"
 
-// Note: @gxp-dev/uikit ships its own stylesheet (Tailwind + theme tokens). The
+// Note: @gxp-dev/app-ui ships its own stylesheet (Tailwind + theme tokens). The
 // experience-flow demo imports it inside DemoExperience.vue so it only loads
 // when that page is opened.
 

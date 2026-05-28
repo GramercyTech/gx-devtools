@@ -373,7 +373,7 @@ const cli = yargs
 	)
 	.command(
 		"storybook",
-		"Run @gxp-dev/uikit Storybook from this project (port 6006)",
+		"Run @gxp-dev/app-ui Storybook from this project (port 6006)",
 		{
 			build: {
 				describe:
@@ -442,7 +442,7 @@ const cli = yargs
 			"Docs:   https://docs.gxp.dev",
 			"AI/MCP: the gxp-api MCP server (bin: mcp-serve) exposes 33 tools across",
 			"        API specs, config editing, docs search, test helpers, data",
-			"        models, and UIKit components. (gxp-api-server still works as a",
+			"        models, and AppUI components. (gxp-api-server still works as a",
 			"        deprecation shim.)",
 		].join("\n"),
 	)

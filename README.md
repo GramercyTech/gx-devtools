@@ -93,9 +93,9 @@ It does **not** overwrite your source files (`src/`, `theme-layouts/`, etc.).
 - **Config linting** — AJV-based JSON Schema validation of `configuration.json` (form-builder definitions) and `app-manifest.json` (plugin metadata + defaults).
 - **Pre-commit hook** — `.githooks/pre-commit` runs Prettier, ESLint, and the GxP linter on staged files; configured automatically via the `prepare` npm script.
 - **Unit testing** — Vitest + `@vue/test-utils` wired out of the box; scaffolded tests via the MCP server.
-- **MCP server** — 32 tools for AI coding assistants (see below). UIKit component/story tools are served by the uikit's own Storybook MCP, auto-registered when you run `gxdev storybook`.
+- **MCP server** — 32 tools for AI coding assistants (see below). AppUI component/story tools are served by app-ui's own Storybook MCP, auto-registered when you run `gxdev storybook`.
 - **AI scaffolding** — pre-wired configs for Claude Code, Codex, and Gemini during `init`.
-- **Experience-flow demo** — `template/src/DemoExperience.vue` is an annotated kiosk flow built with `@gxp-dev/uikit`'s state-machine orchestrator: branching paths, default + inline actions, `callApi` adapter, slot overrides, and a live state inspector. Linked from `DemoPage.vue`.
+- **Experience-flow demo** — `template/src/DemoExperience.vue` is an annotated kiosk flow built with `@gxp-dev/app-ui`'s state-machine orchestrator: branching paths, default + inline actions, `callApi` adapter, slot overrides, and a live state inspector. Linked from `DemoPage.vue`.
 
 ## MCP Server for AI assistants
 
@@ -110,7 +110,7 @@ The toolkit ships `mcp-serve` (bin `@gxp-dev/tools/mcp/mcp-serve.js`), an MCP se
 | **Test helpers** (2)   | `test_scaffold_component_test`, `test_api_route`                                                                                                                                                                                                                                                    |
 | **Data models** (1)    | `describe_data_models` — enumerate or detail OpenAPI `components.schemas` with $ref + allOf flattening                                                                                                                                                                                              |
 
-UIKit component introspection (and story preview/run-tests) is served by the uikit itself via `@storybook/addon-mcp`. Run `gxdev storybook` from a plugin project and the addon exposes an HTTP MCP server at `http://localhost:6006/mcp` — `template/mcp.json` registers it as `gxp-uikit-storybook` alongside `gxp-api`, so AI assistants pick it up automatically when storybook is running.
+AppUI component introspection (and story preview/run-tests) is served by app-ui itself via `@storybook/addon-mcp`. Run `gxdev storybook` from a plugin project and the addon exposes an HTTP MCP server at `http://localhost:6006/mcp` — `template/mcp.json` registers it as `gxp-app-ui-storybook` alongside `gxp-api`, so AI assistants pick it up automatically when storybook is running.
 
 The previous bin name `gxp-api-server` still ships as a deprecation shim — it prints a stderr notice and forwards to the same server. Update your `.mcp.json` / `.gemini/settings.json` to use `mcp-serve` going forward.
 
@@ -125,7 +125,7 @@ my-plugin/
 ├── src/
 │   ├── Plugin.vue              # App entry point + lightweight in-app routing
 │   ├── DemoPage.vue            # Example component (gxp-* directives, sockets, store)
-│   ├── DemoExperience.vue      # Annotated kiosk flow using @gxp-dev/uikit experience-flow
+│   ├── DemoExperience.vue      # Annotated kiosk flow using @gxp-dev/app-ui experience-flow
 │   ├── public/                 # Static assets (served at /src/public/*)
 │   └── stores/
 │       └── index.js            # Pinia store setup

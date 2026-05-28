@@ -40,8 +40,8 @@ describe("constants", () => {
 			expect(REQUIRED_DEPENDENCIES).toHaveProperty("dotenv")
 		})
 
-		it("should include @gxp-dev/uikit (component library)", () => {
-			expect(REQUIRED_DEPENDENCIES).toHaveProperty("@gxp-dev/uikit")
+		it("should include @gxp-dev/app-ui (component library)", () => {
+			expect(REQUIRED_DEPENDENCIES).toHaveProperty("@gxp-dev/app-ui")
 		})
 
 		it("should have version strings for all dependencies", () => {

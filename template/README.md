@@ -1,6 +1,6 @@
 # GxP Plugin Project
 
-This project was scaffolded by `@gxp-dev/tools` and includes the `@gxp-dev/uikit` component library for rapid kiosk/plugin development.
+This project was scaffolded by `@gxp-dev/tools` and includes the `@gxp-dev/app-ui` component library for rapid kiosk/plugin development.
 
 ## Quick Start
 
@@ -252,7 +252,7 @@ Full reference: [docs.gxp.dev/gx-devtools/app-manifest](https://docs.gxp.dev/gx-
 
 ## GX ComponentKit
 
-This project includes `@gxp-dev/uikit`
+This project includes `@gxp-dev/app-ui`
 
 Theme CSS variables are auto-injected:
 
@@ -301,7 +301,7 @@ Produces `dist/<plugin-name>.gxpapp` — a zip containing compiled `plugin.es.js
 
 - **Platform docs** — [docs.gxp.dev](https://docs.gxp.dev)
 - **CLI reference** — [docs.gxp.dev/gx-devtools/cli-reference](https://docs.gxp.dev/gx-devtools/cli-reference)
-- **ComponentKit** — [docs.gxp.dev/gx-uikit](https://docs.gxp.dev/gx-uikit)
+- **ComponentKit** — [docs.gxp.dev/gx-appui](https://docs.gxp.dev/gx-appui)
 - **Vue 3** — [vuejs.org](https://vuejs.org/)
 - **Vite** — [vitejs.dev](https://vitejs.dev/)
 

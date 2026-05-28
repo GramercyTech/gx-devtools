@@ -14,7 +14,7 @@ project guidelines below for everything you do here.
 - **MCP servers:** wired in `.mcp.json` at the project root.
   - `gxp-api` (via `mcp-serve` on PATH) — API specs, data models,
     config/manifest editing, docs search, test helpers.
-  - `gxp-uikit-storybook` — UIKit component/story tools (only available
+  - `gxp-app-ui-storybook` — AppUI component/story tools (only available
     when `gxdev storybook` is running, served at
     `http://localhost:6006/mcp`).
 - **Settings:** `.claude/settings.json` — pre-allows the `gxp-api` MCP

@@ -205,7 +205,7 @@ describe("files", () => {
 			const { REQUIRED_DEPENDENCIES } = require("../../bin/lib/constants")
 
 			expect(REQUIRED_DEPENDENCIES).toHaveProperty("dotenv")
-			expect(REQUIRED_DEPENDENCIES).toHaveProperty("@gxp-dev/uikit")
+			expect(REQUIRED_DEPENDENCIES).toHaveProperty("@gxp-dev/app-ui")
 		})
 
 		it("should have required dev dependencies", () => {

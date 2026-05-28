@@ -1,5 +1,5 @@
 <!--
-  DemoExperience.vue — A teaching demo for @gxp-dev/uikit's experience-flow system.
+  DemoExperience.vue — A teaching demo for @gxp-dev/app-ui's experience-flow system.
 
   WHAT IT IS
   ──────────
@@ -25,7 +25,7 @@
   PRODUCTION USE
   ──────────────
   In a real plugin, `callApi` comes from `gxpStore.callApi(operationId, perm, data)`.
-  The uikit's adapter expects `(endpoint, payload) => Promise<T>` shape — we
+  AppUI's adapter expects `(endpoint, payload) => Promise<T>` shape — we
   bridge that below with a tiny lambda. Replace the mock endpoints with your
   real operationIds and you're done.
 -->
@@ -149,19 +149,19 @@ import {
 	NotepadPage,
 	LoadingPage,
 	FinalPage,
-} from "@gxp-dev/uikit"
-// The uikit ships Tailwind utilities + theme tokens used by every page below.
+} from "@gxp-dev/app-ui"
+// @gxp-dev/app-ui ships Tailwind utilities + theme tokens used by every page below.
 // Imported here so the styles only load when the experience demo opens.
-import "@gxp-dev/uikit/styles"
+import "@gxp-dev/app-ui/styles"
 import { useGxpStore } from "@/stores/gxpPortalConfigStore"
 
 defineEmits(["navigate"])
 
 const gxpStore = useGxpStore()
 
-/* ─── Step 1: bridge gxpStore.callApi to the uikit's callApi shape ──────────
+/* ─── Step 1: bridge gxpStore.callApi to app-ui's callApi shape ─────────────
  *
- * uikit expects:    (endpoint, payload) => Promise<T>
+ * app-ui expects:   (endpoint, payload) => Promise<T>
  * gxpStore offers:  (operationId, permissionIdentifier, data) => Promise<T>
  *
  * For the demo we mock the network so it works offline. In production replace

@@ -131,11 +131,13 @@ function hasLocalFile(fileName) {
  *      `src/Plugin.vue`), so there's no `@import "tailwindcss"` reaching the
  *      build graph and the generated utilities would have nowhere to live.
  *   2. The plugin scans the whole project (including `node_modules`) for
- *      candidate class names. `@gxp-dev/uikit` ships compiled Vue files
- *      containing arbitrary-value classes like
- *      `bg-[var(--keyboard_key_active_background_color,var(--primary))]`,
- *      which Tailwind 4 lowers to CSS with spaces in the var name — invalid
- *      CSS that breaks `lightningcss` minification at build time.
+ *      candidate class names. @gxp-dev/app-ui ships compiled Vue files
+ *      whose arbitrary-value Tailwind utilities reference the platform's
+ *      underscored CSS variables (page-background, keyboard-key-active,
+ *      etc.). Tailwind 4 treats underscores inside arbitrary values as
+ *      spaces, producing CSS with spaces in the var() name — invalid CSS
+ *      that breaks lightningcss minification at build time. (No literal
+ *      example here on purpose: the scanner would treat it as a class.)
  *
  * In dev (`command === "serve"`) we load it; in build we skip and let the
  * platform supply Tailwind at runtime (per `app-manifest.json.baseFramework`).

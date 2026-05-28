@@ -27,7 +27,7 @@ All agents are configured to understand:
 2. **Store Integration** - How to use `gxpPortalConfigStore` for strings, settings, assets, and state
 3. **API Calls** - The correct way to make API requests through the store (never raw axios/fetch)
 4. **WebSocket Events** - How to listen for and emit real-time events
-5. **Component Kit** - Available UI components from `@gxp-dev/uikit`
+5. **Component Kit** - Available UI components from `@gxp-dev/app-ui`
 6. **Vue Directives** - Using `gxp-string` and `gxp-src` for dynamic content
 
 ## Claude Code Setup

@@ -298,7 +298,7 @@ Tools: `config_list_card_types`, `config_list_field_types`, `config_get_field_sc
 
 ## Component Kit
 
-Use `@gxp-dev/uikit` for all UI components. Run `gxdev storybook` to browse available components at `http://localhost:6006`. When storybook is running, the `gxp-uikit-storybook` MCP server (registered in `.mcp.json`) provides tools to inspect stories and documentation.
+Use `@gxp-dev/app-ui` for all UI components. Run `gxdev storybook` to browse available components at `http://localhost:6006`. When storybook is running, the `gxp-app-ui-storybook` MCP server (registered in `.mcp.json`) provides tools to inspect stories and documentation.
 
 Key components: `GxButton`, `GxCard`, `GxInput`, `GxModal`, `GxSpinner`, `GxAlert`, `GxBadge`, `GxAvatar`, `GxProgress`, `GxTabs`, `GxAccordion`
 

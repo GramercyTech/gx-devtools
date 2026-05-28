@@ -431,13 +431,13 @@ Key environment variables (set in `.env`):
 - Vite for building
 - Socket.IO for real-time communication
 - Ink (React-based TUI framework) for CLI interface
-- `@gxp-dev/uikit` - Component library for kiosk UI
+- `@gxp-dev/app-ui` - Component library for kiosk UI
 
 ## MCP Server for AI Assistants
 
 The toolkit ships an MCP server (`mcp/mcp-serve.js`, bin name `mcp-serve`) that exposes 33 tools to AI coding assistants across six families. It speaks MCP over stdio via the official `@modelcontextprotocol/sdk` `StdioServerTransport`. Configure it in your AI tool's MCP settings to get API-aware, schema-aware, test-aware assistance inside plugin projects. The previous bin name `gxp-api-server` still ships as a deprecation shim that prints a stderr notice and forwards to the same server.
 
-UIKit component introspection is no longer served here — `@gxp-dev/uikit` ships `@storybook/addon-mcp`, which exposes an HTTP MCP server at `http://localhost:6006/mcp` whenever `gxdev storybook` is running. `template/mcp.json` registers it as `gxp-uikit-storybook` alongside `gxp-api`, so AI assistants pick up storybook tools (preview-stories, get-storybook-story-instructions, get-documentation, run-story-tests) automatically when storybook is up.
+AppUI component introspection is no longer served here — `@gxp-dev/app-ui` ships `@storybook/addon-mcp`, which exposes an HTTP MCP server at `http://localhost:6006/mcp` whenever `gxdev storybook` is running. `template/mcp.json` registers it as `gxp-app-ui-storybook` alongside `gxp-api`, so AI assistants pick up storybook tools (preview-stories, get-storybook-story-instructions, get-documentation, run-story-tests) automatically when storybook is up.
 
 | Family            | Count | Tools                                                                                                                                                                                                                                                                                               | Purpose                                                                                                                                                                                                         |
 | ----------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

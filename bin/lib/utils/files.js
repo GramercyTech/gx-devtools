@@ -179,6 +179,19 @@ function updateExistingProject(projectPath) {
 			packageJson.dependencies = {}
 		}
 
+		// Migration: @gxp-dev/uikit → @gxp-dev/app-ui (package was renamed).
+		// Drop the old key from both sections so the canonical loop below adds
+		// the new package at the required version.
+		for (const section of ["dependencies", "devDependencies"]) {
+			if (packageJson[section] && packageJson[section]["@gxp-dev/uikit"]) {
+				delete packageJson[section]["@gxp-dev/uikit"]
+				console.log(
+					`  ↻ Migrating ${section}: @gxp-dev/uikit → @gxp-dev/app-ui`,
+				)
+				updated = true
+			}
+		}
+
 		for (const [dep, version] of Object.entries(REQUIRED_DEPENDENCIES)) {
 			const existingVersion = packageJson.dependencies[dep]
 			if (!existingVersion) {
@@ -230,13 +243,41 @@ function updateExistingProject(projectPath) {
 		if (updated) {
 			fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2))
 			console.log("✓ Updated package.json")
-			return true
 		}
 
-		return false
+		migrateMcpJson(projectPath)
+
+		return updated
 	} catch (error) {
 		console.error("Error updating package.json:", error.message)
 		return false
+	}
+}
+
+/**
+ * Migrate any project-scoped MCP config files that reference the old
+ * `gxp-uikit-storybook` key to the renamed `gxp-app-ui-storybook` key.
+ * Idempotent: re-running on an already-migrated file is a no-op.
+ */
+function migrateMcpJson(projectPath) {
+	const candidates = [".mcp.json", "mcp.json"]
+	const OLD_KEY = "gxp-uikit-storybook"
+	const NEW_KEY = "gxp-app-ui-storybook"
+	for (const name of candidates) {
+		const filePath = path.join(projectPath, name)
+		if (!fs.existsSync(filePath)) continue
+		try {
+			const raw = fs.readFileSync(filePath, "utf-8")
+			const config = JSON.parse(raw)
+			if (config?.mcpServers?.[OLD_KEY]) {
+				config.mcpServers[NEW_KEY] = config.mcpServers[OLD_KEY]
+				delete config.mcpServers[OLD_KEY]
+				fs.writeFileSync(filePath, JSON.stringify(config, null, "\t") + "\n")
+				console.log(`  ↻ Migrated ${name}: ${OLD_KEY} → ${NEW_KEY}`)
+			}
+		} catch (error) {
+			console.warn(`  ⚠ Could not migrate ${name}: ${error.message}`)
+		}
 	}
 }
 

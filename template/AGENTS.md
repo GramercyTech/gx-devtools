@@ -468,7 +468,7 @@ Finish with `gxdev lint --all`. The linter validates both roots against the same
 
 ## Component Kit
 
-Use `@gxp-dev/uikit` for all UI components. Run `gxdev storybook` to browse available components and their stories at `http://localhost:6006`. When storybook is running, the `gxp-uikit-storybook` MCP server (registered in `.mcp.json`) provides tools to inspect stories, documentation, and run story tests directly from your AI assistant.
+Use `@gxp-dev/app-ui` for all UI components. Run `gxdev storybook` to browse available components and their stories at `http://localhost:6006`. When storybook is running, the `gxp-app-ui-storybook` MCP server (registered in `.mcp.json`) provides tools to inspect stories, documentation, and run story tests directly from your AI assistant.
 
 Key components: `GxButton`, `GxCard`, `GxInput`, `GxModal`, `GxSpinner`, `GxAlert`, `GxBadge`, `GxAvatar`, `GxProgress`, `GxTabs`, `GxAccordion`
 
@@ -492,7 +492,7 @@ gxdev lint --json    # machine-readable output
 - Socket events: `gxdev socket send --event EventName` (add `--identifier <id>` to target a specific channel)
 - API calls against local mock: `test_api_route` MCP tool
 - Component tests: `test_scaffold_component_test` MCP tool
-- UIKit components: `gxdev storybook` — browse components at `http://localhost:6006`
+- AppUI components: `gxdev storybook` — browse components at `http://localhost:6006`
 - Dev Tools: Press Ctrl+Shift+D
 - Console: `window.gxDevTools.store()` to inspect store
 

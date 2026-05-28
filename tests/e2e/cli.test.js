@@ -137,7 +137,7 @@ describe.runIf(ENABLED)("gxdev e2e", () => {
 			expect(pkg.scripts).toHaveProperty("dev")
 			expect(pkg.scripts).toHaveProperty("build")
 			expect(pkg.scripts).toHaveProperty("dev-http")
-			expect(pkg.dependencies).toHaveProperty("@gxp-dev/uikit")
+			expect(pkg.dependencies).toHaveProperty("@gxp-dev/app-ui")
 			expect(pkg.devDependencies).toHaveProperty("@gxp-dev/tools")
 		})
 

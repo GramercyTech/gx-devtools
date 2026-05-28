@@ -1,12 +1,12 @@
 /**
  * Storybook Command
  *
- * Runs the @gxp-dev/uikit Storybook instance from the plugin project. The
- * uikit ships its own storybook config + @storybook/addon-mcp but declares
- * the storybook ecosystem as *optional* peerDependencies, so plugin projects
- * stay lean by default. This command resolves the installed uikit, detects
- * any missing storybook peers, prompts to install them in the plugin
- * project's node_modules, then delegates to the uikit's storybook script.
+ * Runs the @gxp-dev/app-ui Storybook instance from the plugin project. app-ui
+ * ships its own storybook config + @storybook/addon-mcp but declares the
+ * storybook ecosystem as *optional* peerDependencies, so plugin projects stay
+ * lean by default. This command resolves the installed app-ui, detects any
+ * missing storybook peers, prompts to install them in the plugin project's
+ * node_modules, then delegates to the app-ui's storybook script.
  *
  * When `storybook dev` is running, the addon-mcp also exposes an HTTP MCP
  * server at http://localhost:6006/mcp — the template's mcp.json registers it
@@ -18,7 +18,7 @@ const fs = require("fs")
 const shell = require("shelljs")
 const readline = require("readline")
 const { findProjectRoot } = require("../utils")
-const { resolveUikit } = require("../utils/uikit")
+const { resolveAppUi } = require("../utils/app-ui")
 
 const STORYBOOK_PEERS = [
 	"storybook",
@@ -40,11 +40,11 @@ function isInstalled(pkgName, fromDir) {
 	return false
 }
 
-function findMissingPeers(uikitRoot, pkg) {
+function findMissingPeers(appUiRoot, pkg) {
 	const peerSpecs = (pkg && pkg.peerDependencies) || {}
 	return STORYBOOK_PEERS.filter((name) => {
 		if (!peerSpecs[name]) return false
-		return !isInstalled(name, uikitRoot)
+		return !isInstalled(name, appUiRoot)
 	}).map((name) => `${name}@${peerSpecs[name]}`)
 }
 
@@ -63,35 +63,35 @@ async function confirm(question) {
 }
 
 async function storybookCommand(argv) {
-	const resolved = resolveUikit(process.cwd())
+	const resolved = resolveAppUi(process.cwd())
 	if (!resolved) {
 		console.error(
-			"❌ Could not find @gxp-dev/uikit in this project's node_modules.",
+			"❌ Could not find @gxp-dev/app-ui in this project's node_modules.",
 		)
-		console.log("💡 Install it with: npm install @gxp-dev/uikit")
+		console.log("💡 Install it with: npm install @gxp-dev/app-ui")
 		process.exit(1)
 	}
 
-	const { root: uikitRoot, pkg } = resolved
+	const { root: appUiRoot, pkg } = resolved
 	const wantsBuild = Boolean(argv.build)
 	const scriptName = wantsBuild ? "storybook:build" : "storybook"
 	const script = pkg.scripts && pkg.scripts[scriptName]
-	const storybookConfig = path.join(uikitRoot, ".storybook")
+	const storybookConfig = path.join(appUiRoot, ".storybook")
 
 	if (!script || !fs.existsSync(storybookConfig)) {
 		console.error(
-			`❌ @gxp-dev/uikit@${pkg.version || "?"} at ${uikitRoot} does not ship a Storybook setup.`,
+			`❌ @gxp-dev/app-ui@${pkg.version || "?"} at ${appUiRoot} does not ship a Storybook setup.`,
 		)
 		console.log(
-			"💡 Upgrade the uikit to a version whose `files` field includes `.storybook` and `src`.",
+			"💡 Upgrade app-ui to a version whose `files` field includes `.storybook` and `src`.",
 		)
 		process.exit(1)
 	}
 
-	const missing = findMissingPeers(uikitRoot, pkg)
+	const missing = findMissingPeers(appUiRoot, pkg)
 	if (missing.length > 0) {
 		console.log("📦 Storybook tooling is not installed yet.")
-		console.log("   The uikit lists these as optional peerDependencies:")
+		console.log("   app-ui lists these as optional peerDependencies:")
 		for (const spec of missing) {
 			console.log(`   • ${spec}`)
 		}
@@ -117,12 +117,12 @@ async function storybookCommand(argv) {
 	}
 
 	const label = wantsBuild
-		? "📚 Building Storybook from @gxp-dev/uikit..."
-		: "📚 Starting Storybook from @gxp-dev/uikit (http://localhost:6006)"
+		? "📚 Building Storybook from @gxp-dev/app-ui..."
+		: "📚 Starting Storybook from @gxp-dev/app-ui (http://localhost:6006)"
 	console.log(label)
-	console.log(`📁 UIKit path: ${uikitRoot}`)
+	console.log(`📁 AppUI path: ${appUiRoot}`)
 
-	const result = shell.exec(`npm run ${scriptName}`, { cwd: uikitRoot })
+	const result = shell.exec(`npm run ${scriptName}`, { cwd: appUiRoot })
 	if (result.code !== 0) {
 		process.exit(result.code)
 	}

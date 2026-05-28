@@ -4,7 +4,7 @@
 			"command": "mcp-serve",
 			"args": []
 		},
-		"gxp-uikit-storybook": {
+		"gxp-app-ui-storybook": {
 			"type": "http",
 			"url": "http://localhost:6006/mcp"
 		}

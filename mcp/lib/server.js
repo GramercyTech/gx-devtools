@@ -14,11 +14,10 @@
  *   - Test tools         (test-tools.js)
  *   - Model tools        (model-tools.js)
  *
- * UIKit component introspection has moved out of this server. The uikit
- * ships @storybook/addon-mcp; when developers run `gxdev storybook` the
- * uikit's Storybook exposes its own HTTP MCP server at
- * http://localhost:6006/mcp, registered as `gxp-uikit-storybook` in the
- * plugin project's mcp.json.
+ * AppUI component introspection has moved out of this server. @gxp-dev/app-ui
+ * ships @storybook/addon-mcp; when developers run `gxdev storybook` app-ui's
+ * Storybook exposes its own HTTP MCP server at http://localhost:6006/mcp,
+ * registered as `gxp-app-ui-storybook` in the plugin project's mcp.json.
  */
 
 const { fetchSpec, getEnvironment, getEnvUrls } = require("./specs")
