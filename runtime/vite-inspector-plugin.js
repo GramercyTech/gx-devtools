@@ -638,6 +638,129 @@ export function gxpInspectorPlugin() {
 						})
 					}
 
+					// POST /update-element - Edit a single element's attributes/text by source location
+					// Body: { loc: "src/Plugin.vue:12:4:h1", set?: { class?, style?, text?, attrs?: {k:v} }, remove?: [names], backup? }
+					// The `loc` value is the data-gxp-loc attribute stamped by the source tracker plugin.
+					if (req.method === "POST" && endpoint === "/update-element") {
+						const body = await parseBody(req)
+						const { loc, set = {}, remove = [], backup = false } = body
+
+						if (!loc) {
+							return sendJson(
+								res,
+								{ success: false, error: "loc is required" },
+								400,
+							)
+						}
+
+						const parsedLoc = parseLoc(loc)
+						if (!parsedLoc) {
+							return sendJson(
+								res,
+								{ success: false, error: `Invalid loc format: ${loc}` },
+								400,
+							)
+						}
+
+						const { filePath, line, column } = parsedLoc
+						const fullPath = path.resolve(process.cwd(), filePath)
+
+						if (!fs.existsSync(fullPath)) {
+							return sendJson(
+								res,
+								{ success: false, error: `File not found: ${filePath}` },
+								404,
+							)
+						}
+
+						const fileContent = fs.readFileSync(fullPath, "utf-8")
+						const offset = lineColToOffset(fileContent, line, column)
+						const tag = readOpeningTagAt(fileContent, offset)
+
+						if (!tag || !tag.tagName) {
+							return sendJson(
+								res,
+								{
+									success: false,
+									error: `Could not locate an opening tag at ${filePath}:${line}:${column}`,
+								},
+								400,
+							)
+						}
+
+						const newOpenTag = applyTagEdits(tag.text, { set, remove })
+						let newContent =
+							fileContent.slice(0, tag.start) +
+							newOpenTag +
+							fileContent.slice(tag.end)
+
+						// Optional inner-text replacement for leaf elements (text up to the next tag)
+						let textApplied = false
+						if (typeof set.text === "string" && !tag.selfClosing) {
+							const result = replaceLeafText(
+								newContent,
+								tag.start + newOpenTag.length,
+								set.text,
+							)
+							newContent = result.content
+							textApplied = result.applied
+						}
+
+						if (backup) {
+							fs.copyFileSync(fullPath, fullPath + ".backup")
+						}
+						fs.writeFileSync(fullPath, newContent, "utf-8")
+
+						return sendJson(res, {
+							success: true,
+							file: filePath,
+							tag: tag.tagName,
+							applied: { set, remove, textApplied },
+						})
+					}
+
+					// POST /add-asset - Add an asset URL to app-manifest.json (assets section)
+					if (req.method === "POST" && endpoint === "/add-asset") {
+						const body = await parseBody(req)
+						const { key, value } = body
+
+						if (!key || value === undefined) {
+							return sendJson(
+								res,
+								{ success: false, error: "key and value are required" },
+								400,
+							)
+						}
+
+						const manifestPath = path.join(process.cwd(), "app-manifest.json")
+						let manifest = {}
+
+						if (fs.existsSync(manifestPath)) {
+							manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
+						} else {
+							manifest = {
+								name: "GxToolkit",
+								version: "1.0.0",
+								description: "GxToolkit",
+								manifest_version: 3,
+								settings: {},
+								strings: { default: {} },
+								assets: {},
+							}
+						}
+
+						manifest.assets = manifest.assets || {}
+						manifest.assets[key] = value
+
+						fs.writeFileSync(
+							manifestPath,
+							JSON.stringify(manifest, null, 2),
+							"utf-8",
+						)
+
+						return sendJson(res, { success: true, key, value })
+					}
+
 					// POST /analyze-text - Analyze if text content comes from a dynamic expression
 					if (req.method === "POST" && endpoint === "/analyze-text") {
 						const body = await parseBody(req)
@@ -895,6 +1018,216 @@ export function gxpInspectorPlugin() {
  */
 function escapeRegex(string) {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/**
+ * Parse a data-gxp-loc value ("path:line:col" or "path:line:col:tag") into parts.
+ * The file path itself may contain colons, so line/col/tag are taken from the end.
+ * @returns {{ filePath: string, line: number, column: number, tag: string|null }|null}
+ */
+export function parseLoc(loc) {
+	if (typeof loc !== "string") {
+		return null
+	}
+	const parts = loc.split(":")
+	let tag = null
+	if (parts.length > 0 && !/^\d+$/.test(parts[parts.length - 1])) {
+		tag = parts.pop()
+	}
+	const column = parseInt(parts.pop(), 10)
+	const line = parseInt(parts.pop(), 10)
+	const filePath = parts.join(":")
+	if (!filePath || Number.isNaN(line) || Number.isNaN(column)) {
+		return null
+	}
+	return { filePath, line, column, tag }
+}
+
+/**
+ * Convert 1-based line/column coordinates into an absolute character offset.
+ */
+export function lineColToOffset(text, line, column) {
+	let currentLine = 1
+	let i = 0
+	while (i < text.length && currentLine < line) {
+		if (text[i] === "\n") {
+			currentLine++
+		}
+		i++
+	}
+	return i + (column - 1)
+}
+
+/**
+ * Read the opening tag that begins at (or just after) the given offset.
+ * Respects quoted attribute values so `>` inside quotes does not end the tag.
+ * @returns {{ start: number, end: number, text: string, tagName: string|null, selfClosing: boolean }|null}
+ */
+export function readOpeningTagAt(content, offset) {
+	let start = offset
+	if (content[start] !== "<") {
+		const next = content.indexOf("<", Math.max(0, offset))
+		if (next === -1) {
+			return null
+		}
+		start = next
+	}
+
+	let i = start + 1
+	let inDouble = false
+	let inSingle = false
+	while (i < content.length) {
+		const c = content[i]
+		if (inDouble) {
+			if (c === '"') {
+				inDouble = false
+			}
+		} else if (inSingle) {
+			if (c === "'") {
+				inSingle = false
+			}
+		} else if (c === '"') {
+			inDouble = true
+		} else if (c === "'") {
+			inSingle = true
+		} else if (c === ">") {
+			i++
+			break
+		}
+		i++
+	}
+
+	const end = i
+	const text = content.slice(start, end)
+	const selfClosing = /\/>\s*$/.test(text)
+	const nameMatch = text.match(/^<\s*([a-zA-Z][a-zA-Z0-9-]*)/)
+	return {
+		start,
+		end,
+		text,
+		tagName: nameMatch ? nameMatch[1] : null,
+		selfClosing,
+	}
+}
+
+/**
+ * Apply attribute edits to an opening tag string and return the rewritten tag.
+ * Supports setting class/style, setting/removing arbitrary attributes, and
+ * preserves existing attribute order and quote style.
+ */
+export function applyTagEdits(tagText, { set = {}, remove = [] }) {
+	const selfClosing = /\/>\s*$/.test(tagText)
+	let inner = tagText.replace(/^</, "").replace(/\/?>\s*$/, "")
+	const nameMatch = inner.match(/^\s*([a-zA-Z][a-zA-Z0-9-]*)/)
+	const tagName = nameMatch ? nameMatch[1] : ""
+	const rest = inner.slice(nameMatch ? nameMatch[0].length : 0)
+
+	const attrs = []
+	const attrRe =
+		/([@:a-zA-Z_][a-zA-Z0-9_\-:.@]*)(\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g
+	let m
+	while ((m = attrRe.exec(rest)) !== null) {
+		if (!m[0].trim()) {
+			continue
+		}
+		let value = null
+		let quote = '"'
+		if (m[2]) {
+			if (m[4] !== undefined) {
+				value = m[4]
+				quote = '"'
+			} else if (m[5] !== undefined) {
+				value = m[5]
+				quote = "'"
+			} else {
+				value = m[6]
+				quote = '"'
+			}
+		}
+		attrs.push({ name: m[1], value, quote })
+	}
+
+	const removeAttr = (name) => {
+		const idx = attrs.findIndex((a) => a.name === name)
+		if (idx >= 0) {
+			attrs.splice(idx, 1)
+		}
+	}
+	const upsertAttr = (name, value) => {
+		const found = attrs.find((a) => a.name === name)
+		if (found) {
+			found.value = value
+		} else {
+			attrs.push({ name, value, quote: '"' })
+		}
+	}
+
+	if (typeof set.class === "string") {
+		if (set.class.trim() === "") {
+			removeAttr("class")
+		} else {
+			upsertAttr("class", set.class)
+		}
+	}
+	if (typeof set.style === "string") {
+		if (set.style.trim() === "") {
+			removeAttr("style")
+		} else {
+			upsertAttr("style", set.style)
+		}
+	}
+	if (set.attrs && typeof set.attrs === "object") {
+		for (const [k, v] of Object.entries(set.attrs)) {
+			if (v === null) {
+				removeAttr(k)
+			} else {
+				upsertAttr(k, String(v))
+			}
+		}
+	}
+	for (const name of remove) {
+		removeAttr(name)
+	}
+
+	let out = `<${tagName}`
+	for (const a of attrs) {
+		if (a.value === null) {
+			out += ` ${a.name}`
+		} else {
+			const q = a.quote || '"'
+			const safe =
+				q === '"'
+					? a.value.replace(/"/g, "&quot;")
+					: a.value.replace(/'/g, "&#39;")
+			out += ` ${a.name}=${q}${safe}${q}`
+		}
+	}
+	out += selfClosing ? " />" : ">"
+	return out
+}
+
+/**
+ * Replace the leaf text node directly following an opening tag (text up to the
+ * next `<`). Surrounding whitespace is preserved. Only intended for elements
+ * whose content is a single text node.
+ * @returns {{ content: string, applied: boolean }}
+ */
+export function replaceLeafText(content, fromOffset, newText) {
+	const nextLt = content.indexOf("<", fromOffset)
+	if (nextLt === -1) {
+		return { content, applied: false }
+	}
+	const segment = content.slice(fromOffset, nextLt)
+	const lead = segment.match(/^\s*/)[0]
+	const trail = segment.match(/\s*$/)[0]
+	const safeText = String(newText).replace(/</g, "&lt;").replace(/>/g, "&gt;")
+	const updated =
+		content.slice(0, fromOffset) +
+		lead +
+		safeText +
+		trail +
+		content.slice(nextLt)
+	return { content: updated, applied: true }
 }
 
 export default gxpInspectorPlugin

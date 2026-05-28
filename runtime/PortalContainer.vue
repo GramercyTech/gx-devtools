@@ -22,26 +22,94 @@
 			<Plugin :router="mockRouter" />
 		</component>
 
-		<!-- Dev Tools Toggle Button (visible in corner) -->
-		<button
-			class="gx-devtools-trigger"
-			@click="showDevTools = true"
-			title="Open Dev Tools (Ctrl+Shift+D)"
-		>
-			<svg
-				width="20"
-				height="20"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
+		<!-- In-page element inspector (Select / Locate modes + editor) -->
+		<ElementInspector
+			ref="inspectorRef"
+			:embedded="embedded"
+			@select="onInspectorSelect"
+			@locate="onInspectorLocate"
+		/>
+
+		<!-- Dev Tools Toggle Button + hover ribbon (bottom-right corner).
+		     Hidden when embedded — the host page renders its own menu. -->
+		<div v-if="!embedded" class="gx-inspector-ribbon gx-devtools-fab">
+			<div class="gx-ribbon-menu">
+				<button
+					class="gx-ribbon-item"
+					title="Open configuration dev tools"
+					@click="showDevTools = true"
+				>
+					<svg
+						viewBox="0 0 24 24"
+						width="16"
+						height="16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path d="M3 6h18M3 12h18M3 18h18" />
+					</svg>
+					<span>Config Editor</span>
+				</button>
+				<button
+					class="gx-ribbon-item"
+					:class="{ active: inspectorMode === 'select' }"
+					title="Select an element to edit (Ctrl+Shift+I)"
+					@click="inspectorRef?.toggleSelect()"
+				>
+					<svg
+						viewBox="0 0 24 24"
+						width="16"
+						height="16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path d="M3 3l7.5 18 2.5-7 7-2.5L3 3z" />
+					</svg>
+					<span>Select</span>
+				</button>
+				<button
+					class="gx-ribbon-item"
+					:class="{ active: inspectorMode === 'locate' }"
+					title="Locate an element's source (broadcasts gxp:open-in-source)"
+					@click="inspectorRef?.toggleLocate()"
+				>
+					<svg
+						viewBox="0 0 24 24"
+						width="16"
+						height="16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<circle cx="11" cy="11" r="7" />
+						<path d="M21 21l-4.3-4.3" />
+					</svg>
+					<span>Locate</span>
+				</button>
+			</div>
+
+			<button
+				class="gx-devtools-trigger"
+				@click="showDevTools = true"
+				title="GxP Dev Tools (hover for options · Ctrl+Shift+D)"
 			>
-				<circle cx="12" cy="12" r="3" />
-				<path
-					d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
-				/>
-			</svg>
-		</button>
+				<svg
+					width="20"
+					height="20"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<circle cx="12" cy="12" r="3" />
+					<path
+						d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+					/>
+				</svg>
+			</button>
+		</div>
 	</div>
 </template>
 
@@ -52,10 +120,67 @@
 	-moz-osx-font-smoothing: grayscale;
 }
 
-.gx-devtools-trigger {
+.gx-devtools-fab {
 	position: fixed;
 	bottom: 20px;
 	right: 20px;
+	z-index: 99998;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 8px;
+}
+
+/* Ribbon opens upward; hidden until the FAB is hovered */
+.gx-ribbon-menu {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	opacity: 0;
+	transform: translateY(8px);
+	pointer-events: none;
+	transition:
+		opacity 0.15s ease,
+		transform 0.15s ease;
+}
+
+.gx-devtools-fab:hover .gx-ribbon-menu {
+	opacity: 1;
+	transform: translateY(0);
+	pointer-events: auto;
+}
+
+.gx-ribbon-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: #1e1e1e;
+	border: 1px solid #3d3d3d;
+	color: #e0e0e0;
+	border-radius: 8px;
+	padding: 8px 12px;
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: 600;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	white-space: nowrap;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	transition: all 0.15s;
+}
+
+.gx-ribbon-item:hover {
+	border-color: #61dafb;
+	color: #61dafb;
+}
+
+.gx-ribbon-item.active {
+	border-color: #61dafb;
+	color: #1e1e1e;
+	background: #61dafb;
+}
+
+.gx-devtools-trigger {
 	width: 44px;
 	height: 44px;
 	border-radius: 50%;
@@ -66,7 +191,6 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	z-index: 99998;
 	transition: all 0.2s;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -92,7 +216,7 @@
 </style>
 
 <script setup>
-import { ref, shallowRef, onMounted, onUnmounted } from "vue"
+import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue"
 
 // These imports use aliases configured in vite.config.js
 // @/ points to the client project's src/ directory
@@ -106,6 +230,11 @@ import { storeToRefs } from "pinia"
 
 // Dev Tools
 import DevToolsModal from "./dev-tools/DevToolsModal.vue"
+import ElementInspector from "./dev-tools/ElementInspector.vue"
+import {
+	isEmbedded,
+	createDevtoolsBridge,
+} from "./dev-tools/devtools-bridge.js"
 
 // Initialize the GxP store from client project's stores/index.js
 // which re-exports useGxpStore from either the toolkit or a local copy
@@ -113,6 +242,13 @@ import { useGxpStore } from "@/stores/index.js"
 window.useGxpStore = { useGxpStore }
 // App state management
 const showDevTools = ref(false)
+const inspectorRef = ref(null)
+const inspectorMode = computed(() => inspectorRef.value?.mode ?? "off")
+
+// When running inside a host page (iframe), hide the injected menu and let the
+// host drive the dev tools over postMessage via the bridge below.
+const embedded = isEmbedded()
+let devtoolsBridge = null
 const currentLayout = shallowRef(PublicLayout)
 const currentLayoutName = ref("public")
 const currentPage = ref("start")
@@ -324,10 +460,103 @@ function setupDevToolsAPI() {
 		store: () => gxpStore,
 		setLayout: (layout) => changeLayout(layout),
 		getLayout: () => currentLayoutName.value,
+		// Element inspector (in-page, no browser extension required)
+		toggleSelect: () => inspectorRef.value?.toggleSelect(),
+		toggleLocate: () => inspectorRef.value?.toggleLocate(),
+		inspectorMode: () => inspectorMode.value,
 	}
 
 	// Legacy support
 	window.toggleConfigPanel = () => window.gxDevTools.toggle()
+}
+
+// ── Embedded mode: host-driven dev tools bridge ────────────────────────
+function safeClone(value) {
+	try {
+		return JSON.parse(JSON.stringify(value))
+	} catch {
+		return null
+	}
+}
+
+function snapshotStore() {
+	return {
+		pluginVars: safeClone(gxpStore.pluginVars),
+		stringsList: safeClone(gxpStore.stringsList),
+		assetList: safeClone(gxpStore.assetList),
+		triggerState: safeClone(gxpStore.triggerState),
+		permissionFlags: safeClone(gxpStore.permissionFlags),
+		dependencyList: safeClone(gxpStore.dependencyList),
+	}
+}
+
+// Handlers the host can invoke over postMessage. These run the exact same
+// in-page operations the local menu would.
+const bridgeHandlers = {
+	ping: () => ({ embedded, mode: inspectorMode.value }),
+	setMode: (p) => {
+		inspectorRef.value?.setMode(p?.mode || "off")
+		return { mode: inspectorMode.value }
+	},
+	select: () => {
+		inspectorRef.value?.setMode("select")
+		return { mode: inspectorMode.value }
+	},
+	locate: () => {
+		inspectorRef.value?.setMode("locate")
+		return { mode: inspectorMode.value }
+	},
+	exit: () => {
+		inspectorRef.value?.setMode("off")
+		return { mode: "off" }
+	},
+	describeSelection: () => inspectorRef.value?.describeSelection() ?? null,
+	highlight: (p) => inspectorRef.value?.highlightLoc(p?.loc) ?? null,
+	clearHighlight: () => {
+		inspectorRef.value?.clearSelection()
+		return { ok: true }
+	},
+	getComponentTree: () => inspectorRef.value?.getComponentTree() ?? [],
+	getLayouts: () => ["public", "private", "system"],
+	getLayout: () => currentLayoutName.value,
+	setLayout: (p) => {
+		changeLayout(p?.layout)
+		return { layout: currentLayoutName.value }
+	},
+	openConfig: () => {
+		showDevTools.value = true
+		return { open: true }
+	},
+	closeConfig: () => {
+		showDevTools.value = false
+		return { open: false }
+	},
+	getStore: () => snapshotStore(),
+	getState: (p) => gxpStore.getState?.(p?.key, p?.fallback),
+	setState: (p) => {
+		if (p?.key != null) {
+			gxpStore.triggerState[p.key] = p.value
+		}
+		return { key: p?.key, value: p?.value }
+	},
+	// Convenience proxy so the host can hit the dev-server source-edit API
+	// through the same channel (avoids cross-origin fetch juggling host-side).
+	api: async (p) => {
+		const res = await fetch(`/__gxp-inspector${p.endpoint}`, {
+			method: p.method || "POST",
+			headers: { "Content-Type": "application/json" },
+			body: p.body != null ? JSON.stringify(p.body) : undefined,
+		})
+		return res.json()
+	},
+}
+
+function onInspectorSelect(payload) {
+	devtoolsBridge?.emit("element-selected", payload)
+}
+
+function onInspectorLocate(payload) {
+	devtoolsBridge?.emit("open-in-source", payload)
 }
 
 // Expose functions for use in Plugin component
@@ -359,10 +588,24 @@ onMounted(() => {
 		"%c Console API: window.gxDevTools.open() / .close() / .toggle() ",
 		"color: #888; font-size: 12px;",
 	)
+
+	// Stand up the host bridge. Always created so a host page (or test harness)
+	// can drive the tools; the floating menu is only hidden when `embedded`.
+	devtoolsBridge = createDevtoolsBridge({ handlers: bridgeHandlers })
+	watch(inspectorMode, (mode) => devtoolsBridge?.emit("mode-changed", { mode }))
+
+	if (embedded) {
+		console.log(
+			"%c GxP Dev Tools running embedded — controlled by host via postMessage ",
+			"color: #61dafb; font-size: 12px;",
+		)
+	}
 })
 
 onUnmounted(() => {
 	document.removeEventListener("keydown", handleKeydown)
+	devtoolsBridge?.destroy()
+	devtoolsBridge = null
 	delete window.gxDevTools
 	delete window.toggleConfigPanel
 	delete window.changeLayout

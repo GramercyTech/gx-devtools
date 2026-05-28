@@ -140,7 +140,12 @@ function parseTagsFromHtml(html) {
  * Create the source tracker plugin
  */
 export function gxpSourceTrackerPlugin(options = {}) {
-	const { enabled = true, attrName = "data-gxp-expr" } = options
+	const {
+		enabled = true,
+		attrName = "data-gxp-expr",
+		locAttrName = "data-gxp-loc",
+		trackLocations = true,
+	} = options
 
 	return {
 		name: "gxp-source-tracker",
@@ -166,6 +171,71 @@ export function gxpSourceTrackerPlugin(options = {}) {
 
 			let template = templateMatch[1]
 			let modified = false
+
+			// Stamp data-gxp-loc="file:line:col:tag" on every element opening tag.
+			// This must run FIRST, on the pristine template, so the line/column we
+			// embed point at the real source positions before any other transform
+			// shifts offsets. The stamped value references the on-disk .vue file and
+			// powers Locate mode + the in-page element editor (update-element API).
+			if (trackLocations) {
+				const fileRelPath = id.startsWith(process.cwd())
+					? id.slice(process.cwd().length).replace(/^[/\\]/, "")
+					: id
+
+				// Absolute offset of the template's inner content within the file
+				const templateOuterStart = code.indexOf(templateMatch[0])
+				const templateContentStart = templateOuterStart + "<template>".length
+
+				const locTags = parseTagsFromHtml(template)
+				const locReplacements = []
+
+				for (const tag of locTags) {
+					if (tag.isClosing) {
+						continue
+					}
+					const tagNameLower = tag.tagName.toLowerCase()
+					if (["script", "style", "template"].includes(tagNameLower)) {
+						continue
+					}
+					if (tag.attrs.includes(locAttrName)) {
+						continue
+					}
+
+					const absOffset = templateContentStart + tag.start
+					const { line, column } = offsetToLineCol(code, absOffset)
+					const locValue = `${fileRelPath}:${line}:${column}:${tag.tagName}`
+
+					const oldOpenTag = tag.fullMatch
+					let newOpenTag
+					if (oldOpenTag.endsWith("/>")) {
+						newOpenTag =
+							oldOpenTag.slice(0, -2) +
+							` ${locAttrName}="${escapeAttr(locValue)}"/>`
+					} else {
+						newOpenTag =
+							oldOpenTag.slice(0, -1) +
+							` ${locAttrName}="${escapeAttr(locValue)}">`
+					}
+
+					locReplacements.push({
+						start: tag.start,
+						oldText: oldOpenTag,
+						newText: newOpenTag,
+					})
+				}
+
+				locReplacements.sort((a, b) => b.start - a.start)
+				for (const r of locReplacements) {
+					template =
+						template.substring(0, r.start) +
+						r.newText +
+						template.substring(r.start + r.oldText.length)
+				}
+
+				if (locReplacements.length > 0) {
+					modified = true
+				}
+			}
 
 			// Process each element that has {{ expression }} as its content
 			// Strategy: Find each {{ expression }} and trace back to find its parent element
@@ -287,7 +357,7 @@ export function gxpSourceTrackerPlugin(options = {}) {
 			}
 
 			console.log(
-				`[GxP Source Tracker] Added data-gxp-expr to ${elementExpressions.size} elements in: ${fileName}`,
+				`[GxP Source Tracker] Stamped ${fileName} (data-gxp-expr on ${elementExpressions.size} elements, data-gxp-loc: ${trackLocations ? "on" : "off"})`,
 			)
 			const newCode = code.replace(
 				/<template>[\s\S]*?<\/template>/,
@@ -354,6 +424,24 @@ function addAttrToDirective(template, directive, attrName) {
 
 function escapeRegex(str) {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/**
+ * Convert an absolute character offset into 1-based line/column coordinates.
+ */
+function offsetToLineCol(text, offset) {
+	let line = 1
+	let column = 1
+	const max = Math.min(offset, text.length)
+	for (let i = 0; i < max; i++) {
+		if (text[i] === "\n") {
+			line++
+			column = 1
+		} else {
+			column++
+		}
+	}
+	return { line, column }
 }
 
 function escapeAttr(str) {
