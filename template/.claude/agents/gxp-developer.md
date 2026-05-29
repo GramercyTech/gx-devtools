@@ -770,7 +770,7 @@ gxdev socket send --event Name --identifier id  # Send to a specific channel
 # Dependencies
 gxdev add-dependency                        # Interactive wizard: search endpoints and add dependency to app-manifest.json
 
-# UIKit components
+# AppUI components
 gxdev storybook                             # Browse components at http://localhost:6006
 
 # Lint

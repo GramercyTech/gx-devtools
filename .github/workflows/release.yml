@@ -2,7 +2,7 @@ name: Release
 
 # Tag-triggered publish. Pushing a SemVer tag like `v2.1.0` runs the full
 # verification chain (unit + e2e + tui build) and then `npm publish` if
-# everything is green. Mirrors @gxp-dev/uikit's release.yml.
+# everything is green. Mirrors @gxp-dev/app-ui's release.yml.
 #
 # Replaces the old npm-publish.yml workflow, which auto-bumped the patch
 # version and published on every push to main. That behavior is intentionally
