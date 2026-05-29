@@ -60,7 +60,7 @@
 	"dependencies": {
 		"@faker-js/faker": "^9.9.0",
 		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
-		"@gxp-dev/app-ui": "^0.1.5",
+		"@gxp-dev/app-ui": "^0.1.6",
 		"@modelcontextprotocol/sdk": "^1.29.0",
 		"@vitejs/plugin-vue": "^6.0.6",
 		"@vue/test-utils": "^2.4.6",
