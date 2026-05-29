@@ -405,34 +405,72 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		// Initialize dependency-based sockets based on the new structure
 		if (Array.isArray(dependencies.value)) {
 			dependencies.value.forEach((permission) => {
-				if (permission.events && Object.keys(permission.events).length > 0) {
-					// Create socket listeners for each event type
-					sockets[permission.identifier] = {}
+				if (permission.identifier) {
+					if (permission.events && Object.keys(permission.events).length > 0) {
+						// Create socket listeners for each event type
+						sockets[permission.identifier] = {}
+						Object.keys(permission.events).forEach((eventType) => {
+							const eventName = permission.events[eventType]
+							const channel = `private.${permission.model}.${permission.identifier}`
 
-					Object.keys(permission.events).forEach((eventType) => {
-						const eventName = permission.events[eventType]
-						const channel = `private.${permission.model}.${permission.identifier}`
+							sockets[permission.identifier][eventType] = {
+								listen: function (callback) {
+									// Listen for the specific event on the primary socket
+									return primarySocket.on(eventName, (data) => {
+										console.log(
+											`Socket event received: ${eventName} on ${channel}`,
+											data,
+										)
+										callback(data)
+									})
+								},
+							}
+						})
+					} else {
+						// For dependencies without events, create empty listeners
+						sockets[permission.identifier] = {
+							created: { listen: () => () => {} },
+							updated: { listen: () => () => {} },
+							deleted: { listen: () => () => {} },
+						}
+					}
+				} else if (
+					permission.identifiers &&
+					Array.isArray(permission.identifiers)
+				) {
+					permission.identifiers.forEach((identifier) => {
+						if (
+							permission.events &&
+							Object.keys(permission.events).length > 0
+						) {
+							// Create socket listeners for each event type
+							sockets[identifier] = {}
+							Object.keys(permission.events).forEach((eventType) => {
+								const eventName = permission.events[eventType]
+								const channel = `private.${permission.model}.${identifier}`
 
-						sockets[permission.identifier][eventType] = {
-							listen: function (callback) {
-								// Listen for the specific event on the primary socket
-								return primarySocket.on(eventName, (data) => {
-									console.log(
-										`Socket event received: ${eventName} on ${channel}`,
-										data,
-									)
-									callback(data)
-								})
-							},
+								sockets[identifier][eventType] = {
+									listen: function (callback) {
+										// Listen for the specific event on the primary socket
+										return primarySocket.on(eventName, (data) => {
+											console.log(
+												`Socket event received: ${eventName} on ${channel}`,
+												data,
+											)
+											callback(data)
+										})
+									},
+								}
+							})
+						} else {
+							// For dependencies without events, create empty listeners
+							sockets[identifier] = {
+								created: { listen: () => () => {} },
+								updated: { listen: () => () => {} },
+								deleted: { listen: () => () => {} },
+							}
 						}
 					})
-				} else {
-					// For dependencies without events, create empty listeners
-					sockets[permission.identifier] = {
-						created: { listen: () => () => {} },
-						updated: { listen: () => () => {} },
-						deleted: { listen: () => () => {} },
-					}
 				}
 			})
 		}

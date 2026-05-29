@@ -152,6 +152,28 @@ export function buildElementLabel(el) {
 }
 
 /**
+ * Find the nearest ancestor (including the element itself) that carries
+ * a `data-gxp-loc` stamp. The source-tracker Vite plugin only stamps
+ * top-level template elements of a transformed .vue file — children
+ * created by third-party components, runtime injected elements, or
+ * scoped style wrappers don't get one. Walking up gives Locate / Save
+ * a reasonable fallback target instead of going dark on those clicks.
+ *
+ * Returns the ancestor element when found, or null if the chain hits
+ * `document.body` without seeing the attribute.
+ */
+function findLocAncestor(el) {
+	let cur = el
+	while (cur && cur.nodeType === 1) {
+		if (cur.getAttribute?.("data-gxp-loc")) {
+			return cur
+		}
+		cur = cur.parentElement
+	}
+	return null
+}
+
+/**
  * Build the gxp:open-in-source payload broadcast for an element.
  */
 export function buildSourcePayload(el) {
@@ -160,7 +182,17 @@ export function buildSourcePayload(el) {
 	let line = null
 	let column = null
 	let tag = el.tagName.toLowerCase()
-	const loc = el.getAttribute?.("data-gxp-loc")
+	// Prefer the element's own stamp; fall back to walking up so we
+	// still resolve a source location for un-stamped descendants.
+	let locOwner = el
+	let loc = el.getAttribute?.("data-gxp-loc")
+	if (!loc) {
+		const ancestor = findLocAncestor(el.parentElement)
+		if (ancestor) {
+			locOwner = ancestor
+			loc = ancestor.getAttribute("data-gxp-loc")
+		}
+	}
 	if (loc) {
 		const parsed = parseLoc(loc)
 		if (parsed) {
@@ -172,6 +204,11 @@ export function buildSourcePayload(el) {
 			}
 		}
 	}
+	// If we resolved via ancestor, surface that fact so the host can
+	// distinguish "this exact element's source" from "the nearest
+	// stamped parent" — useful for UI ("opened parent: HeaderBar")
+	// and for the agent when reasoning about edits.
+	const resolvedFromAncestor = locOwner !== el
 	return {
 		type: "gxp:open-in-source",
 		file,
@@ -183,6 +220,7 @@ export function buildSourcePayload(el) {
 		gxpKey:
 			el.getAttribute?.("gxp-string") || el.getAttribute?.("gxp-src") || null,
 		expr: el.getAttribute?.("data-gxp-expr") || null,
+		resolvedFromAncestor,
 	}
 }
 
