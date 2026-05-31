@@ -1,11 +1,120 @@
 import { defineConfig, loadEnv, mergeConfig } from "vite"
 import { fileURLToPath, pathToFileURL } from "url"
+import { createRequire } from "module"
 import vue from "@vitejs/plugin-vue"
 import path from "path"
 import fs from "fs"
 import externalGlobals from "rollup-plugin-external-globals"
 import { gxpInspectorPlugin } from "./vite-inspector-plugin.js"
 import { gxpSourceTrackerPlugin } from "./vite-source-tracker-plugin.js"
+
+const require = createRequire(import.meta.url)
+
+/**
+ * Packages that must NOT be auto-pre-bundled even if a plugin lists them as
+ * a dependency. @gxp-dev/tools is the dev-harness runtime itself — it's
+ * provided to the plugin (and partly window-shimmed) rather than bundled as
+ * an ordinary library, so leave its current handling alone.
+ */
+const OPTIMIZE_DEPS_EXCLUDE = new Set(["@gxp-dev/tools"])
+
+/**
+ * The general problem this and {@link getOptimizeDepsEntries} solve:
+ *
+ * When Vite discovers a dependency lazily (on the first request that imports
+ * it) it re-runs dep optimization and bumps the optimize-deps browser hash.
+ * On the preview URL that's invisible — `/@vite/client` catches the
+ * resulting 504 ("Outdated Optimize Dep") and full-reloads to recover. But
+ * the portal embeds the live preview cross-origin via `import(pluginUrl)`,
+ * and that self-healing reload can't happen there: the now-stale
+ * `/node_modules/.vite/deps/<dep>.js?v=<hash>` request 504s with no recovery,
+ * so the dependency never loads (while same-origin `/src/*` modules, served
+ * fresh with no hash, keep working). The cure is to make every dependency a
+ * plugin actually uses get pre-bundled ONCE at server start, so its hash is
+ * fixed for the whole session. That takes two complementary pieces.
+ *
+ * --- getOptimizeDepsInclude: force-pre-bundle our linked shared libs ---
+ *
+ * Vite does NOT pre-bundle linked / workspace packages by default, even when
+ * they're discovered — and our @gxp-dev/* component libraries are exactly
+ * that (workspace packages shipping pre-compiled ESM with `preserveModules`).
+ * They must be named in `optimizeDeps.include` or they get the lazy, hash-
+ * churning treatment. We pull them straight from the plugin's own
+ * `package.json` dependencies, so any @gxp-dev/* library a plugin adds is
+ * handled automatically — no per-package edit to this config is ever needed.
+ *
+ * Scope notes:
+ *   - Only `@gxp-dev/*` deps are force-included. Ordinary npm libraries don't
+ *     need it — once discovered by the startup scan (see entries) Vite
+ *     pre-bundles them normally. This also keeps node-only / build-time deps
+ *     a plugin might list (e.g. dotenv) out of the browser optimizer, since
+ *     they're never imported from src and so never scanned.
+ *   - @gxp-dev/tools is excluded: it's the dev-harness runtime, provided to
+ *     the plugin (and partly window-shimmed), not bundled as a normal lib.
+ *   - vue + pinia are always included (deduped to a single instance).
+ *   - Each name is probed for resolvability so an uninstalled entry can't
+ *     make the optimizer throw at startup.
+ *
+ * @returns {string[]}
+ */
+function getOptimizeDepsInclude() {
+	const include = ["vue", "pinia"]
+	const resolvePaths = [
+		process.cwd(),
+		path.dirname(fileURLToPath(import.meta.url)),
+	]
+
+	try {
+		const pkgPath = path.resolve(process.cwd(), "package.json")
+		if (fs.existsSync(pkgPath)) {
+			const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"))
+			for (const dep of Object.keys(pkg.dependencies || {})) {
+				if (!dep.startsWith("@gxp-dev/")) {
+					continue
+				}
+				if (include.includes(dep) || OPTIMIZE_DEPS_EXCLUDE.has(dep)) {
+					continue
+				}
+				try {
+					require.resolve(dep, { paths: resolvePaths })
+					include.push(dep)
+				} catch {
+					// Declared but not resolvable from here (not installed, or
+					// exposes only subpaths) — skip rather than crash the optimizer.
+				}
+			}
+		}
+	} catch {
+		// Unreadable/invalid package.json — fall back to vue + pinia only.
+	}
+
+	return include
+}
+
+/**
+ * Entry files Vite scans at startup to discover dependencies up front.
+ *
+ * The plugin has no root `index.html` (the harness serves runtime/index.html
+ * via middleware with `root` set to the plugin dir), so Vite's default entry
+ * scan finds nothing and falls back to discovering deps lazily at request
+ * time — the exact hash-churn that breaks the cross-origin portal embed (see
+ * {@link getOptimizeDepsInclude}). Pointing the scan at the plugin's own
+ * source makes every ordinary library it imports get pre-bundled at boot with
+ * a stable hash. Combined with the @gxp-dev/* force-include above, this means
+ * a plugin author just adds a dependency and imports it — no edit here.
+ *
+ * @param {Record<string, string>} env
+ * @returns {string[]}
+ */
+function getOptimizeDepsEntries(env = {}) {
+	const entries = [
+		path.resolve(process.cwd(), "src/**/*.{vue,js,ts,jsx,tsx,mjs}"),
+	]
+	if (env.COMPONENT_PATH) {
+		entries.unshift(path.resolve(process.cwd(), env.COMPONENT_PATH))
+	}
+	return entries
+}
 
 // Environment URL configuration for API proxy
 const ENVIRONMENT_URLS = {
@@ -742,9 +851,15 @@ export default defineConfig(async (ctx) => {
 			// Dedupe Vue and Pinia to ensure only one instance is used
 			dedupe: ["vue", "pinia"],
 		},
-		// Force Vite to pre-bundle these dependencies to ensure single instances
+		// Pre-bundle deps once at server start so their optimize-deps hash is
+		// stable for the whole session — lazy discovery churns the hash and
+		// breaks the cross-origin portal embed. `entries` makes the startup
+		// scan crawl the plugin's source (it has no root index.html), and
+		// `include` force-pre-bundles our linked @gxp-dev/* libraries that
+		// Vite won't pre-bundle otherwise. See the two helpers for details.
 		optimizeDeps: {
-			include: ["vue", "pinia"],
+			include: getOptimizeDepsInclude(),
+			entries: getOptimizeDepsEntries(env),
 		},
 		// SSR configuration to handle externals properly
 		ssr: {
