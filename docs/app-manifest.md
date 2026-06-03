@@ -299,6 +299,46 @@ if (store.hasPermission("camera")) {
 }
 ```
 
+### Track Events (`track-events`)
+
+Declares the analytics events the plugin reports via the `gxp-track` directive or `window.gxp.track()`, so the platform can build reporting around them. Keys are event identifiers; the object value describes the root keys of the event's properties (`gxp-track-props`):
+
+```json
+{
+	"track-events": {
+		"cta.clicked": {
+			"placement": "string",
+			"variant": ["primary", "secondary"]
+		},
+		"session.join": {
+			"session_id": { "type": "session", "value": "id" }
+		},
+		"flow.completed": {}
+	}
+}
+```
+
+Each property value is one of:
+
+| Form                                | Meaning                                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `"string"`                          | Free-form string value                                                                                              |
+| `["a", "b", "c"]`                   | One of a fixed list of allowed values                                                                               |
+| `{ "type": "...", "value": "..." }` | Relationship value — a platform model and the field the prop carries (e.g. `{ "type": "attendee", "value": "id" }`) |
+
+Matching template usage:
+
+```html
+<button
+	gxp-track="cta.clicked"
+	gxp-track-props='{"placement": "hero", "variant": "primary"}'
+>
+	Go
+</button>
+```
+
+`gxdev extract-config` (and the `config_extract_strings` MCP tool) scans `src/` for `gxp-track` usage and seeds this section automatically — every discovered prop defaults to `"string"`. Refine the entries by hand (allowed-value lists, relationship objects) afterwards; re-extraction never overwrites an existing definition.
+
 ## Complete Example
 
 ```json
@@ -331,6 +371,13 @@ if (store.hasPermission("camera")) {
 		"current_attendee": null,
 		"badge_printing": false
 	},
+	"track-events": {
+		"checkin.scan.started": {},
+		"checkin.completed": {
+			"method": ["qr", "manual"],
+			"attendee_id": { "type": "attendee", "value": "id" }
+		}
+	},
 	"dependencies": [],
 	"permissions": ["camera"]
 }
@@ -346,6 +393,7 @@ if (store.hasPermission("camera")) {
 | `gxp-string` | `gxp-state`    | `triggerState` | `<span gxp-string="count" gxp-state>0</span>`              |
 | `gxp-src`    | (none)         | `assetList`    | `<img gxp-src="hero" src="/placeholder.jpg" />`            |
 | `gxp-src`    | `gxp-state`    | `triggerState` | `<img gxp-src="badge" gxp-state src="/placeholder.jpg" />` |
+| `gxp-track`  | (none)         | `track-events` | `<button gxp-track="cta.clicked">Go</button>`              |
 
 ## Best Practices
 

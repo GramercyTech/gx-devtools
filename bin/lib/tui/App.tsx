@@ -41,6 +41,7 @@ interface ExtractedConfig {
 		path: string
 		events?: Record<string, string>
 	}>
+	trackEvents: Record<string, Record<string, unknown>>
 }
 
 export interface UpdateInfo {
@@ -644,6 +645,7 @@ export default function App({ autoStart, args, updateInfo }: AppProps) {
 				Object.keys(extractedConfig.settings).length +
 				Object.keys(extractedConfig.assets).length +
 				Object.keys(extractedConfig.triggerState).length +
+				Object.keys(extractedConfig.trackEvents).length +
 				extractedConfig.dependencies.length
 
 			if (totalItems === 0) {
@@ -716,6 +718,7 @@ export default function App({ autoStart, args, updateInfo }: AppProps) {
 		strings: { default: {} },
 		assets: {},
 		triggerState: {},
+		"track-events": {},
 		dependencies: [],
 		permissions: [],
 	})

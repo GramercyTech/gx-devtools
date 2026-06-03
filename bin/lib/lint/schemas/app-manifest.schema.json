@@ -89,6 +89,52 @@
 			},
 			"additionalProperties": false
 		},
+		"track-events": {
+			"type": "object",
+			"description": "Analytics events reported via gxp-track / window.gxp.track, used by the platform for reporting. Keys are event identifiers (e.g. checkin.submit); values map each gxp-track-props root key to a type: the string \"string\" for free-form values, an array of allowed values, or a { type, value } object for relationship values (e.g. { \"type\": \"attendee\", \"value\": \"id\" }).",
+			"patternProperties": {
+				"^[A-Za-z_][A-Za-z0-9_.:-]*$": {
+					"type": "object",
+					"patternProperties": {
+						"^[A-Za-z_$][A-Za-z0-9_$]*$": {
+							"oneOf": [
+								{
+									"type": "string",
+									"minLength": 1,
+									"description": "Value type name — typically \"string\"."
+								},
+								{
+									"type": "array",
+									"minItems": 1,
+									"items": { "type": ["string", "number", "boolean"] },
+									"description": "List of allowed values."
+								},
+								{
+									"type": "object",
+									"required": ["type", "value"],
+									"properties": {
+										"type": {
+											"type": "string",
+											"minLength": 1,
+											"description": "Related platform model, e.g. attendee."
+										},
+										"value": {
+											"type": "string",
+											"minLength": 1,
+											"description": "Field of the related model the prop carries, e.g. id."
+										}
+									},
+									"additionalProperties": false,
+									"description": "Relationship value descriptor."
+								}
+							]
+						}
+					},
+					"additionalProperties": false
+				}
+			},
+			"additionalProperties": false
+		},
 		"dependencies": {
 			"type": "array",
 			"items": {

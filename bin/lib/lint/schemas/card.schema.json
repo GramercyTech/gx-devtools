@@ -24,14 +24,74 @@
 			]
 		},
 		"title": { "type": ["string", "null"] },
+		"subtitle": { "type": ["string", "null"] },
 		"tabId": { "type": ["string", "null"] },
+		"icon": { "type": ["string", "null"] },
 		"cols": { "$ref": "common.schema.json#/$defs/gridCols" },
+		"colsSm": { "$ref": "common.schema.json#/$defs/gridCols" },
 		"colsMd": { "$ref": "common.schema.json#/$defs/gridCols" },
 		"colsLg": { "$ref": "common.schema.json#/$defs/gridCols" },
+		"colsXl": { "$ref": "common.schema.json#/$defs/gridCols" },
 		"marginBottom": { "type": "integer", "minimum": 0 },
 		"showCard": { "type": "boolean" },
 		"border": { "type": "boolean" },
+		"classList": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"bodyClassList": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"cardWrapperClassList": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"wrapperClassList": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"fieldsListClassList": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"spacerY": { "type": ["string", "number", "null"] },
+		"spacerX": { "type": ["string", "number", "null"] },
+		"gutterY": { "type": ["string", "number", "null"] },
+		"gutterX": { "type": ["string", "number", "null"] },
+		"collapse": {
+			"type": "object",
+			"properties": {
+				"heading": { "type": "string" },
+				"label": { "type": "string" },
+				"smooth": { "type": "boolean" },
+				"showingByDefault": { "type": "boolean" }
+			},
+			"additionalProperties": true
+		},
+		"permissions": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"features": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"footerButton": {
+			"type": "object",
+			"properties": {
+				"text": { "type": "string" },
+				"route": { "type": "string" },
+				"icon": { "type": ["string", "null"] },
+				"classList": {
+					"type": "array",
+					"items": { "type": "string" }
+				}
+			},
+			"additionalProperties": true
+		},
 		"listKey": { "type": ["string", "null"] },
+		"listData": { "type": "array" },
 		"condition": { "type": ["string", "null"] },
 		"conditionParams": {
 			"$ref": "common.schema.json#/$defs/conditionParams"
@@ -52,6 +112,7 @@
 				"properties": {
 					"title": { "type": "string" },
 					"tabId": { "type": ["string", "null"] },
+					"icon": { "type": ["string", "null"] },
 					"cards": {
 						"type": "array",
 						"items": { "$ref": "card.schema.json" }
@@ -68,9 +129,26 @@
 				"properties": {
 					"text": { "type": "string" },
 					"type": { "type": "string" },
+					"color": { "type": ["string", "null"] },
 					"icon": { "type": ["string", "null"] },
 					"href": { "type": ["string", "null"] },
+					"route": { "type": ["string", "null"] },
+					"method": { "type": ["string", "null"] },
+					"data": { "type": "object" },
+					"eventName": { "type": ["string", "null"] },
 					"action": { "type": ["string", "null"] },
+					"classList": {
+						"type": "array",
+						"items": { "type": "string" }
+					},
+					"permissions": {
+						"type": "array",
+						"items": { "type": "string" }
+					},
+					"features": {
+						"type": "array",
+						"items": { "type": "string" }
+					},
 					"condition": { "type": ["string", "null"] },
 					"conditionParams": {
 						"$ref": "common.schema.json#/$defs/conditionParams"
@@ -79,15 +157,27 @@
 				"additionalProperties": true
 			}
 		},
+		"grouped": { "type": "boolean" },
+		"draggable": { "type": "boolean" },
+		"dragTargetData": { "type": ["string", "null"] },
+		"createConfig": { "type": "object" },
+		"updateConfig": { "type": "object" },
+		"delete": { "type": "object" },
 		"component": { "type": ["string", "null"] },
 		"componentProps": { "type": "object" },
+		"props": { "type": "object" },
 		"headers": {
 			"type": "array",
 			"items": { "type": ["string", "object"] }
 		},
 		"rows": { "type": "array" },
 		"options": { "type": "object" },
-		"tableTitle": { "type": ["string", "null"] }
+		"tableTitle": { "type": ["string", "null"] },
+		"itemList": { "type": "array" },
+		"tileList": { "type": "array" },
+		"gridData": { "type": "object" },
+		"loopKey": { "type": ["string", "null"] },
+		"loopList": { "type": "array" }
 	},
 	"allOf": [
 		{
@@ -157,7 +247,12 @@
 				"required": ["type"]
 			},
 			"then": {
-				"anyOf": [{ "required": ["headers"] }, { "required": ["rows"] }]
+				"anyOf": [
+					{ "required": ["headers"] },
+					{ "required": ["rows"] },
+					{ "required": ["listData"] },
+					{ "required": ["listKey"] }
+				]
 			}
 		}
 	],

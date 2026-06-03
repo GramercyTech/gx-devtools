@@ -143,6 +143,207 @@ describe("lint configuration.json", () => {
 	})
 })
 
+describe("lint configuration.json — platform templating sync", () => {
+	it("accepts a settings root section without additionalTabs", () => {
+		const result = lintData(
+			{
+				settings: [
+					{
+						type: "fields_list",
+						fieldsList: [
+							{
+								name: "api_key",
+								type: "text",
+								label: "API Key",
+								column: "custom_settings",
+							},
+						],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(result.ok).toBe(true)
+	})
+
+	it("accepts tab-style additionalTabs items ({title, icon, cards})", () => {
+		const result = lintData(
+			{
+				additionalTabs: [
+					{
+						title: "Advanced Settings",
+						icon: "gears",
+						cards: [{ type: "fields_list", fieldsList: [] }],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(result.ok).toBe(true)
+	})
+
+	it("accepts platform field types and aliases added from the templating reference", () => {
+		const result = lintData(
+			{
+				additionalTabs: [
+					{
+						type: "fields_list",
+						fieldsList: [
+							{ type: "switch", name: "enabled" },
+							{ type: "range", name: "volume", min: 0, max: 100 },
+							{ type: "secret_key", name: "api_secret" },
+							{ type: "barcode", name: "scan" },
+							{ type: "date-range", name: "window" },
+							{ type: "markdown-editor", name: "notes" },
+							{ type: "code-editor", name: "snippet" },
+							{ type: "qr-code", name: "ticket" },
+							{ type: "tabs_nav_button", direction: "next" },
+							{ type: "donut_chart", name: "usage" },
+							{
+								type: "checkbox_group",
+								name: "channels",
+								options: [{ value: "email", text: "Email" }],
+							},
+						],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(result.ok).toBe(true)
+		expect(result.errors).toEqual([])
+	})
+
+	it("rejects types that are not FormField types (v2 builder elements / removed)", () => {
+		for (const type of [
+			"keyValuePair",
+			"savedSearchBuilder",
+			"object-builder",
+		]) {
+			const result = lintData(
+				{
+					additionalTabs: [
+						{ type: "fields_list", fieldsList: [{ type, name: "x" }] },
+					],
+				},
+				"configuration.json",
+			)
+			expect(result.ok, `${type} should be rejected`).toBe(false)
+		}
+	})
+
+	it("accepts a checkbox without options (uses checkedValue/uncheckedValue)", () => {
+		const result = lintData(
+			{
+				additionalTabs: [
+					{
+						type: "fields_list",
+						fieldsList: [
+							{
+								type: "checkbox",
+								name: "agree",
+								checkedValue: "yes",
+								uncheckedValue: "no",
+							},
+						],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(result.ok).toBe(true)
+	})
+
+	it("accepts asyncSelect with route (no href/method) and rejects one with neither", () => {
+		const ok = lintData(
+			{
+				additionalTabs: [
+					{
+						type: "fields_list",
+						fieldsList: [
+							{
+								type: "asyncSelect",
+								name: "stream",
+								route: "dashboard.project.social-streams.index",
+								routeParams: { project: "{{current_project}}" },
+							},
+						],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(ok.ok).toBe(true)
+
+		const bad = lintData(
+			{
+				additionalTabs: [
+					{
+						type: "fields_list",
+						fieldsList: [{ type: "asyncSelect", name: "stream" }],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(bad.ok).toBe(false)
+	})
+
+	it("accepts platform option shapes ({value, text} and radio {option, title})", () => {
+		const result = lintData(
+			{
+				additionalTabs: [
+					{
+						type: "fields_list",
+						fieldsList: [
+							{
+								type: "select",
+								name: "level",
+								options: [{ value: 1, text: "One" }],
+							},
+							{
+								type: "radio",
+								name: "kind",
+								options: [{ option: "a", title: "A" }],
+							},
+						],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(result.ok).toBe(true)
+	})
+
+	it("accepts both conditionParams shapes (name/logic and field/operator)", () => {
+		const result = lintData(
+			{
+				additionalTabs: [
+					{
+						type: "fields_list",
+						fieldsList: [
+							{
+								type: "html",
+								content: "<div />",
+								conditionParams: [{ name: "mode", logic: "==", value: "on" }],
+							},
+							{
+								type: "html",
+								content: "<div />",
+								conditionParams: [
+									{ field: "enable_preview", operator: "equals", value: true },
+								],
+							},
+						],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(result.ok).toBe(true)
+	})
+})
+
 describe("lint app-manifest.json", () => {
 	it("passes the toolkit's template manifest", () => {
 		const file = path.resolve(__dirname, "../../template/app-manifest.json")

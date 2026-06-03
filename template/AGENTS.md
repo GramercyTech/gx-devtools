@@ -60,13 +60,16 @@ Build against the plan:
 - Use the GxP store for **all** data access — `store.callApi(operationId, identifier, data)` for platform API calls, plus sockets, strings, assets, settings, state. Never use `axios` or `fetch` directly.
 - Declare every permission identifier used by `callApi` in `app-manifest.json` → `dependencies` + `permissions`. Use `"project"` for project-wide / top-level operations and pass any required IDs in `data`.
 - Wire **every string literal a user will see** with `gxp-string` — button labels, headings, paragraph text, tab names, empty-state messages, placeholder text, error messages, tooltip copy. The only exceptions are text rendered directly from an API response and purely internal/debug strings. If you're typing a visible string into a template, it needs `gxp-string`. Wire every image with `gxp-src`.
+- Add `gxp-track` to **meaningful user interactions** — primary CTAs, form submissions, navigation choices, feature entry points. Use namespaced `feature.action` event names (e.g. `checkin.submit`) and put record IDs in `gxp-track-props`, never in the event name. Use `window.gxp.track()` / `inject("gxpTrack")` for non-click milestones (e.g. a flow completing).
 - Keep components under `src/`. The runtime container (layouts, routing, dev tools) is not yours to edit.
 
 ### 5. Sync the manifest and build the admin form
 
-As soon as you've added a new `store.callApi`, `store.listen`, `gxp-string`, or `gxp-src` — and before you move on to testing — close the loop on the admin-editable surface:
+As soon as you've added a new `store.callApi`, `store.listen`, `gxp-string`, `gxp-src`, or `gxp-track` — and before you move on to testing — close the loop on the admin-editable surface:
 
-1. **Extract the configurable surface into `app-manifest.json`.** Run the MCP tool `config_extract_strings` with `writeTo: "app-manifest.json"`. It scans `src/` for every `gxp-string`, `gxp-src`, `store.getString/getSetting/getAsset/getState`, and `store.callApi` identifier and merges the new keys into the manifest (linter-guarded; falls back to `gxdev extract-config` on the CLI if you need it). Do this every time you touch the plugin's public surface so the manifest never drifts from the code.
+1. **Extract the configurable surface into `app-manifest.json`.** Run the MCP tool `config_extract_strings` with `writeTo: "app-manifest.json"`. It scans `src/` for every `gxp-string`, `gxp-src`, `gxp-track`, `store.getString/getSetting/getAsset/getState`, `gxp.track`/`gxpTrack`, and `store.callApi` identifier and merges the new keys into the manifest (linter-guarded; falls back to `gxdev extract-config` on the CLI if you need it). Do this every time you touch the plugin's public surface so the manifest never drifts from the code.
+
+   Analytics events land under `track-events`, with every `gxp-track-props` key seeded as `"string"`. After extraction, refine the prop types by hand where you know more: an array of allowed values when the prop is an enum (`"variant": ["primary", "secondary"]`), or a relationship object when it carries a platform record reference (`"attendee_id": { "type": "attendee", "value": "id" }`). Re-extraction never overwrites these refinements.
 
 2. **Build `configuration.json` from what's in the manifest.** For every entry in the manifest, add a matching field in the admin form using the MCP `config_*` tools — they validate each write against the schema. Default mappings:
 
@@ -326,6 +329,40 @@ Payloads live under `socket-events/` — add or edit a JSON file to define a new
 ```
 
 Strings that do NOT need `gxp-string`: values interpolated from API data (`{{ post.title }}`), v-for loop variables, computed display values derived from store state.
+
+### Analytics tracking (`gxp-track`)
+
+The platform provides a `gxp-track` directive and `window.gxp.track()` for analytics reporting. Add tracking to meaningful interactions — primary buttons, form submits, navigation, feature entry points:
+
+```html
+<!-- Click tracking: sends an "interaction" event named by the attribute -->
+<button gxp-track="checkin.submit" gxp-string="btn_submit">Check In</button>
+
+<!-- Extra properties as JSON — put record IDs here, not in the event name -->
+<button
+	gxp-track="session.join"
+	:gxp-track-props="JSON.stringify({ session_id: session.id })"
+	gxp-string="btn_join"
+>
+	Join
+</button>
+```
+
+```javascript
+// Non-click milestones from script code — prefer the injected function
+const track = inject("gxpTrack")
+track("checkin.completed", { attendee_id: attendee.id })
+
+// Or from any JS context
+window.gxp.track("registration.started", { form_id: 123 })
+```
+
+Rules:
+
+- Event names are namespaced `feature.action` (lowercase, dot-separated) and low-cardinality — IDs and variable data go in `gxp-track-props` / the properties object.
+- `gxp-track` composes with `gxp-string` / `gxp-src` on the same element.
+- Every tracked event must be declared in `app-manifest.json` → `track-events` (the platform uses it for reporting). The extractor in Step 5 seeds it; refine prop types to allowed-value lists or `{ type, value }` relationship objects where applicable.
+- Don't build your own analytics transport (`fetch`, `axios`, custom endpoints). The directive handles delivery — in production it reports to the platform tracking endpoint; on the dev server events are broadcast on `window` as `gxp:track` CustomEvents and logged to the console as JSON, so you can verify payloads without touching production analytics.
 
 ## Admin Configuration Form (`configuration.json`)
 

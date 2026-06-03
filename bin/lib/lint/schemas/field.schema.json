@@ -2,68 +2,150 @@
 	"$id": "https://gxp.dev/schemas/field.schema.json",
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"title": "GxP Form Field",
-	"description": "A single form field descriptor used inside a fields_list card.",
+	"description": "A single form field descriptor used inside a fields_list card. Type list mirrors the platform's FormField.vue routing table (docs/platform-details/templating-system.md, 'Field Type Reference'). Types are case-sensitive; both snake_case and kebab-case aliases are listed where the platform supports them.",
 	"type": "object",
 	"required": ["type"],
 	"properties": {
 		"type": {
 			"type": "string",
 			"enum": [
-				"hidden",
-				"html",
-				"live-html",
-				"heading",
-				"heading-large",
-				"small-heading",
-				"description",
-				"image",
-				"video",
-				"icon",
-				"icon-selector",
-				"clipboard",
-				"timestamp",
-				"button",
-				"external_link",
 				"text",
+				"input.text",
 				"number",
 				"email",
 				"password",
-				"phone_number",
 				"textarea",
+				"phone_number",
+				"phone-number",
+				"secret_key",
+				"barcode",
+				"range",
+				"map_coordinates",
+				"map-coordinates",
+				"hidden",
 				"select",
 				"pill_select",
+				"pill-select",
 				"multi_select",
+				"multi-select",
 				"autocomplete",
-				"asyncSelect",
 				"radio",
 				"checkbox",
-				"boolean",
-				"boolean_icon",
-				"file",
-				"selectAsset",
-				"selectPagePlugin",
-				"selectProjectPlan",
-				"keyValuePair",
-				"codeEditor",
-				"htmlEditor",
-				"render_markdown",
-				"colorPicker",
+				"checkbox_group",
+				"asyncSelect",
+				"async-select",
+				"dynamic_options",
+				"dynamic-options",
 				"tag_list",
-				"savedSearchBuilder",
+				"tag-list",
+				"list-group",
+				"selectAsset",
+				"select-asset",
+				"selectPagePlugin",
+				"select-page-plugin",
+				"selectPagePluginVersion",
+				"select-page-plugin-version",
+				"selectProjectPlan",
+				"select-project-plan",
 				"date",
 				"datetime",
 				"time",
+				"date-range",
 				"timezone_picker",
-				"data_table",
-				"integration_connector",
+				"colorPicker",
+				"color-picker",
+				"icon-selector",
+				"icon",
+				"switch",
+				"boolean",
+				"boolean_icon",
+				"boolean-icon",
+				"file",
+				"image",
+				"sprite",
+				"video",
+				"audio",
+				"qr_code",
+				"qr-code",
+				"heading",
+				"heading-large",
+				"small-heading",
+				"blockquote",
+				"quote",
+				"description",
+				"paragraph",
+				"divider",
+				"banner",
+				"timestamp",
+				"clipboard",
+				"html",
+				"html-block",
+				"render_markdown",
+				"render-markdown",
+				"progress_bar",
+				"progress-bar",
+				"iframe",
+				"iframe-field",
+				"button",
+				"external_link",
+				"external-link",
+				"download_button",
+				"download-button",
+				"tabs_nav_button",
+				"codeEditor",
+				"code-editor",
+				"htmlEditor",
+				"html-editor",
+				"markdown-editor",
+				"live-html",
+				"reactive-canvas",
+				"reactive-canvas-builder",
+				"reactive-canvas-builder-copy",
+				"repeatable_block",
+				"repeatable-block",
+				"dependency-list-builder",
 				"form-builder",
-				"object-builder"
+				"form_builder",
+				"quiz_builder",
+				"quiz-builder",
+				"preset_system",
+				"async_card_list",
+				"async-card-list",
+				"integration_connector",
+				"integration-connector",
+				"integration_field_mapping",
+				"integration-field-mapping",
+				"data_table",
+				"data-table",
+				"filter_dialog",
+				"field-list",
+				"form-modal",
+				"component",
+				"donut_chart",
+				"bar_chart",
+				"time_series_chart",
+				"analytics_tile_header",
+				"gemini-live-chat",
+				"live-quiz-control",
+				"git_repository",
+				"git_ssh_keys",
+				"git_code_editor",
+				"pull_requests",
+				"build_logs"
 			],
-			"description": "Field type. Determines which extra properties are required."
+			"description": "Field type. Determines which extra properties are required. Matched case-sensitively by the platform (e.g. `code_editor` is invalid — use `code-editor`/`codeEditor`)."
 		},
 		"name": { "type": ["string", "null"] },
+		"id": { "type": ["string", "null"] },
 		"label": { "type": ["string", "null"] },
+		"column": {
+			"type": ["string", "null"],
+			"description": "Data-model column/namespace the value is stored under (e.g. custom_settings, asset_list, dependency_list, style_overrides, language_overrides)."
+		},
 		"default": {
+			"type": ["string", "number", "boolean", "array", "object", "null"]
+		},
+		"default_value": {
 			"type": ["string", "number", "boolean", "array", "object", "null"]
 		},
 		"placeholder": { "type": ["string", "null"] },
@@ -71,27 +153,47 @@
 		"readonly": { "type": "boolean" },
 		"required": { "type": "boolean" },
 		"multiple": { "type": "boolean" },
+		"stringify": {
+			"type": "boolean",
+			"description": "JSON-encode the stored value."
+		},
 		"classList": {
 			"type": "array",
 			"items": { "type": "string" }
 		},
-		"columnClass": { "type": ["string", "null"] },
+		"columnClass": { "type": ["string", "array", "null"] },
 		"cols": {
 			"$ref": "common.schema.json#/$defs/gridCols"
 		},
 		"colsSm": { "$ref": "common.schema.json#/$defs/gridCols" },
 		"colsMd": { "$ref": "common.schema.json#/$defs/gridCols" },
 		"colsLg": { "$ref": "common.schema.json#/$defs/gridCols" },
+		"colsXl": { "$ref": "common.schema.json#/$defs/gridCols" },
 		"condition": { "type": ["string", "null"] },
 		"conditionParams": {
 			"$ref": "common.schema.json#/$defs/conditionParams"
 		},
-		"content": { "type": ["string", "null"] },
+		"permissions": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"features": {
+			"type": "array",
+			"items": { "type": "string" }
+		},
+		"navigate": { "type": ["string", "null"] },
+		"content": { "type": ["string", "object", "array", "null"] },
 		"text": { "type": ["string", "null"] },
+		"infoText": { "type": ["string", "null"] },
+		"instructions": { "type": ["string", "null"] },
 		"href": { "type": ["string", "null"] },
+		"route": { "type": ["string", "null"] },
+		"routeParams": { "type": "object" },
 		"icon": { "type": ["string", "null"] },
+		"iconStyle": { "type": ["string", "null"] },
 		"options": {
-			"$ref": "common.schema.json#/$defs/options"
+			"type": ["array", "object"],
+			"description": "Items array for selection fields ({value, text} / {title, value} / radio {option, title}); an options object for fields like text (maxLength, tooltip…) or qr_code."
 		},
 		"accept": {
 			"type": "array",
@@ -102,7 +204,7 @@
 		"append": { "type": ["string", "null"] },
 		"method": {
 			"type": ["string", "null"],
-			"enum": ["GET", "POST", "PUT", "PATCH", "DELETE", null]
+			"pattern": "^(?:GET|POST|PUT|PATCH|DELETE|get|post|put|patch|delete)$"
 		},
 		"query_parameter": { "type": ["string", "null"] },
 		"refresh": {
@@ -113,10 +215,62 @@
 			},
 			"additionalProperties": true
 		},
+		"validation": {
+			"type": "object",
+			"properties": {
+				"rules": {
+					"type": "array",
+					"items": { "type": "string" }
+				}
+			},
+			"additionalProperties": true
+		},
 		"validation_rules": {
 			"type": "array",
 			"items": { "type": "string" }
 		},
+		"rows": { "type": "integer", "minimum": 1 },
+		"min": { "type": "number" },
+		"max": { "type": "number" },
+		"step": { "type": "number" },
+		"height": { "type": ["string", "number", "null"] },
+		"language": { "type": ["string", "null"] },
+		"valueField": { "type": ["string", "null"] },
+		"labelField": { "type": ["string", "null"] },
+		"secondaryLabelField": { "type": ["string", "null"] },
+		"filter": { "type": "boolean" },
+		"pills": { "type": "boolean" },
+		"reorder": { "type": "boolean" },
+		"clearable": { "type": "boolean" },
+		"autoOpen": { "type": "boolean" },
+		"checkedValue": {
+			"type": ["string", "number", "boolean", "null"]
+		},
+		"uncheckedValue": {
+			"type": ["string", "number", "boolean", "null"]
+		},
+		"invert": { "type": "boolean" },
+		"preventUpdate": { "type": "boolean" },
+		"inlineUpdate": { "type": "object" },
+		"aiBuilder": {
+			"type": "object",
+			"properties": {
+				"systemPrompt": { "type": "string" }
+			},
+			"additionalProperties": true
+		},
+		"maxLength": { "type": "integer", "minimum": 1 },
+		"direction": {
+			"type": "string",
+			"enum": ["next", "previous"],
+			"description": "tabs_nav_button only."
+		},
+		"plugin_page_id": {
+			"type": ["string", "integer", "null"],
+			"description": "selectPagePluginVersion only."
+		},
+		"component": { "type": ["string", "null"] },
+		"componentProps": { "type": "object" },
 		"custom_settings": { "type": "object" }
 	},
 	"allOf": [
@@ -127,9 +281,11 @@
 						"enum": [
 							"select",
 							"pill_select",
+							"pill-select",
 							"multi_select",
+							"multi-select",
 							"radio",
-							"checkbox"
+							"checkbox_group"
 						]
 					}
 				},
@@ -151,30 +307,59 @@
 					"type": {
 						"enum": [
 							"text",
+							"input.text",
 							"number",
 							"email",
 							"password",
 							"phone_number",
+							"phone-number",
+							"secret_key",
+							"barcode",
+							"range",
+							"map_coordinates",
+							"map-coordinates",
 							"textarea",
 							"select",
 							"pill_select",
+							"pill-select",
 							"multi_select",
+							"multi-select",
 							"autocomplete",
 							"asyncSelect",
+							"async-select",
+							"dynamic_options",
+							"dynamic-options",
 							"radio",
 							"checkbox",
+							"checkbox_group",
+							"switch",
 							"boolean",
 							"boolean_icon",
+							"boolean-icon",
 							"file",
 							"selectAsset",
-							"keyValuePair",
+							"select-asset",
+							"selectPagePlugin",
+							"select-page-plugin",
+							"selectPagePluginVersion",
+							"select-page-plugin-version",
+							"selectProjectPlan",
+							"select-project-plan",
 							"codeEditor",
+							"code-editor",
 							"htmlEditor",
+							"html-editor",
+							"markdown-editor",
 							"colorPicker",
+							"color-picker",
+							"icon-selector",
 							"tag_list",
+							"tag-list",
+							"list-group",
 							"date",
 							"datetime",
 							"time",
+							"date-range",
 							"timezone_picker"
 						]
 					}
@@ -193,16 +378,24 @@
 		},
 		{
 			"if": {
-				"properties": { "type": { "const": "asyncSelect" } },
+				"properties": {
+					"type": { "enum": ["asyncSelect", "async-select"] }
+				},
 				"required": ["type"]
 			},
 			"then": {
-				"required": ["href", "method"]
+				"anyOf": [
+					{ "required": ["route"] },
+					{ "required": ["href"] },
+					{ "required": ["item"] }
+				]
 			}
 		},
 		{
 			"if": {
-				"properties": { "type": { "const": "external_link" } },
+				"properties": {
+					"type": { "enum": ["external_link", "external-link"] }
+				},
 				"required": ["type"]
 			},
 			"then": {
@@ -211,7 +404,9 @@
 		},
 		{
 			"if": {
-				"properties": { "type": { "const": "colorPicker" } },
+				"properties": {
+					"type": { "enum": ["colorPicker", "color-picker"] }
+				},
 				"required": ["type"]
 			},
 			"then": {
@@ -223,6 +418,37 @@
 						]
 					}
 				}
+			}
+		},
+		{
+			"if": {
+				"properties": { "type": { "const": "tabs_nav_button" } },
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["direction"]
+			}
+		},
+		{
+			"if": {
+				"properties": {
+					"type": {
+						"enum": ["selectPagePluginVersion", "select-page-plugin-version"]
+					}
+				},
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["plugin_page_id"]
+			}
+		},
+		{
+			"if": {
+				"properties": { "type": { "const": "component" } },
+				"required": ["type"]
+			},
+			"then": {
+				"required": ["component"]
 			}
 		}
 	],

@@ -19,7 +19,10 @@
 			"welcome_subtitle": "Edit these values live from the Dev Tools (Ctrl+Shift+D)",
 			"socket_hint": "Open this page in another window and messages broadcast on the 'primary' socket will arrive in both.",
 			"send_button_label": "Broadcast to primary socket",
-			"open_window_button_label": "Open another window"
+			"open_window_button_label": "Open another window",
+			"analytics_hint": "Click a button below, then check the browser console — every tracked event is logged as JSON.",
+			"track_button_label": "Track this click",
+			"track_custom_button_label": "Send a custom event"
 		}
 	},
 	"assets": {
@@ -29,6 +32,14 @@
 	"triggerState": {
 		"current_status": "idle",
 		"last_event": "none"
+	},
+	"track-events": {
+		"demo.cta.clicked": {
+			"placement": ["demo_panel"]
+		},
+		"demo.custom.fired": {
+			"source": "string"
+		}
 	},
 	"dependencies": [],
 	"permissions": []

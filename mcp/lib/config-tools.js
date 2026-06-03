@@ -285,7 +285,7 @@ const CONFIG_TOOLS = [
 	{
 		name: "config_extract_strings",
 		description:
-			"Scan a plugin's src/ directory for GxP datastore usage and directives (gxp-string, gxp-src, store.getString/getSetting/getAsset/getState calls) and return the extracted keys. Optionally merge them into app-manifest.json (linter-guarded — invalid writes are refused unless force=true). Note: store.getUser/getUserName/getUserEmail/isAuthenticated and store.user are also valid accessors but read the platform-injected logged-in user (null when logged out) and have no manifest entry.",
+			"Scan a plugin's src/ directory for GxP datastore usage and directives (gxp-string, gxp-src, gxp-track, store.getString/getSetting/getAsset/getState and gxp.track/gxpTrack calls) and return the extracted keys. Analytics events land in the manifest's `track-events` map — each gxp-track identifier maps its gxp-track-props root keys to a type, seeded as \"string\"; hand-authored definitions (allowed-value arrays or { type, value } relationship objects) are never overwritten. Optionally merge into app-manifest.json (linter-guarded — invalid writes are refused unless force=true). Note: store.getUser/getUserName/getUserEmail/isAuthenticated and store.user are also valid accessors but read the platform-injected logged-in user (null when logged out) and have no manifest entry.",
 		inputSchema: {
 			type: "object",
 			properties: {
@@ -523,6 +523,7 @@ async function handleConfigToolCall(name, args = {}) {
 				assets: Object.keys(extracted.assets).length,
 				triggerState: Object.keys(extracted.triggerState).length,
 				dependencies: extracted.dependencies.length,
+				trackEvents: Object.keys(extracted.trackEvents).length,
 			}
 
 			const out = { ok: true, src_dir: srcDir, counts, extracted }

@@ -388,5 +388,213 @@ describe("extract-config", () => {
 			expect(summary).toContain("notifications")
 			expect(summary).toContain("Events:")
 		})
+
+		it("should include track events with prop keys", () => {
+			const config = {
+				strings: {},
+				settings: {},
+				assets: {},
+				triggerState: {},
+				dependencies: [],
+				trackEvents: {
+					"cta.clicked": { placement: "string", variant: "string" },
+					"flow.completed": {},
+				},
+			}
+
+			const summary = generateSummary(config)
+
+			expect(summary).toContain("Track Events (2)")
+			expect(summary).toContain("cta.clicked: { placement, variant }")
+			expect(summary).toContain("flow.completed")
+		})
+	})
+
+	describe("track event extraction", () => {
+		const fs = require("fs")
+		const os = require("os")
+		const path = require("path")
+		const {
+			extractConfigFromSource,
+		} = require("../../bin/lib/utils/extract-config")
+
+		let tmpDir
+
+		function extractFrom(fileName, content) {
+			tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gxp-extract-"))
+			fs.writeFileSync(path.join(tmpDir, fileName), content)
+			return extractConfigFromSource(tmpDir)
+		}
+
+		afterEach(() => {
+			if (tmpDir) {
+				fs.rmSync(tmpDir, { recursive: true, force: true })
+				tmpDir = null
+			}
+		})
+
+		it("should extract gxp-track attribute without props", () => {
+			const config = extractFrom(
+				"Comp.vue",
+				`<template>
+					<button gxp-track="checkin.submit">Check In</button>
+				</template>`,
+			)
+
+			expect(config.trackEvents).toEqual({ "checkin.submit": {} })
+		})
+
+		it("should extract static gxp-track-props JSON keys as string types", () => {
+			const config = extractFrom(
+				"Comp.vue",
+				`<template>
+					<button
+						gxp-track="cta.clicked"
+						gxp-track-props='{"placement": "hero", "variant": "primary"}'
+					>
+						Go
+					</button>
+				</template>`,
+			)
+
+			expect(config.trackEvents).toEqual({
+				"cta.clicked": { placement: "string", variant: "string" },
+			})
+		})
+
+		it("should extract props regardless of attribute order", () => {
+			const config = extractFrom(
+				"Comp.vue",
+				`<template>
+					<button gxp-track-props='{"placement": "hero"}' gxp-track="cta.clicked">Go</button>
+				</template>`,
+			)
+
+			expect(config.trackEvents).toEqual({
+				"cta.clicked": { placement: "string" },
+			})
+		})
+
+		it("should extract keys from bound :gxp-track-props with JSON.stringify", () => {
+			const config = extractFrom(
+				"Comp.vue",
+				`<template>
+					<button
+						gxp-track="session.join"
+						:gxp-track-props="JSON.stringify({ session_id: session.id })"
+					>
+						Join
+					</button>
+				</template>`,
+			)
+
+			expect(config.trackEvents).toEqual({
+				"session.join": { session_id: "string" },
+			})
+		})
+
+		it("should extract v-gxp-track directive syntax", () => {
+			const config = extractFrom(
+				"Comp.vue",
+				`<template>
+					<button v-gxp-track="'cta.clicked'">Go</button>
+				</template>`,
+			)
+
+			expect(config.trackEvents).toEqual({ "cta.clicked": {} })
+		})
+
+		it("should extract programmatic gxp.track and gxpTrack calls", () => {
+			const config = extractFrom(
+				"tracking.js",
+				`window.gxp.track("registration.started", { form_id: id })
+				window.gxp?.track("page.viewed")
+				gxpTrack("checkin.completed", { attendee_id: attendee.id })`,
+			)
+
+			expect(config.trackEvents).toEqual({
+				"registration.started": { form_id: "string" },
+				"page.viewed": {},
+				"checkin.completed": { attendee_id: "string" },
+			})
+		})
+
+		it("should not treat gxp-track-props as an event identifier", () => {
+			const config = extractFrom(
+				"Comp.vue",
+				`<template>
+					<button gxp-track-props='{"placement": "hero"}'>No event</button>
+				</template>`,
+			)
+
+			expect(config.trackEvents).toEqual({})
+		})
+	})
+
+	describe("mergeConfig track-events", () => {
+		const { mergeConfig } = require("../../bin/lib/utils/extract-config")
+
+		const baseExtracted = (trackEvents) => ({
+			strings: {},
+			settings: {},
+			assets: {},
+			triggerState: {},
+			dependencies: [],
+			trackEvents,
+		})
+
+		it("should merge extracted track events under the track-events key", () => {
+			const merged = mergeConfig(
+				{ name: "test" },
+				baseExtracted({ "cta.clicked": { placement: "string" } }),
+			)
+
+			expect(merged["track-events"]).toEqual({
+				"cta.clicked": { placement: "string" },
+			})
+		})
+
+		it("should preserve hand-authored definitions even with overwrite", () => {
+			const existing = {
+				"track-events": {
+					"cta.clicked": {
+						placement: ["hero", "footer"],
+						attendee: { type: "attendee", value: "id" },
+					},
+				},
+			}
+
+			const merged = mergeConfig(
+				existing,
+				baseExtracted({
+					"cta.clicked": {
+						placement: "string",
+						attendee: "string",
+						variant: "string",
+					},
+				}),
+				{ overwrite: true },
+			)
+
+			expect(merged["track-events"]["cta.clicked"]).toEqual({
+				placement: ["hero", "footer"],
+				attendee: { type: "attendee", value: "id" },
+				variant: "string",
+			})
+		})
+
+		it("should tolerate extracted configs without trackEvents", () => {
+			const extracted = {
+				strings: {},
+				settings: {},
+				assets: {},
+				triggerState: {},
+				dependencies: [],
+			}
+
+			const merged = mergeConfig({ name: "test" }, extracted)
+
+			expect(merged["track-events"]).toEqual({})
+		})
 	})
 })

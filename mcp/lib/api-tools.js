@@ -345,7 +345,10 @@ async function findEndpointsBySchema(filters) {
 }
 
 function normalizeOperationId(id) {
-	if (!id) return id
+	// Defensive: `x-triggered-by` is normally a string operationId, but a spec
+	// may declare an array (multiple triggers). Return non-strings untouched so
+	// callers don't hit `id.replace is not a function`.
+	if (!id || typeof id !== "string") return id
 	return id.replace(/^portal\.v1\.project\./, "")
 }
 

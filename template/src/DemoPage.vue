@@ -135,6 +135,46 @@
 					</div>
 				</div>
 			</section>
+
+			<!-- gxp-track: declarative analytics. In dev, tracked events are broadcast
+				on window as 'gxp:track' CustomEvents and logged to the console as JSON
+				(in production the same payloads go to the platform tracking endpoint). -->
+			<section class="panel">
+				<h2>Analytics demo <span class="tag">gxp-track</span></h2>
+				<p gxp-string="analytics_hint" class="hint">
+					Click a button below, then check the browser console — every tracked
+					event is logged as JSON.
+				</p>
+
+				<div class="socket-controls">
+					<!-- Declarative: clicks send an "interaction" event named by the
+						attribute; gxp-track-props JSON is merged into properties -->
+					<button
+						class="btn primary"
+						gxp-track="demo.cta.clicked"
+						gxp-track-props='{"placement": "demo_panel"}'
+					>
+						<span gxp-string="track_button_label">Track this click</span>
+					</button>
+					<!-- Programmatic: custom events from script code via inject("gxpTrack") -->
+					<button class="btn secondary" @click="trackCustomEvent">
+						<span gxp-string="track_custom_button_label"
+							>Send a custom event</span
+						>
+					</button>
+				</div>
+
+				<div class="feed-column">
+					<h3>Captured gxp:track events</h3>
+					<ul v-if="trackedEvents.length">
+						<li v-for="(e, i) in trackedEvents" :key="`t-${i}`">
+							<span class="time">{{ e.time }}</span>
+							<code>{{ e.name }}</code> {{ e.props }}
+						</li>
+					</ul>
+					<p v-else class="empty">No events tracked yet.</p>
+				</div>
+			</section>
 		</div>
 	</div>
 </template>
@@ -362,7 +402,7 @@ defineOptions({
 
 defineEmits(["navigate"])
 
-import { ref, onMounted, onUnmounted } from "vue"
+import { ref, inject, onMounted, onUnmounted } from "vue"
 import { useGxpStore } from "@/stores/gxpPortalConfigStore"
 
 const gxpStore = useGxpStore()
@@ -371,7 +411,16 @@ const messageDraft = ref("")
 const sentMessages = ref([])
 const receivedMessages = ref([])
 
+// Analytics: same function as window.gxp.track, provided by the platform
+// (and by the dev harness with an identical API). The fallback covers
+// contexts where the plugin renders before/without the injection.
+const gxpTrack = inject("gxpTrack", (name, props) =>
+	window.gxp?.track?.(name, props),
+)
+const trackedEvents = ref([])
+
 let unsubscribe = null
+let removeTrackListener = null
 
 const PRIMARY_SOCKET = "primary"
 const DEMO_EVENT = "demo-message"
@@ -393,6 +442,11 @@ function sendMessage() {
 	messageDraft.value = ""
 }
 
+function trackCustomEvent() {
+	// Programmatic tracking for non-click milestones (flows completing, etc.)
+	gxpTrack("demo.custom.fired", { source: "DemoPage" })
+}
+
 function openInNewWindow() {
 	// Open a new window of the current page so two peers can exchange socket
 	// messages via the primary socket.
@@ -405,11 +459,27 @@ onMounted(() => {
 			typeof data?.text === "string" ? data.text : JSON.stringify(data)
 		receivedMessages.value.unshift({ text, time: timestamp() })
 	})
+
+	// Dev-only: the dev harness broadcasts every tracked event on window as a
+	// 'gxp:track' CustomEvent (in production the payload is sent to the
+	// platform tracking endpoint instead, so this listener simply never fires).
+	const onTrack = (event) => {
+		trackedEvents.value.unshift({
+			time: timestamp(),
+			name: event.detail?.event_name,
+			props: JSON.stringify(event.detail?.properties ?? {}),
+		})
+	}
+	window.addEventListener("gxp:track", onTrack)
+	removeTrackListener = () => window.removeEventListener("gxp:track", onTrack)
 })
 
 onUnmounted(() => {
 	if (typeof unsubscribe === "function") {
 		unsubscribe()
+	}
+	if (typeof removeTrackListener === "function") {
+		removeTrackListener()
 	}
 })
 </script>

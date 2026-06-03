@@ -6,18 +6,24 @@
 	"$defs": {
 		"conditionParam": {
 			"type": "object",
+			"description": "Conditional-display rule. Two shapes exist on the platform: {name, logic, value} and {field, operator, value}.",
 			"properties": {
 				"name": { "type": "string" },
+				"field": { "type": "string" },
 				"value": {
-					"type": ["string", "number", "boolean", "null"]
+					"type": ["string", "number", "boolean", "array", "null"]
 				},
 				"logic": {
 					"type": "string",
 					"enum": ["==", "!=", ">", ">=", "<", "<=", "in", "not_in", "includes"]
 				},
+				"operator": { "type": "string" },
 				"column": { "type": ["string", "null"] }
 			},
-			"required": ["name", "logic"],
+			"anyOf": [
+				{ "required": ["name", "logic"] },
+				{ "required": ["field", "operator"] }
+			],
 			"additionalProperties": true
 		},
 		"conditionParams": {
@@ -44,14 +50,24 @@
 		},
 		"option": {
 			"type": "object",
+			"description": "A selection option. The platform uses {value, text} for select/pill/multi/checkbox_group, {title, value} for autocomplete, and {option, title} for radio; {label, value} is also accepted.",
 			"properties": {
 				"label": { "type": "string" },
+				"text": { "type": "string" },
+				"title": { "type": "string" },
+				"secondaryText": { "type": "string" },
+				"icon": { "type": ["string", "null"] },
+				"image": { "type": ["string", "null"] },
 				"value": {
 					"type": ["string", "number", "boolean", "null"]
 				},
+				"option": {
+					"type": ["string", "number", "boolean", "null"],
+					"description": "Radio options use `option` as the stored value key."
+				},
 				"disabled": { "type": "boolean" }
 			},
-			"required": ["label", "value"],
+			"anyOf": [{ "required": ["value"] }, { "required": ["option"] }],
 			"additionalProperties": true
 		},
 		"options": {

@@ -92,19 +92,29 @@ function searchEvents(spec, query) {
 	const messages = spec?.components?.messages || {}
 	for (const [eventName, message] of Object.entries(messages)) {
 		if (typeof message !== "object" || message === null) continue
-		const trigger = message["x-triggered-by"] || ""
+		// `x-triggered-by` is usually a string operationId, but a spec may
+		// declare an array (multiple triggers) or omit it entirely. Normalize
+		// to a searchable string so a non-string value can't crash the search
+		// (`trigger.toLowerCase is not a function`); keep the raw value for the
+		// returned `triggeredBy`.
+		const triggerRaw = message["x-triggered-by"] ?? null
+		const triggerText = Array.isArray(triggerRaw)
+			? triggerRaw.join(" ")
+			: typeof triggerRaw === "string"
+				? triggerRaw
+				: ""
 		if (
 			eventName.toLowerCase().includes(queryLower) ||
 			message.summary?.toLowerCase().includes(queryLower) ||
 			message.description?.toLowerCase().includes(queryLower) ||
-			trigger.toLowerCase().includes(queryLower)
+			triggerText.toLowerCase().includes(queryLower)
 		) {
 			results.push({
 				kind: "event",
 				eventName,
 				summary: message.summary || "",
 				description: message.description || "",
-				triggeredBy: trigger || null,
+				triggeredBy: triggerRaw,
 				payloadRef: message.payload?.$ref || null,
 			})
 		}

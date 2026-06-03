@@ -18,6 +18,8 @@ async function init() {
 	const { useGxpStore } = await import("@/stores/index.js")
 	const { createGxpStringsPlugin } =
 		await import("@gx-runtime/gxpStringsPlugin.js")
+	const { createGxpAnalyticsPlugin } =
+		await import("@gx-runtime/gxpAnalyticsPlugin.js")
 
 	window.useGxpStore = useGxpStore
 
@@ -35,6 +37,17 @@ async function init() {
 	const devServerBaseUrl = `${devProtocol}://localhost:${devPort}`
 
 	app.use(createGxpStringsPlugin(gxpStore, { devServerBaseUrl }))
+
+	// Dev analytics: same gxp-track / window.gxp.track API as the platform,
+	// but events are broadcast on window + logged to the console instead of
+	// being sent to the production tracking endpoint.
+	if (import.meta.env.VITE_DISABLE_ANALYTICS !== "true") {
+		app.use(
+			createGxpAnalyticsPlugin({
+				projectId: import.meta.env.VITE_API_PROJECT_ID || null,
+			}),
+		)
+	}
 
 	app.mount("#app")
 }

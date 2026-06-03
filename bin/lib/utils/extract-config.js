@@ -16,6 +16,7 @@
  * - gxp-asset/v-gxp-asset + gxp-string -> assets
  * - gxp-state/v-gxp-state + gxp-string -> triggerState
  * - gxp-src/v-gxp-src -> assets
+ * - gxp-track/v-gxp-track directives + gxp.track()/gxpTrack() calls -> track-events
  */
 
 const fs = require("fs")
@@ -33,6 +34,7 @@ function extractConfigFromSource(srcDir) {
 		assets: {},
 		triggerState: {},
 		dependencies: [],
+		trackEvents: {},
 	}
 
 	if (!fs.existsSync(srcDir)) {
@@ -189,6 +191,17 @@ function extractFromScript(content, config, sourcePath) {
 		}
 	}
 
+	// Extract programmatic analytics calls: window.gxp.track('name', {...}),
+	// gxp.track('name', {...}) or the injected gxpTrack('name', {...}).
+	// The optional second argument's root keys become the event's prop schema.
+	const trackCallRegex =
+		/(?:gxp\??\.track|gxpTrack)\s*\(\s*['"`]([^'"`]+)['"`]\s*(?:,\s*(\{[^)]*\}))?/g
+	while ((match = trackCallRegex.exec(content)) !== null) {
+		const eventName = match[1]
+		const propsLiteral = match[2] || ""
+		addTrackEvent(config, eventName, extractObjectKeys(propsLiteral))
+	}
+
 	// Extract listenSocket calls for reference: listenSocket('socketName', 'event', callback)
 	// These help identify what socket events the app expects
 	const listenSocketRegex =
@@ -340,6 +353,89 @@ function extractFromTemplate(content, config, sourcePath) {
 			}
 		}
 	}
+
+	// Extract gxp-track/v-gxp-track analytics events. The full opening tag is
+	// captured so a gxp-track-props attribute is found regardless of order.
+	// Note: `gxp-track` must be followed by `=` so `gxp-track-props=` (and the
+	// bound `:gxp-track-props=`) never match as the event identifier.
+	const gxpTrackRegex =
+		/<[a-z][a-z0-9-]*\s+[^>]*(?:v-gxp-track|gxp-track)=(?:"([^"]*)"|'([^']*)')[^>]*>/gi
+	while ((match = gxpTrackRegex.exec(template)) !== null) {
+		// Strip inner quotes from the directive form: v-gxp-track="'key'"
+		const eventName = (match[1] ?? match[2] ?? "").replace(/['"]/g, "")
+		addTrackEvent(config, eventName, extractTrackProps(match[0]))
+	}
+}
+
+/**
+ * Extract prop keys from a gxp-track-props attribute inside an opening tag.
+ * Handles both the static form (gxp-track-props='{"placement": "hero"}') and
+ * the bound form (:gxp-track-props="JSON.stringify({ session_id: id })").
+ * @param {string} tag - The full opening tag markup
+ * @returns {string[]} Root-level prop keys
+ */
+function extractTrackProps(tag) {
+	const propsAttrMatch = tag.match(/:?gxp-track-props=(?:'([^']*)'|"([^"]*)")/i)
+	if (!propsAttrMatch) {
+		return []
+	}
+	const raw = propsAttrMatch[1] ?? propsAttrMatch[2] ?? ""
+	try {
+		const parsed = JSON.parse(raw)
+		if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+			return Object.keys(parsed)
+		}
+	} catch {
+		// Not static JSON — fall through to object-literal key extraction
+		// (covers :gxp-track-props="JSON.stringify({ ... })" bindings).
+	}
+	const literalMatch = raw.match(/\{[\s\S]*\}/)
+	return literalMatch ? extractObjectKeys(literalMatch[0]) : []
+}
+
+/**
+ * Extract root-level keys from a JS object literal or JSON string.
+ * Regex-based (consistent with the rest of this extractor) — nested object
+ * values may contribute keys, which is acceptable for schema seeding.
+ * @param {string} literal - Object literal source, e.g. "{ placement: 'hero' }"
+ * @returns {string[]} Property keys
+ */
+function extractObjectKeys(literal) {
+	if (!literal) {
+		return []
+	}
+	const keys = []
+	const keyRegex = /['"]?([A-Za-z_$][A-Za-z0-9_$]*)['"]?\s*:/g
+	let match
+	while ((match = keyRegex.exec(literal)) !== null) {
+		if (!keys.includes(match[1])) {
+			keys.push(match[1])
+		}
+	}
+	return keys
+}
+
+/**
+ * Record a tracked analytics event and its prop keys on the config.
+ * Every extracted prop defaults to the "string" type — richer definitions
+ * (allowed-value lists, relationship objects) are authored in the manifest
+ * and preserved by {@link mergeConfig}.
+ * @param {Object} config - Configuration object to populate
+ * @param {string} eventName - The gxp-track identifier
+ * @param {string[]} propKeys - Root keys of the event's properties
+ */
+function addTrackEvent(config, eventName, propKeys) {
+	if (!eventName) {
+		return
+	}
+	if (!config.trackEvents[eventName]) {
+		config.trackEvents[eventName] = {}
+	}
+	for (const key of propKeys) {
+		if (config.trackEvents[eventName][key] === undefined) {
+			config.trackEvents[eventName][key] = "string"
+		}
+	}
 }
 
 /**
@@ -361,6 +457,7 @@ function mergeConfig(existingManifest, extractedConfig, options = {}) {
 	if (!merged.assets) merged.assets = {}
 	if (!merged.triggerState) merged.triggerState = {}
 	if (!merged.dependencies) merged.dependencies = []
+	if (!merged["track-events"]) merged["track-events"] = {}
 
 	// Merge strings
 	for (const [key, value] of Object.entries(extractedConfig.strings)) {
@@ -387,6 +484,24 @@ function mergeConfig(existingManifest, extractedConfig, options = {}) {
 	for (const [key, value] of Object.entries(extractedConfig.triggerState)) {
 		if (overwrite || merged.triggerState[key] === undefined) {
 			merged.triggerState[key] = value
+		}
+	}
+
+	// Merge track events. Extracted prop types are always the "string"
+	// default, so existing definitions are never overwritten (even with
+	// overwrite: true) — hand-authored allowed-value lists and relationship
+	// objects ({ type, value }) must survive re-extraction.
+	for (const [eventName, props] of Object.entries(
+		extractedConfig.trackEvents || {},
+	)) {
+		if (!merged["track-events"][eventName]) {
+			merged["track-events"][eventName] = {}
+		}
+		const target = merged["track-events"][eventName]
+		for (const [propKey, propType] of Object.entries(props)) {
+			if (target[propKey] === undefined) {
+				target[propKey] = propType
+			}
 		}
 	}
 
@@ -421,6 +536,7 @@ function generateSummary(config) {
 	const assetCount = Object.keys(config.assets).length
 	const stateCount = Object.keys(config.triggerState).length
 	const depCount = config.dependencies.length
+	const trackEventCount = Object.keys(config.trackEvents || {}).length
 
 	lines.push("📊 Extraction Summary:")
 	lines.push("")
@@ -469,7 +585,26 @@ function generateSummary(config) {
 		lines.push("")
 	}
 
-	if (stringCount + settingCount + assetCount + stateCount + depCount === 0) {
+	if (trackEventCount > 0) {
+		lines.push(`📈 Track Events (${trackEventCount}):`)
+		for (const [eventName, props] of Object.entries(config.trackEvents)) {
+			const propKeys = Object.keys(props)
+			lines.push(
+				`   ${eventName}${propKeys.length ? `: { ${propKeys.join(", ")} }` : ""}`,
+			)
+		}
+		lines.push("")
+	}
+
+	if (
+		stringCount +
+			settingCount +
+			assetCount +
+			stateCount +
+			depCount +
+			trackEventCount ===
+		0
+	) {
 		lines.push("   No configuration found in source files.")
 		lines.push("")
 	}

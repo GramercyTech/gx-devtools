@@ -2,14 +2,24 @@
 	"$id": "https://gxp.dev/schemas/configuration.schema.json",
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"title": "GxP Plugin Configuration Form",
-	"description": "Defines the configuration form shown to admins in the GxP admin panel when they install or configure a plugin. Follows the GxP templating system (ShowPage > tabs > cards > fields).",
+	"description": "Defines the configuration form shown to admins in the GxP admin panel when they install or configure a plugin. Follows the GxP templating system (ShowPage > tabs > cards > fields). Two root sections exist: `settings` (cards appended to the page's main settings tab) and `additionalTabs` (complete tabs of their own).",
 	"type": "object",
-	"required": ["additionalTabs"],
+	"anyOf": [{ "required": ["additionalTabs"] }, { "required": ["settings"] }],
 	"properties": {
+		"settings": {
+			"type": "array",
+			"description": "Cards rendered on the page's main settings tab.",
+			"items": { "$ref": "card.schema.json" }
+		},
 		"additionalTabs": {
 			"type": "array",
-			"description": "Top-level array of tab definitions. Each item is a card (usually card_list or fields_list) rendered under the plugin's configuration panel.",
-			"items": { "$ref": "card.schema.json" }
+			"description": "Top-level tab definitions. Each item is either a tab object ({title, icon, cards}) or a card (card_list/fields_list) rendered under the plugin's configuration panel.",
+			"items": {
+				"anyOf": [
+					{ "$ref": "card.schema.json" },
+					{ "$ref": "#/$defs/tabDefinition" }
+				]
+			}
 		},
 		"formTemplate": {
 			"type": "array",
@@ -19,6 +29,36 @@
 		"title": { "type": ["string", "null"] },
 		"description": { "type": ["string", "null"] },
 		"version": { "type": ["string", "integer", "null"] }
+	},
+	"$defs": {
+		"tabDefinition": {
+			"type": "object",
+			"description": "A complete tab: title plus the cards it renders. Distinguished from a card by the absence of `type`.",
+			"required": ["title", "cards"],
+			"not": { "required": ["type"] },
+			"properties": {
+				"title": { "type": "string" },
+				"tabId": { "type": ["string", "null"] },
+				"icon": { "type": ["string", "null"] },
+				"cards": {
+					"type": "array",
+					"items": { "$ref": "card.schema.json" }
+				},
+				"condition": { "type": ["string", "null"] },
+				"conditionParams": {
+					"$ref": "common.schema.json#/$defs/conditionParams"
+				},
+				"permissions": {
+					"type": "array",
+					"items": { "type": "string" }
+				},
+				"features": {
+					"type": "array",
+					"items": { "type": "string" }
+				}
+			},
+			"additionalProperties": true
+		}
 	},
 	"additionalProperties": true
 }

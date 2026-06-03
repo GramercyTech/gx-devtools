@@ -52,6 +52,7 @@ async function extractConfigCommand(argv) {
 		Object.keys(extractedConfig.settings).length +
 		Object.keys(extractedConfig.assets).length +
 		Object.keys(extractedConfig.triggerState).length +
+		Object.keys(extractedConfig.trackEvents).length +
 		extractedConfig.dependencies.length
 
 	if (totalItems === 0) {
@@ -64,6 +65,9 @@ async function extractConfigCommand(argv) {
 		)
 		console.log(
 			'   - Use gxp-src directive: <img gxp-src="key" src="/default.jpg" />',
+		)
+		console.log(
+			'   - Use gxp-track directive: <button gxp-track="cta.clicked">Go</button>',
 		)
 		return
 	}
@@ -135,6 +139,7 @@ function getDefaultManifest() {
 		},
 		assets: {},
 		triggerState: {},
+		"track-events": {},
 		dependencies: [],
 		permissions: [],
 	}
@@ -156,6 +161,7 @@ function logChanges(oldManifest, newManifest, extracted) {
 	let addedAssets = 0
 	let addedState = 0
 	let addedDeps = 0
+	let addedTrackEvents = 0
 
 	for (const key of Object.keys(extracted.strings)) {
 		if (!oldStrings[key]) addedStrings++
@@ -180,11 +186,17 @@ function logChanges(oldManifest, newManifest, extracted) {
 		if (!exists) addedDeps++
 	}
 
+	for (const eventName of Object.keys(extracted.trackEvents || {})) {
+		if (!oldManifest["track-events"]?.[eventName]) addedTrackEvents++
+	}
+
 	if (addedStrings > 0) console.log(`   + ${addedStrings} new string(s)`)
 	if (addedSettings > 0) console.log(`   + ${addedSettings} new setting(s)`)
 	if (addedAssets > 0) console.log(`   + ${addedAssets} new asset(s)`)
 	if (addedState > 0) console.log(`   + ${addedState} new state value(s)`)
 	if (addedDeps > 0) console.log(`   + ${addedDeps} new dependency(ies)`)
+	if (addedTrackEvents > 0)
+		console.log(`   + ${addedTrackEvents} new track event(s)`)
 }
 
 module.exports = {

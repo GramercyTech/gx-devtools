@@ -67,6 +67,7 @@ GxP Dev Devtools provides:
 - Browser extensions (Chrome/Firefox) for testing plugins in production environments
 - Project templates with Vue 3 and Pinia integration
 - GxP Strings Plugin for reactive string/asset replacement
+- GxP Analytics Plugin for `gxp-track` click/event tracking (dev transport: window broadcast + console JSON, never production endpoints)
 
 ## Common Commands
 
@@ -135,6 +136,7 @@ gx-devtools/
 │   ├── PortalContainer.vue # Platform emulator
 │   ├── server.js           # Socket.IO server
 │   ├── gxpStringsPlugin.js # Vue plugin for gxp-string/gxp-src directives
+│   ├── gxpAnalyticsPlugin.js # Vue plugin for gxp-track directive + window.gxp.track() (dev transport)
 │   ├── fallback-layouts/   # Fallback layouts for projects without theme-layouts/
 │   │   ├── PublicLayout.vue
 │   │   ├── PrivateLayout.vue
@@ -257,6 +259,79 @@ The devtools provides Vue directives for reactive string and asset replacement f
 3. Content/attribute is replaced if a value exists
 4. Falls back to original if no value found
 5. Watches for store changes and updates reactively
+
+## GxP Analytics Plugin
+
+The platform provides a `gxp-track` directive and `window.gxp.track()` for analytics reporting. The devtools ships a dev-server clone (`runtime/gxpAnalyticsPlugin.js`) with the identical API — but instead of POSTing to the production tracking endpoint, every event is broadcast on `window` as a `gxp:track` CustomEvent and logged to the console as pretty-printed JSON.
+
+### Declarative Click Tracking
+
+```html
+<!-- Clicks send an "interaction" event named by the attribute value -->
+<button gxp-track="registration.submit" gxp-string="btn_submit">Submit</button>
+
+<!-- Extra properties via JSON attribute (merged into properties) -->
+<button gxp-track="cta.clicked" gxp-track-props='{"placement": "hero"}'>
+	Go
+</button>
+
+<!-- Dynamic props with Vue binding -->
+<button
+	gxp-track="session.join"
+	:gxp-track-props="JSON.stringify({ session_id: session.id })"
+>
+	Join
+</button>
+```
+
+Both the `v-gxp-track` directive and the raw `gxp-track` attribute work (a delegated document listener handles raw attributes; directive-bound elements are excluded so events never double-fire). Interaction events automatically include `element_tag` and `element_text` (first 100 chars).
+
+### Custom Events
+
+```javascript
+// From any JS context
+window.gxp.track("registration.started", { form_id: 123 })
+
+// From inside a Vue component (preferred)
+const track = inject("gxpTrack")
+track("checkin.completed", { attendee_id: attendee.id })
+```
+
+### Payload Shape
+
+```json
+{
+	"event_type": "interaction", // or "custom" for gxp.track()
+	"event_name": "registration.submit",
+	"project_id": 42, // from API_PROJECT_ID in .env (dev)
+	"properties": { "element_tag": "button", "element_text": "Submit" }
+}
+```
+
+### Observing Events in Dev
+
+```javascript
+window.addEventListener("gxp:track", (e) => console.log(e.detail))
+```
+
+Set `DISABLE_ANALYTICS=true` in `.env` to skip installing the plugin in the dev harness. Full docs: `docs/analytics-plugin.md`.
+
+### Declaring Events (`track-events` in app-manifest.json)
+
+Tracked events are declared in the manifest for platform reporting. Keys are `gxp-track` identifiers; values map each `gxp-track-props` root key to a type — `"string"` (free-form), an array of allowed values, or a `{ "type": "attendee", "value": "id" }` relationship object:
+
+```json
+{
+	"track-events": {
+		"cta.clicked": {
+			"placement": "string",
+			"variant": ["primary", "secondary"]
+		}
+	}
+}
+```
+
+`gxdev extract-config` / the `config_extract_strings` MCP tool / `/extract-config` in the TUI scan `src/` for `gxp-track` attributes and `gxp.track()`/`gxpTrack()` calls and seed this section (props default to `"string"`). Hand-authored refinements are never overwritten by re-extraction. Schema: `bin/lib/lint/schemas/app-manifest.schema.json`.
 
 ## GxP Store (gxpPortalConfigStore.js)
 
@@ -423,6 +498,8 @@ Key environment variables (set in `.env`):
 - `CERT_PATH`, `KEY_PATH` - SSL certificate paths
 - `USE_LOCAL_INDEX` - Use local `index.html` instead of the toolkit runtime version (default: unset/false)
 - `USE_LOCAL_MAIN` - Use local `main.js` instead of the toolkit runtime version (default: unset/false)
+- `DISABLE_ANALYTICS` - Skip installing the dev analytics plugin (`gxp-track`) (default: unset/false)
+- `API_PROJECT_ID` - Project ID stamped onto analytics event payloads as `project_id`
 
 ## Key Dependencies
 

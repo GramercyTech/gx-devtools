@@ -610,6 +610,11 @@ export default defineConfig(async (ctx) => {
 			"import.meta.env.SOCKET_DRIVER": JSON.stringify(
 				env.SOCKET_DRIVER || "io",
 			),
+			// Dev analytics plugin (gxp-track). Set DISABLE_ANALYTICS=true in
+			// .env to skip installing it in the dev harness.
+			"import.meta.env.VITE_DISABLE_ANALYTICS": JSON.stringify(
+				env.DISABLE_ANALYTICS || "false",
+			),
 		},
 		plugins: [
 			runtimeFilesPlugin,
