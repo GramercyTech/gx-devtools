@@ -175,6 +175,7 @@ const store = useGxpStore()
 | \`store.theme\` | Object | Computed theme from pluginVars: \`{ background_color, text_color, primary_color, start_background_color, start_text_color, final_background_color, final_text_color }\` |
 | \`store.manifestLoaded\` | boolean | true once app-manifest.json has been processed |
 | \`store.portal\` | Object\|null | Platform portal context (injected by platform) |
+| \`store.form\` | Store\|null | Form store for form-backed apps (see "Form Store" below). Attached when \`app-manifest.json → form\` (or \`settings.formId\`) exists; on-platform the page's ProjectForm attaches it automatically. |
 
 ## Data Getters
 
@@ -259,11 +260,78 @@ store.triggerState['is_active'] = true
 
 Do NOT write to pluginVars, stringsList, or assetList — these are platform-managed and will be overwritten on manifest reload.
 
+## Form Store — store.form
+
+Form-backed apps get a per-form store attached as \`store.form\` — the same interface plugins see on-platform. It is \`null\` unless \`app-manifest.json\` has a \`form\` section (or \`settings.formId\`), or the app calls \`store.attachFormStore(formKeyOrStore)\`.
+
+### Schema helpers
+
+\`\`\`javascript
+store.form.getSections()      // nested sections: { id, title, fields[], sections[] } (visibility-filtered when conditions enabled)
+store.form.getElements()      // flat list of fields (normalized: slug, label, type, required, default_value, validation_rules, condition_params)
+store.form.getElement(slug)   // one field or null
+store.form.schema             // computed { name, slug, sections } with conditions applied
+\`\`\`
+
+### Form data
+
+\`\`\`javascript
+store.form.formData           // reactive slug-keyed data object (seeded: defaults → prefillData → resume data)
+store.form.getData() / getValue(slug) / setValue(slug, value) / setData({ ... })
+\`\`\`
+
+### Validation
+
+\`\`\`javascript
+store.form.validateField(slug)  // error message or null; recorded in store.form.errors
+store.form.validateForm()       // boolean; populates store.form.errors
+store.form.errors               // slug-keyed error map
+store.form.isValid              // computed boolean
+\`\`\`
+
+Supports required + type checks (email/phone/number) and Laravel-style string rules (required, email, numeric, min, max, in, regex). The server remains authoritative.
+
+### Conditional visibility
+
+\`\`\`javascript
+store.form.setConditionalProcessing(true)  // or "conditions": true in the manifest form section
+\`\`\`
+
+When enabled, getSections/getElements evaluate each node's \`condition_params\` against formData and hidden fields are skipped by validation.
+
+### Submission
+
+\`\`\`javascript
+const result = await store.form.submit(extra = {}, { validate: true })
+await store.form.confirmUpdateExisting(attendeeId)   // after a 409 duplicate prompt
+await store.form.saveProgress(contactValue)          // resumable forms
+store.form.processing / store.form.submitted / store.form.lastResult
+\`\`\`
+
+In dev, submit resolves in order: \`form.mockResponses.submit\` from the manifest → real POST to the registration-form API under the configured apiBaseUrl → simulated \`{ success: true, simulated: true }\` result. Every delivery is console-logged and broadcast as a \`gxp:form-submit\` CustomEvent on window. 422 responses map onto \`store.form.errors\`; 409 duplicate payloads are returned for the app to prompt on.
+
+### Manifest configuration (app-manifest.json → form)
+
+\`\`\`json
+{
+	"form": {
+		"formId": "my-registration-form",
+		"schema": { "root": { "cardList": ["card-1"] }, "cards": { "card-1": { "id": "card-1", "elementList": ["el-1"] } }, "elements": { "el-1": { "id": "el-1", "name": "first_name", "type": "input", "label": "First Name", "required": true } } },
+		"prefillData": { "first_name": "Jane" },
+		"conditions": true,
+		"mockResponses": { "submit": { "success": true, "status": "created" } }
+	}
+}
+\`\`\`
+
+\`schema\` accepts the v2 shape ({ root, cards, elements }) or \`{ sections: [...] }\`; a top-level \`sections\` array also works. Hot-reloaded with the rest of the manifest (formData resets on reload).
+
 ## Dev-Only Helpers
 
 \`\`\`javascript
 store.addDevAsset(key, filename)  // adds /dev-assets/images/<filename> with dev-server URL prefix
 store.listAssets()                // logs all assetList entries to console, returns the object
+store.attachFormStore(keyOrStore) // attach/create the form store manually (returns it)
 \`\`\`
 
 ## Deprecated (do not use — kept for backwards compatibility only)

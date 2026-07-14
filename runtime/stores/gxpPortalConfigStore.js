@@ -2,6 +2,7 @@ import { defineStore } from "pinia"
 import { ref, computed, reactive } from "vue"
 import axios from "axios"
 import { io } from "socket.io-client"
+import { useGxpFormStore, disposeGxpFormStore } from "./gxpFormStore.js"
 
 // Environment URL configuration (matches constants.js ENVIRONMENT_URLS)
 const ENVIRONMENT_URLS = {
@@ -155,6 +156,25 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	const portalAssets = ref({ ...defaultData.portalAssets })
 	const portal = ref(defaultData.portal)
 
+	// Form store for form-backed apps (gxpStore.form.getElements() etc).
+	// Attached automatically when app-manifest.json declares a `form`
+	// section (or settings.formId), or explicitly via attachFormStore.
+	// Mirrors the platform's gxpPortalConfigStore.form.
+	const form = ref(null)
+
+	/**
+	 * Attach a gxpFormStore instance (or create one from a form key) so
+	 * plugin authors can reach it as `gxpStore.form` without importing
+	 * the form store module.
+	 */
+	function attachFormStore(formStoreOrKey) {
+		form.value =
+			typeof formStoreOrKey === "object" && formStoreOrKey !== null
+				? formStoreOrKey
+				: useGxpFormStore(formStoreOrKey)
+		return form.value
+	}
+
 	const apiOperations = ref({})
 
 	// Loading state for manifest
@@ -283,6 +303,45 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		if (manifest.triggerState && typeof manifest.triggerState === "object") {
 			triggerState.value = { ...manifest.triggerState }
 		}
+
+		applyFormSection(manifest)
+	}
+
+	/**
+	 * Attach and initialize the form store from the manifest's `form`
+	 * section (or settings.formId). Like the other manifest-managed
+	 * sections, the form store is rebuilt on every manifest (re)load —
+	 * schema edits hot-reload, and unsaved formData is reset.
+	 */
+	function applyFormSection(manifest) {
+		const formConfig =
+			manifest.form && typeof manifest.form === "object" ? manifest.form : null
+		const formId =
+			formConfig?.formId ??
+			formConfig?.slug ??
+			manifest.settings?.formId ??
+			null
+
+		if (!formConfig && !formId) {
+			return
+		}
+
+		const formKey = formId ?? "dev-form"
+		pluginVars.value.formId = formKey
+
+		if (form.value?.slug && form.value.slug !== formKey) {
+			disposeGxpFormStore(form.value.slug)
+		} else {
+			disposeGxpFormStore(formKey)
+		}
+
+		const formStore = attachFormStore(formKey)
+		formStore.initialize({
+			formId: formKey,
+			...(formConfig ?? {}),
+			customSettings: pluginVars.value,
+		})
+		console.log(`[GxP Store] Form store attached as store.form (${formKey})`)
 	}
 
 	/**
@@ -875,6 +934,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		pluginData,
 		portalAssets,
 		portal,
+		form,
 		sockets,
 		theme,
 		triggerState,
@@ -903,6 +963,9 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 		// Update methods (for DevTools and programmatic updates)
 		addDevAsset,
+
+		// Form store
+		attachFormStore,
 
 		// Socket methods
 		emitSocket,

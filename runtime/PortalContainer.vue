@@ -1,5 +1,5 @@
 <template>
-	<div id="app">
+	<div id="app" class="gxp-theme">
 		<!-- Dev Tools Modal -->
 		<DevToolsModal
 			v-if="showDevTools"
@@ -650,8 +650,14 @@ onUnmounted(() => {
 })
 </script>
 <style>
-/* Theme CSS Variables */
-:root {
+/* Theme CSS Variables.
+   Scoped to #app, NOT :root: Vue writes the v-bind() hash vars as inline
+   style on this component's root element, so a :root selector resolves
+   them at <html> where they are invisible — every var would be
+   guaranteed-invalid. #app also carries the .gxp-theme class so
+   @gxp-dev/app-ui re-derives its abstract tokens from these platform
+   vars at this scope. */
+#app {
 	--primary: v-bind("theme.primary");
 	--page_background_color: v-bind("theme.page_background_color");
 	--page_text_color: v-bind("theme.page_text_color");

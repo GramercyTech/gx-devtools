@@ -345,6 +345,7 @@ The Pinia store is a **platform-provided runtime interface** — `src/stores/gxp
 - `triggerState` - Dynamic state values
 - `dependencyList` - External dependencies
 - `permissionFlags` - Feature permissions
+- `form` - Form store for form-backed apps (`null` unless configured — see below)
 
 ### Getter Methods
 
@@ -381,6 +382,21 @@ await store.apiPost("/endpoint", data)
 await store.apiPut("/endpoint", data)
 await store.apiDelete("/endpoint")
 ```
+
+### Form Store (`store.form`)
+
+Form-backed apps get a mock `gxpFormStore` (`runtime/stores/gxpFormStore.js`) attached as `store.form` — the same interface the platform provides when a portal page is backed by a ProjectForm. It attaches automatically when `app-manifest.json` has a `form` section (or `settings.formId`), or explicitly via `store.attachFormStore(formKeyOrStore)`. Hot-reloaded (rebuilt) with the manifest.
+
+```javascript
+store.form.getSections() / getElements() / getElement(slug) // normalized schema
+store.form.formData // slug-keyed data (defaults → prefillData)
+store.form.getValue(slug) / setValue(slug, v) / setData({})
+store.form.validateField(slug) / validateForm() // errors in store.form.errors
+store.form.setConditionalProcessing(true) // condition_params visibility
+;(await store.form.submit()) / confirmUpdateExisting(id) / saveProgress(contact)
+```
+
+Dev submission transport: manifest `form.mockResponses.submit` → real POST to the registration-form API under `apiBaseUrl` → simulated `{ success: true, simulated: true }` fallback. Deliveries are console-logged and broadcast as `gxp:form-submit` CustomEvents on `window`. Manifest `form` keys: `formId`, `schema` (v2 `{root, cards, elements}` or `{sections}`), `prefillData`, `settings`, `strings`, `registrationMode`, `conditions`, `mockResponses`. Full docs: `docs/gxp-store.md` + `docs/app-manifest.md`.
 
 ### Socket Methods
 

@@ -170,6 +170,61 @@ store.updateState("checked_in_count", store.triggerState.checked_in_count + 1)
 const step = store.getState("current_step", 1)
 ```
 
+### Form (`form`)
+
+For form-backed apps (registration forms, quizzes, surveys), declare a mock form so the dev store attaches a form store as `store.form` — the same interface plugins get on-platform when a page is backed by a ProjectForm:
+
+```json
+{
+	"form": {
+		"formId": "my-registration-form",
+		"schema": {
+			"root": { "cardList": ["card-1"] },
+			"cards": {
+				"card-1": {
+					"id": "card-1",
+					"title": "General",
+					"elementList": ["el-1", "el-2"]
+				}
+			},
+			"elements": {
+				"el-1": {
+					"id": "el-1",
+					"name": "first_name",
+					"type": "input",
+					"label": "First Name",
+					"required": true
+				},
+				"el-2": {
+					"id": "el-2",
+					"name": "contact_email",
+					"type": "email",
+					"label": "Email",
+					"required": true
+				}
+			}
+		},
+		"prefillData": { "first_name": "Jane" },
+		"registrationMode": "both",
+		"conditions": true,
+		"mockResponses": { "submit": { "success": true, "status": "created" } }
+	}
+}
+```
+
+| Key                | Description                                                                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `formId`           | Form slug/id (falls back to `settings.formId`, then `dev-form`). Also stamped onto `pluginVars.formId` for `callApi` path injection. |
+| `schema`           | Form schema — v2 shape (`{ root, cards, elements }`) or `{ sections: [...] }`. A top-level `sections` array also works.              |
+| `prefillData`      | Slug → value map seeded into `formData` (simulates attendee prefill on update-capable forms).                                        |
+| `settings`         | Form settings object (`registration_mode` etc.) as the platform returns it.                                                          |
+| `strings`          | Locale-keyed form strings (`{ "default": { "registration": { ... } } }`).                                                            |
+| `registrationMode` | `new_only` \| `update_only` \| `both`.                                                                                               |
+| `conditions`       | Enable conditional-visibility processing of `condition_params` against `formData`.                                                   |
+| `mockResponses`    | Canned results for `submit` / `saveProgress` instead of hitting an API.                                                              |
+
+See the [GxP Store docs](./gxp-store.md#form-store-storeform) for the full `store.form` API. The section is hot-reloaded like the rest of the manifest.
+
 ### Dependencies
 
 Dependencies define external API services your plugin can interact with. Each dependency maps API operations to endpoints that can be called via `gxpStore.callApi()`.

@@ -16,7 +16,19 @@ const require = createRequire(import.meta.url)
  * provided to the plugin (and partly window-shimmed) rather than bundled as
  * an ordinary library, so leave its current handling alone.
  */
-const OPTIMIZE_DEPS_EXCLUDE = new Set(["@gxp-dev/tools"])
+const OPTIMIZE_DEPS_EXCLUDE = new Set([
+	"@gxp-dev/tools",
+	// UI libraries must NOT be pre-bundled: optimized dep chunks are served
+	// from cache and bypass the externalGlobals transform, so they'd import
+	// their own copy of Vue from the dev server. Standalone dev survives
+	// that (window.Vue IS the dev-server Vue), but in the platform embed
+	// (browser-extension local-app swap) window.Vue is the platform's Vue —
+	// two runtimes means slot vnodes silently drop inside library
+	// components. Served unbundled, their `import ... from "vue"` goes
+	// through externalGlobals → window.Vue, matching how `gxdev build`
+	// treats them (bundled with the plugin, vue external).
+	"@gxp-dev/app-ui",
+])
 
 /**
  * The general problem this and {@link getOptimizeDepsEntries} solve:
@@ -864,6 +876,12 @@ export default defineConfig(async (ctx) => {
 		// Vite won't pre-bundle otherwise. See the two helpers for details.
 		optimizeDeps: {
 			include: getOptimizeDepsInclude(),
+			// Only app-ui is excluded from the optimizer itself: it must be served
+			// unbundled so externalGlobals rewrites its vue imports to window.Vue
+			// (see OPTIMIZE_DEPS_EXCLUDE). @gxp-dev/tools stays out of `include`
+			// but must NOT be excluded here — excluding it un-bundles the runtime
+			// store (axios & co.) and triggers mid-session re-optimization.
+			exclude: ["@gxp-dev/app-ui"],
 			entries: getOptimizeDepsEntries(env),
 		},
 		// SSR configuration to handle externals properly

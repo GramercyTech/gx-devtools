@@ -32,6 +32,7 @@ async function publishCommand(argv) {
 		console.log("  Runtime files (advanced customization):")
 		console.log("  • server.cjs         - Socket.IO server file")
 		console.log("  • gxpPortalConfigStore.js - GxP datastore")
+		console.log("  • gxpFormStore.js    - GxP form store (store.form)")
 		console.log("")
 		console.log("💡 Usage:")
 		console.log("  gxdev publish main.js")
@@ -67,6 +68,12 @@ async function publishCommand(argv) {
 			src: "stores/gxpPortalConfigStore.js",
 			dest: "src/stores/gxpPortalConfigStore.js",
 			desc: "GxP datastore",
+			location: "runtime",
+		},
+		"gxpFormStore.js": {
+			src: "stores/gxpFormStore.js",
+			dest: "src/stores/gxpFormStore.js",
+			desc: "GxP form store",
 			location: "runtime",
 		},
 	}
@@ -135,6 +142,17 @@ async function publishCommand(argv) {
 
 	// Special handling for gxpPortalConfigStore.js - update the import in stores/index.js
 	if (fileName === "gxpPortalConfigStore.js") {
+		// The store imports ./gxpFormStore.js relatively — publish it alongside
+		// so the local copy resolves.
+		const formStoreSrc = path.join(sourceDir, "stores/gxpFormStore.js")
+		const formStoreDest = path.join(projectPath, "src/stores/gxpFormStore.js")
+		if (fs.existsSync(formStoreSrc) && !fs.existsSync(formStoreDest)) {
+			fs.copyFileSync(formStoreSrc, formStoreDest)
+			console.log(
+				"📝 Also published gxpFormStore.js (imported by the datastore)",
+			)
+		}
+
 		const storeIndexPath = path.join(projectPath, "src/stores/index.js")
 		if (fs.existsSync(storeIndexPath)) {
 			try {

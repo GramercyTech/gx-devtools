@@ -21,17 +21,18 @@ const store = useGxpStore()
 
 The store contains several reactive sections populated from your `app-manifest.json` and the platform:
 
-| Section           | Description                       | Source                        |
-| ----------------- | --------------------------------- | ----------------------------- |
-| `pluginVars`      | Plugin settings/configuration     | `settings` in manifest        |
-| `stringsList`     | Translatable strings              | `strings.default` in manifest |
-| `assetList`       | Asset URLs                        | `assets` in manifest          |
-| `triggerState`    | Dynamic runtime state             | `triggerState` in manifest    |
-| `dependencyList`  | External dependencies             | Platform-injected             |
-| `permissionFlags` | Granted permissions               | Platform-injected             |
-| `user`            | Logged-in user object (or `null`) | Platform-injected             |
-| `theme`           | Platform theme colors             | Platform-injected             |
-| `router`          | Navigation methods                | Platform-injected             |
+| Section           | Description                       | Source                                                        |
+| ----------------- | --------------------------------- | ------------------------------------------------------------- |
+| `pluginVars`      | Plugin settings/configuration     | `settings` in manifest                                        |
+| `stringsList`     | Translatable strings              | `strings.default` in manifest                                 |
+| `assetList`       | Asset URLs                        | `assets` in manifest                                          |
+| `triggerState`    | Dynamic runtime state             | `triggerState` in manifest                                    |
+| `dependencyList`  | External dependencies             | Platform-injected                                             |
+| `permissionFlags` | Granted permissions               | Platform-injected                                             |
+| `user`            | Logged-in user object (or `null`) | Platform-injected                                             |
+| `theme`           | Platform theme colors             | Platform-injected                                             |
+| `router`          | Navigation methods                | Platform-injected                                             |
+| `form`            | Form store for form-backed apps   | `form` in manifest (dev) / ProjectForm-backed page (platform) |
 
 ## Getter Methods
 
@@ -289,6 +290,107 @@ await store.apiPut("/attendees/456", {
 ```javascript
 await store.apiDelete("/sessions/789")
 ```
+
+## Form Store (`store.form`)
+
+Form-backed apps (registration forms, quizzes, surveys built on a platform ProjectForm) get a per-form store attached as `store.form` — the same interface plugins see on-platform, so `gxpStore.form.getElements()` works identically in dev and production.
+
+`store.form` is `null` unless one of:
+
+- `app-manifest.json` has a `form` section (or `settings.formId`) — attached automatically, hot-reloaded with the manifest
+- the app calls `store.attachFormStore(formKeyOrStore)` explicitly
+
+### Schema Helpers
+
+```javascript
+store.form.getSections() // nested sections: { id, title, fields[], sections[] }
+store.form.getElements() // flat list of normalized fields
+store.form.getElement("first_name") // one field or null
+store.form.schema // computed { name, slug, sections } with conditions applied
+```
+
+Fields are normalized to guaranteed keys regardless of source shape (v2 `{root, cards, elements}` or plain sections): `slug`, `label`, `type`, `required`, `default_value`, `validation_rules`, `condition_params`.
+
+### Form Data
+
+```javascript
+store.form.formData // reactive slug-keyed data object
+store.form.getValue("first_name")
+store.form.setValue("first_name", "Jane") // also clears the field's error
+store.form.setData({ first_name: "Jane", company: "Acme" })
+```
+
+`formData` is seeded on initialize: field defaults → `prefillData` → resume-session data.
+
+### Validation
+
+```javascript
+store.form.validateField("contact_email") // error string or null
+store.form.validateForm() // boolean; populates store.form.errors
+store.form.errors // slug-keyed error map
+store.form.isValid // computed boolean
+```
+
+Supports `required`, type checks (email/phone/number), and Laravel-style string rules (`min`, `max`, `in`, `regex`, `numeric`, `email`). The server remains authoritative.
+
+### Conditional Visibility
+
+```javascript
+store.form.setConditionalProcessing(true) // or "conditions": true in the manifest
+```
+
+When enabled, `getSections()`/`getElements()` evaluate each node's `condition_params` against `formData`, and hidden fields are skipped by validation.
+
+### Submission
+
+```javascript
+const result = await store.form.submit()
+await store.form.confirmUpdateExisting(attendeeId) // after a 409 duplicate prompt
+await store.form.saveProgress("jane@example.com") // resumable forms
+store.form.processing / store.form.submitted / store.form.lastResult
+```
+
+In dev, `submit()` resolves in order:
+
+1. `form.mockResponses.submit` from the manifest (returned verbatim)
+2. A real POST to the registration-form API under the configured `apiBaseUrl` (mock API or a real environment via the dev proxy)
+3. A simulated `{ success: true, simulated: true }` result
+
+Every delivery is logged to the console and broadcast as a `gxp:form-submit` CustomEvent on `window`. Real 422 responses map onto `store.form.errors`; 409 duplicate payloads are returned so the app can prompt.
+
+### Manifest Configuration
+
+```json
+{
+	"form": {
+		"formId": "my-registration-form",
+		"schema": {
+			"root": { "cardList": ["card-1"] },
+			"cards": {
+				"card-1": {
+					"id": "card-1",
+					"title": "General",
+					"elementList": ["el-1"]
+				}
+			},
+			"elements": {
+				"el-1": {
+					"id": "el-1",
+					"name": "first_name",
+					"type": "input",
+					"label": "First Name",
+					"required": true
+				}
+			}
+		},
+		"prefillData": { "first_name": "Jane" },
+		"conditions": true,
+		"mockResponses": { "submit": { "success": true, "status": "created" } }
+	}
+}
+```
+
+`schema` accepts the v2 shape (`{ root, cards, elements }`) or `{ sections: [...] }`; a top-level `sections` array also works. Like the other manifest sections, the form store is rebuilt on manifest hot-reload (unsaved `formData` resets).
 
 ## Socket.IO Integration
 

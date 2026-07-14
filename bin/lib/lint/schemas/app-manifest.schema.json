@@ -89,6 +89,63 @@
 			},
 			"additionalProperties": false
 		},
+		"form": {
+			"type": "object",
+			"description": "Mock form definition for form-backed apps. When present (or when settings.formId is set), the dev store attaches a gxpFormStore as store.form with the same interface plugins get on-platform (getSections/getElements, formData, validation, submit).",
+			"properties": {
+				"formId": {
+					"type": ["string", "number"],
+					"description": "Form slug/id. Falls back to settings.formId, then 'dev-form'."
+				},
+				"schema": {
+					"type": "object",
+					"description": "Form schema: either v2 shape { root, cards, elements } or { sections: [...] } with fields arrays.",
+					"properties": {
+						"root": { "type": "object" },
+						"cards": { "type": "object" },
+						"elements": { "type": "object" },
+						"sections": { "type": "array" }
+					},
+					"additionalProperties": true
+				},
+				"sections": {
+					"type": "array",
+					"description": "Plain nested sections array ({ title, fields, sections }) — alternative to schema.",
+					"items": { "type": "object" }
+				},
+				"settings": {
+					"type": "object",
+					"description": "Form settings object (registration_mode etc.), as returned by the platform."
+				},
+				"strings": {
+					"type": "object",
+					"description": "Locale-keyed form strings ({ default: { registration: {...} } })."
+				},
+				"prefillData": {
+					"type": "object",
+					"description": "Field slug → value map seeded into formData (simulates attendee prefill)."
+				},
+				"registrationMode": {
+					"type": "string",
+					"enum": ["new_only", "update_only", "both"]
+				},
+				"isAuthenticated": { "type": "boolean" },
+				"conditions": {
+					"type": "boolean",
+					"description": "Enable conditional-visibility processing of condition_params against formData."
+				},
+				"mockResponses": {
+					"type": "object",
+					"description": "Canned results returned by store.form.submit()/saveProgress() instead of hitting an API.",
+					"properties": {
+						"submit": { "type": "object" },
+						"saveProgress": { "type": "object" }
+					},
+					"additionalProperties": false
+				}
+			},
+			"additionalProperties": true
+		},
 		"track-events": {
 			"type": "object",
 			"description": "Analytics events reported via gxp-track / window.gxp.track, used by the platform for reporting. Keys are event identifiers (e.g. checkin.submit); values map each gxp-track-props root key to a type: the string \"string\" for free-form values, an array of allowed values, or a { type, value } object for relationship values (e.g. { \"type\": \"attendee\", \"value\": \"id\" }).",
