@@ -383,6 +383,144 @@ describe("lint app-manifest.json", () => {
 	})
 })
 
+describe("lint app-manifest dependencies (parent-scoped permissions)", () => {
+	const baseManifest = (dependencies) => ({
+		name: "test",
+		version: "1.0.0",
+		strings: { default: {} },
+		dependencies,
+	})
+
+	const groupDep = {
+		identifiers: ["group", "#vip"],
+		model: "Group",
+		key: "slug",
+		permissions: ["view_groups", "view_attendees"],
+		permissionKey: "group",
+	}
+
+	it("accepts a parent-scoped dependency pair (@permissionKey identifier)", () => {
+		const file = writeTmp(
+			"parent-scoped.app-manifest.json",
+			baseManifest([
+				groupDep,
+				{
+					identifier: "@group",
+					model: "Attendee",
+					permissions: ["view_attendees"],
+					permissionKey: "group-attendees",
+					parentRelation: "groups",
+				},
+			]),
+		)
+		const result = lintFile(file)
+		expect(result.errors).toEqual([])
+		expect(result.ok).toBe(true)
+	})
+
+	it("accepts * and @untagged identifier tokens", () => {
+		const file = writeTmp(
+			"star-untagged.app-manifest.json",
+			baseManifest([
+				{ identifier: "*", model: "SocialStream", permissionKey: "streams" },
+				{ identifiers: ["@untagged"], model: "AgendaItem" },
+			]),
+		)
+		const result = lintFile(file)
+		expect(result.errors).toEqual([])
+		expect(result.ok).toBe(true)
+	})
+
+	it("flags an unresolved @permissionKey reference", () => {
+		const file = writeTmp(
+			"unresolved-ref.app-manifest.json",
+			baseManifest([
+				{ identifier: "@missing", model: "Attendee", permissions: [] },
+			]),
+		)
+		const result = lintFile(file)
+		expect(result.ok).toBe(false)
+		expect(result.errors.some((e) => e.code === "parent-ref-unresolved")).toBe(
+			true,
+		)
+	})
+
+	it("flags a self-referencing parent scope", () => {
+		const file = writeTmp(
+			"self-ref.app-manifest.json",
+			baseManifest([
+				{
+					identifier: "@self",
+					model: "Attendee",
+					permissionKey: "self",
+				},
+			]),
+		)
+		const result = lintFile(file)
+		expect(result.ok).toBe(false)
+		expect(result.errors.some((e) => e.code === "parent-ref-self")).toBe(true)
+	})
+
+	it("flags an indirect parent-reference cycle", () => {
+		const file = writeTmp(
+			"cycle-ref.app-manifest.json",
+			baseManifest([
+				{ identifier: "@b", model: "Group", permissionKey: "a" },
+				{ identifier: "@a", model: "Attendee", permissionKey: "b" },
+			]),
+		)
+		const result = lintFile(file)
+		expect(result.ok).toBe(false)
+		expect(result.errors.some((e) => e.code === "parent-ref-cycle")).toBe(true)
+	})
+
+	it("flags duplicate explicit permissionKey values", () => {
+		const file = writeTmp(
+			"dup-key.app-manifest.json",
+			baseManifest([
+				{ identifier: "one", model: "Group", permissionKey: "shared" },
+				{ identifier: "two", model: "Attendee", permissionKey: "shared" },
+			]),
+		)
+		const result = lintFile(file)
+		expect(result.ok).toBe(false)
+		expect(
+			result.errors.some((e) => e.code === "duplicate-permission-key"),
+		).toBe(true)
+	})
+
+	it("flags a dependency with neither identifier nor identifiers", () => {
+		const file = writeTmp(
+			"no-identifier.app-manifest.json",
+			baseManifest([{ model: "Group", permissions: [] }]),
+		)
+		const result = lintFile(file)
+		expect(result.ok).toBe(false)
+	})
+
+	it("still accepts the legacy wizard output (permissionKey: null, operations)", () => {
+		const file = writeTmp(
+			"legacy-wizard.app-manifest.json",
+			baseManifest([
+				{
+					identifier: "access_points",
+					model: "AccessPoint",
+					permissionKey: null,
+					permissions: ["view_access_points"],
+					operations: {
+						"access-points.index":
+							"get:/v1/projects/{teamSlug}/{projectSlug}/access-points",
+					},
+					events: { AccessPointUpdated: "AccessPointUpdated" },
+				},
+			]),
+		)
+		const result = lintFile(file)
+		expect(result.errors).toEqual([])
+		expect(result.ok).toBe(true)
+	})
+})
+
 describe("lintFile edge cases", () => {
 	it("reports file-not-found without throwing", () => {
 		const result = lintFile("/definitely/does/not/exist/app-manifest.json")

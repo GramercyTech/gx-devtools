@@ -118,6 +118,106 @@ function locateInSource(source, instancePath) {
 }
 
 /**
+ * Cross-item checks the JSON Schema cannot express, for app-manifest
+ * `dependencies`:
+ *   - every `@<permissionKey>` identifier token must resolve to another
+ *     dependency's permissionKey (or identifier fallback)
+ *   - parent references must not point at themselves or form a cycle
+ *   - explicit permissionKey values must be unique (they address slots in
+ *     rule scopes and parent references)
+ *
+ * Returns error objects shaped like AJV-derived ones (line/column filled in
+ * by the caller).
+ */
+function semanticManifestErrors(data) {
+	const errors = []
+	const deps = Array.isArray(data?.dependencies) ? data.dependencies : []
+
+	const slotKeyOf = (dep) =>
+		dep?.permissionKey ??
+		dep?.identifier ??
+		(Array.isArray(dep?.identifiers) ? dep.identifiers[0] : undefined)
+
+	const isParentRef = (token) =>
+		typeof token === "string" &&
+		token.startsWith("@") &&
+		token !== "@untagged" &&
+		token.length > 1
+
+	const tokensOf = (dep) =>
+		dep?.identifier !== undefined
+			? [dep.identifier]
+			: Array.isArray(dep?.identifiers)
+				? dep.identifiers
+				: []
+
+	const byKey = new Map()
+	deps.forEach((dep, i) => {
+		if (typeof dep?.permissionKey === "string") {
+			if (byKey.has(dep.permissionKey)) {
+				errors.push({
+					code: "duplicate-permission-key",
+					message: `/dependencies/${i}/permissionKey duplicate permissionKey "${dep.permissionKey}" — slot addresses must be unique`,
+					instancePath: `/dependencies/${i}/permissionKey`,
+				})
+			}
+		}
+		const key = slotKeyOf(dep)
+		if (typeof key === "string" && !byKey.has(key)) {
+			byKey.set(key, i)
+		}
+	})
+
+	deps.forEach((dep, i) => {
+		for (const token of tokensOf(dep)) {
+			if (!isParentRef(token)) {
+				continue
+			}
+			const targetKey = token.slice(1)
+			const pathHint =
+				dep.identifier !== undefined
+					? `/dependencies/${i}/identifier`
+					: `/dependencies/${i}/identifiers`
+
+			if (!byKey.has(targetKey)) {
+				errors.push({
+					code: "parent-ref-unresolved",
+					message: `${pathHint} references "@${targetKey}" but no dependency has permissionKey (or identifier) "${targetKey}"`,
+					instancePath: pathHint,
+				})
+				continue
+			}
+			if (byKey.get(targetKey) === i) {
+				errors.push({
+					code: "parent-ref-self",
+					message: `${pathHint} references its own dependency ("@${targetKey}") — a parent scope cannot point at itself`,
+					instancePath: pathHint,
+				})
+				continue
+			}
+
+			// Follow the parent chain to catch indirect cycles (a → b → a).
+			const seen = new Set([i])
+			let cursor = byKey.get(targetKey)
+			while (cursor !== undefined && !seen.has(cursor)) {
+				seen.add(cursor)
+				const next = tokensOf(deps[cursor]).find(isParentRef)
+				cursor = next ? byKey.get(next.slice(1)) : undefined
+			}
+			if (cursor !== undefined && seen.has(cursor)) {
+				errors.push({
+					code: "parent-ref-cycle",
+					message: `${pathHint} parent reference "@${targetKey}" forms a cycle`,
+					instancePath: pathHint,
+				})
+			}
+		}
+	})
+
+	return errors
+}
+
+/**
  * Lint a single file. Returns a result object; never throws for validation or
  * JSON-parse errors (those become errors in the result).
  */
@@ -198,6 +298,15 @@ function lintFile(filePath) {
 			})
 		}
 	}
+
+	if (schemaKey === "app-manifest.schema.json") {
+		for (const err of semanticManifestErrors(data)) {
+			result.ok = false
+			const { line, column } = locateInSource(source, err.instancePath)
+			result.errors.push({ ...err, line, column })
+		}
+	}
+
 	return result
 }
 
@@ -272,6 +381,14 @@ function lintData(data, pathHint) {
 			})
 		}
 	}
+
+	if (schemaKey === "app-manifest.schema.json") {
+		for (const err of semanticManifestErrors(data)) {
+			result.ok = false
+			result.errors.push({ ...err, line: 1, column: 1 })
+		}
+	}
+
 	return result
 }
 

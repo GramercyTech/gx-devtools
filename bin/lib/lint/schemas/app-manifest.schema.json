@@ -196,13 +196,54 @@
 			"type": "array",
 			"items": {
 				"type": "object",
-				"required": ["identifier"],
+				"anyOf": [
+					{ "required": ["identifier"] },
+					{ "required": ["identifiers"] }
+				],
 				"properties": {
 					"identifier": {
-						"$ref": "common.schema.json#/$defs/identifier"
+						"$ref": "common.schema.json#/$defs/dependencyIdentifierToken"
+					},
+					"identifiers": {
+						"type": "array",
+						"minItems": 1,
+						"items": {
+							"$ref": "common.schema.json#/$defs/dependencyIdentifierToken"
+						},
+						"description": "Multiple object-scope tokens, matched any-of. Mixes binding keys, #tag literals, @untagged, and @<permissionKey> parent references."
 					},
 					"model": { "type": "string" },
-					"events": { "type": "object" }
+					"key": {
+						"type": "string",
+						"minLength": 1,
+						"description": "Model column the dependency_list binding values match (route key, default id)."
+					},
+					"permissionKey": {
+						"anyOf": [
+							{ "$ref": "common.schema.json#/$defs/identifier" },
+							{ "type": "null" }
+						],
+						"description": "Stable address of this dependency for rule scopes and @<permissionKey> parent references. Falls back to the identifier when omitted."
+					},
+					"parentRelation": {
+						"$ref": "common.schema.json#/$defs/identifier",
+						"description": "Relation on this dependency's model pointing at the parent dependency's model, for @<permissionKey> scopes. Reflected by convention when omitted."
+					},
+					"permissions": {
+						"type": "array",
+						"items": { "type": "string", "minLength": 1 }
+					},
+					"visibleFields": {
+						"type": "array",
+						"items": { "type": "string", "minLength": 1 },
+						"description": "Field ceiling for API responses of this dependency's model. Omitted = unrestricted."
+					},
+					"operations": {
+						"type": "object",
+						"additionalProperties": { "type": "string" }
+					},
+					"events": { "type": "object" },
+					"description": { "type": "string" }
 				},
 				"additionalProperties": true
 			}

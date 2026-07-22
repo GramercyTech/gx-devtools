@@ -289,8 +289,26 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 		if (manifest.dependencies && Array.isArray(manifest.dependencies)) {
 			dependencies.value = manifest.dependencies // Store full dependency objects
-			dependencyList.value = manifest.dependencies.reduce((acc, permission) => {
-				acc[permission.identifier] = "1"
+			// Mock a binding for every dependency_list key token. Literal scope
+			// tokens (`*`, `#<tag>`, `@untagged`, `@<permissionKey>` parent refs)
+			// are not binding keys and never appear in dependency_list.
+			dependencyList.value = manifest.dependencies.reduce((acc, dep) => {
+				const tokens =
+					dep.identifier !== undefined
+						? [dep.identifier]
+						: Array.isArray(dep.identifiers)
+							? dep.identifiers
+							: []
+				for (const token of tokens) {
+					if (
+						typeof token === "string" &&
+						token !== "*" &&
+						!token.startsWith("#") &&
+						!token.startsWith("@")
+					) {
+						acc[token] = "1"
+					}
+				}
 				return acc
 			}, {})
 			console.log("[GxP Store] Dependency List:", dependencyList.value)

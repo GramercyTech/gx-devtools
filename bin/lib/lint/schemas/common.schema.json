@@ -48,6 +48,22 @@
 			"type": "string",
 			"pattern": "^[A-Za-z_][A-Za-z0-9_-]*$"
 		},
+		"dependencyIdentifierToken": {
+			"description": "One object-scope token of a dependency: a dependency_list binding key, `*` (every object of the model in the project), `#<tag-id-or-slug>` (objects carrying the tag), `@untagged` (objects with no tags), or `@<permissionKey>` (objects related to the dependency addressed by that key — parent-scoped permissions).",
+			"anyOf": [
+				{ "$ref": "#/$defs/identifier" },
+				{ "const": "*" },
+				{ "const": "@untagged" },
+				{
+					"type": "string",
+					"pattern": "^#[A-Za-z0-9][A-Za-z0-9_-]*$"
+				},
+				{
+					"type": "string",
+					"pattern": "^@[A-Za-z_][A-Za-z0-9_-]*$"
+				}
+			]
+		},
 		"option": {
 			"type": "object",
 			"description": "A selection option. The platform uses {value, text} for select/pill/multi/checkbox_group, {title, value} for autocomplete, and {option, title} for radio; {label, value} is also accepted.",

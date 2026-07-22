@@ -257,14 +257,67 @@ Dependencies define external API services your plugin can interact with. Each de
 
 #### Dependency Fields
 
-| Field           | Type   | Description                                                 |
-| --------------- | ------ | ----------------------------------------------------------- |
-| `identifier`    | string | Unique identifier for this dependency (used in `callApi`)   |
-| `model`         | string | The model/resource name from the API                        |
-| `permissionKey` | string | The permission key used for access control                  |
-| `permissions`   | array  | List of permissions required to use this dependency         |
-| `operations`    | object | Map of operationId to `method:path` (e.g., `"get:/v1/..."`) |
-| `events`        | object | Map of socket event names this dependency can emit/receive  |
+| Field            | Type   | Description                                                                                                                          |
+| ---------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `identifier`     | string | Object-scope token for this dependency (used in `callApi`). See scope tokens below.                                                  |
+| `identifiers`    | array  | Multiple scope tokens, matched any-of. Use instead of `identifier`.                                                                  |
+| `model`          | string | The model/resource name from the API                                                                                                 |
+| `key`            | string | Model column the page's `dependency_list` binding values match (route key, default `id`)                                             |
+| `permissionKey`  | string | Stable address of this dependency — used by rule scopes and `@<permissionKey>` references. Defaults to the identifier.               |
+| `parentRelation` | string | Relation on this model pointing at a parent dependency's model, for `@<permissionKey>` scopes. Reflected by convention when omitted. |
+| `permissions`    | array  | List of permissions granted through this dependency                                                                                  |
+| `visibleFields`  | array  | Field ceiling for API responses of this model. Omitted = all fields.                                                                 |
+| `operations`     | object | Map of operationId to `method:path` (e.g., `"get:/v1/..."`)                                                                          |
+| `events`         | object | Map of socket event names this dependency can emit/receive                                                                           |
+
+#### Scope Tokens
+
+An `identifier` (or each entry of `identifiers`) is one of:
+
+| Token               | Meaning                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `some_name`         | A `dependency_list` binding key — the page configuration binds it to concrete object(s) |
+| `*`                 | Every object of the model in the project (project-wide)                                 |
+| `#<tag-id-or-slug>` | Objects carrying the given project tag                                                  |
+| `@untagged`         | Objects with no project tags                                                            |
+| `@<permissionKey>`  | **Parent scope** — objects related to the dependency addressed by that permission key   |
+
+#### Parent-Scoped Dependencies (`@<permissionKey>`)
+
+Prefer a parent scope over the legacy `:viewAny` permission suffix when a model
+is only ever accessed through a parent object. The grants then apply to the
+parent's related objects only — never project-wide:
+
+```json
+{
+	"dependencies": [
+		{
+			"identifiers": ["group"],
+			"model": "Group",
+			"key": "slug",
+			"permissions": ["view_groups", "view_attendees"],
+			"permissionKey": "group"
+		},
+		{
+			"identifier": "@group",
+			"model": "Attendee",
+			"permissions": ["view_attendees"],
+			"permissionKey": "group-attendees"
+		}
+	]
+}
+```
+
+With `dependency_list.group` bound to a group, the relation route
+(`/groups/{group}/attendees/...`) works for that group only, and the direct
+attendee endpoints (`/attendees/search`, `/attendees/{id}`) are limited to that
+group's members. The platform resolves the child → parent relation
+automatically (`Attendee::groups()`); declare `parentRelation` when the
+relation name isn't conventional.
+
+The linter validates parent references: `@<permissionKey>` must resolve to
+another dependency in the same manifest, and must not self-reference or form a
+cycle. Explicit `permissionKey` values must be unique.
 
 #### Using the Add Dependency Wizard
 
