@@ -881,7 +881,6 @@ export default defineConfig(async (ctx) => {
 			// (see OPTIMIZE_DEPS_EXCLUDE). @gxp-dev/tools stays out of `include`
 			// but must NOT be excluded here — excluding it un-bundles the runtime
 			// store (axios & co.) and triggers mid-session re-optimization.
-			exclude: ["@gxp-dev/app-ui"],
 			entries: getOptimizeDepsEntries(env),
 		},
 		// SSR configuration to handle externals properly
