@@ -603,6 +603,17 @@ export default defineConfig(async (ctx) => {
 		root: process.cwd(),
 		// Expose environment variables to the browser
 		define: {
+			// Vite replaces `process.env.NODE_ENV` everywhere EXCEPT lib builds,
+			// where it's deliberately left for a downstream bundler to substitute.
+			// Our output has no downstream bundler — the platform loads plugin.es.js
+			// straight into the browser via import(pluginUrl), where `process` is
+			// undefined. Any surviving reference (reka-ui's DialogContent onMounted,
+			// vee-validate's useField setup, etc.) throws ReferenceError and kills
+			// that component subtree in production while dev works fine. Substitute
+			// it ourselves at build time; dev keeps Vite's default handling.
+			...(ctx.command === "build"
+				? { "process.env.NODE_ENV": JSON.stringify("production") }
+				: {}),
 			"import.meta.env.VITE_API_ENV": JSON.stringify(env.API_ENV || "mock"),
 			"import.meta.env.VITE_API_BASE_URL": JSON.stringify(
 				env.API_BASE_URL || "",
@@ -850,6 +861,14 @@ export default defineConfig(async (ctx) => {
 						vue: "Vue",
 						pinia: "Pinia",
 					},
+					// The platform loads exactly plugin.es.js + style.css from the
+					// .gxpapp — it cannot serve extra chunks, so any dynamic import
+					// in the plugin or a dependency (e.g. app-ui's lazy
+					// `import("qrcode")` in FinalPage) must be inlined into the
+					// single entry chunk. Splitting also makes Rolldown (Vite 8+)
+					// emit a shared rolldown-runtime-*.js helper chunk, which the
+					// platform ServiceWorker can't resolve either.
+					codeSplitting: false,
 				},
 			},
 		},
