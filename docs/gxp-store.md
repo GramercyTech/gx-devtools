@@ -508,6 +508,8 @@ The relay rebroadcasts every event to every other client, so `project`/`portal`/
 
 Same API as the platform. In dev, set `PUSH_NOTIFICATIONS_ENABLED=true` and `VAPID_PUBLIC_KEY` in `.env` to exercise a real service-worker subscription; unset, the helpers behave exactly as the platform does when push is unavailable.
 
+The server side of push (`/push/subscribe`, `/push/unsubscribe`, `/push/status`) consists of portal web routes on the platform, not `/api/v1` operations — the one deliberate exception to the `/api` prefix rule above. The dev API host does not implement them, so a real subscribe attempt in dev is rolled back and rejected, as it would be if the platform refused it.
+
 ```javascript
 store.pushSubscription // current subscription JSON or null
 await store.loadPushSubscription() // browser subscription or null

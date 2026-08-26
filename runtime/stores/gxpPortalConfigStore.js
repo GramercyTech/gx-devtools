@@ -432,11 +432,18 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 	// --- Web Push Notifications (EZ-2502) ----------------------------
 	// Same surface and semantics as the platform. The platform reads the
 	// VAPID key / feature flag from its boot vars; here they come from
-	// VITE_VAPID_PUBLIC_KEY / VITE_PUSH_NOTIFICATIONS_ENABLED, and the
-	// subscribe/unsubscribe/status calls go to the configured API host
-	// instead of the portal origin. Without a key (the usual dev case)
-	// every helper resolves exactly as it does on the platform when push
-	// is unavailable: null / no-op / "not configured" error.
+	// VITE_VAPID_PUBLIC_KEY / VITE_PUSH_NOTIFICATIONS_ENABLED. Without a key
+	// (the usual dev case) every helper resolves exactly as it does on the
+	// platform when push is unavailable: null / no-op / "not configured" error.
+	//
+	// NOTE on paths: `/push/subscribe`, `/push/unsubscribe` and `/push/status`
+	// are portal-origin web routes on the platform (session-authenticated),
+	// NOT `/api/v1` operations — so, deliberately, they are the one place in
+	// this store that is not prefixed with "/api". In dev they are sent to
+	// the configured host root, which is not expected to implement them; a
+	// rejected subscribe rolls the browser subscription back, as on the
+	// platform. Don't copy this pattern for API calls — use callApi/apiGet
+	// with "/api/v1/..." paths.
 	const pushSubscription = ref(null)
 	const pushEnv = {
 		enabled: import.meta.env.VITE_PUSH_NOTIFICATIONS_ENABLED === "true",
@@ -612,14 +619,21 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		}
 	}
 
+	// Re-subscribe when the browser rotates our subscription mid-session.
+	// Named so destroy() can unregister it — a disposed and re-created store
+	// must not leave a stale handler that re-subscribes on the old instance.
+	const handlePushSubscriptionChange = (event) => {
+		if (event.data?.type === "pushsubscriptionchange") {
+			subscribeToPush().catch((err) =>
+				console.warn("re-subscribe after change failed", err),
+			)
+		}
+	}
 	if (typeof navigator !== "undefined" && navigator.serviceWorker) {
-		navigator.serviceWorker.addEventListener("message", (event) => {
-			if (event.data?.type === "pushsubscriptionchange") {
-				subscribeToPush().catch((err) =>
-					console.warn("re-subscribe after change failed", err),
-				)
-			}
-		})
+		navigator.serviceWorker.addEventListener(
+			"message",
+			handlePushSubscriptionChange,
+		)
 	}
 
 	/**
@@ -1124,7 +1138,8 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 
 	// API methods for common operations. Endpoints are resolved against the
 	// API host, so — as on the platform — pass the full path including the
-	// "/api" segment (e.g. apiGet("/api/v1/projects/...")).
+	// "/api" segment (e.g. apiGet("/api/v1/projects/...")). The only unprefixed
+	// calls in this file are the `/push/*` portal routes (see Web Push above).
 	async function apiGet(endpoint, params = {}) {
 		try {
 			const response = await apiClient.get(endpoint, { params })
@@ -1522,6 +1537,12 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		if (typeof window !== "undefined") {
 			window.removeEventListener("online", handleOnline)
 			window.removeEventListener("offline", handleOffline)
+		}
+		if (typeof navigator !== "undefined" && navigator.serviceWorker) {
+			navigator.serviceWorker.removeEventListener(
+				"message",
+				handlePushSubscriptionChange,
+			)
 		}
 	}
 

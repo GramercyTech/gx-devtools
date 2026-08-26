@@ -608,6 +608,26 @@ describe("lifecycle", () => {
 		expect(remove).toHaveBeenCalledWith("offline", expect.any(Function))
 	})
 
+	it("destroy() unregisters the service-worker subscription-change handler", async () => {
+		const sw = { addEventListener: vi.fn(), removeEventListener: vi.fn() }
+		Object.defineProperty(navigator, "serviceWorker", {
+			value: sw,
+			configurable: true,
+		})
+		try {
+			const store = await freshStore()
+			const [event, handler] = sw.addEventListener.mock.calls.find(
+				([e]) => e === "message",
+			)
+			expect(event).toBe("message")
+			expect(typeof handler).toBe("function")
+			store.destroy()
+			expect(sw.removeEventListener).toHaveBeenCalledWith("message", handler)
+		} finally {
+			delete navigator.serviceWorker
+		}
+	})
+
 	it("push helpers degrade exactly like the platform without push support", async () => {
 		const store = await freshStore()
 		expect(await store.loadPushSubscription()).toBeNull()
