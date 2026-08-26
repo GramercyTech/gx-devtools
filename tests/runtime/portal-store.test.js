@@ -257,8 +257,9 @@ describe("callApi request paths", () => {
 	})
 
 	it("proxy env: base is /api-proxy (host root) and requests carry the /api prefix", async () => {
-		// Regression: 2.1.x dropped the "/api" segment when going through the
-		// Vite proxy, so every dev call against a real API 404'd.
+		// 2.1.x dropped the "/api" segment in proxy mode (the API hosts happen to
+		// alias /v1 → /api/v1, so it worked by accident); the platform store
+		// always sends /api/v1, and so do we.
 		const store = await freshStore({
 			VITE_API_ENV: "production",
 			VITE_API_PROJECT_ID: "acme/expo",
