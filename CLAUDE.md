@@ -376,12 +376,16 @@ store.addDevAsset("logo", "logo.png") // Adds /dev-assets/images/logo.png with d
 
 ### API Client
 
+`callApi(operationId, identifier, data)` is the primary API; it prefixes OpenAPI paths with `/api` itself and switches to multipart when `data` holds a Blob/File or is a `FormData`. The low-level helpers resolve against the API host, so include `/api` yourself (as on the platform):
+
 ```javascript
-await store.apiGet("/endpoint", { params })
-await store.apiPost("/endpoint", data)
-await store.apiPut("/endpoint", data)
-await store.apiDelete("/endpoint")
+await store.apiGet("/api/v1/projects/team/project/endpoint", { params })
+await store.apiPost("/api/v1/projects/team/project/endpoint", data)
+await store.apiPut("/api/v1/projects/team/project/endpoint", data)
+await store.apiDelete("/api/v1/projects/team/project/endpoint")
 ```
+
+The dev store mirrors the platform store's surface (`experience-portal/resources/js/Store/gxpPortalConfigStore.js`); `tests/runtime/portal-store.test.js` pins it. Dev-only extras (`user`, `getUser*`, `apiPatch`, `updateSetting`, `updateState`, `manifest*`) are labelled as such in `docs/gxp-store.md`.
 
 ### Form Store (`store.form`)
 
@@ -401,9 +405,12 @@ Dev submission transport: manifest `form.mockResponses.submit` → real POST to 
 ### Socket Methods
 
 ```javascript
-// Primary API — use these
+// Primary API — use these. Every listen* returns an unsubscribe function.
 store.broadcast("primary", "event-name", data)
-store.listen("primary", "event-name", callback)
+const off = store.listen("primary", "event-name", callback)
+store.sockets.primary.listenForStateChange(cb) // merges e.changes into triggerState
+store.sockets.project / store.sockets.portal // when manifest `portal.project_slug` is set
+store.sockets.attendee.notification(cb) // when a user is logged in
 
 // Platform API event (AsyncAPI event scoped to a permission identifier)
 store.listen("SomeEventName", "identifier", callback)

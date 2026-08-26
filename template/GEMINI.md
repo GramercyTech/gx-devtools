@@ -166,11 +166,10 @@ store.getState("key", null) // triggerState[key] or default
 store.hasPermission("flag") // boolean
 store.findDependency("identifier") // bound resource ID for an identifier
 
-// Logged-in user — returns null when no user is authenticated
-store.getUser() // full user object or null
-store.getUserName("Guest") // display name with fallback
-store.getUserEmail() // email or null
-store.isAuthenticated() // boolean
+// Logged-in user — null when no user is authenticated (same in dev and production)
+store.auth?.user // attendee object or null
+store.getGroupSlugs() / store.inGroup("vip") / store.inAnyGroup([...]) // group membership
+// DEV-ONLY, not on the platform: store.user, getUser(), getUserName(), getUserEmail(), isAuthenticated()
 
 // Write to triggerState only (the only section plugins should write to)
 store.triggerState["my_key"] = "value"

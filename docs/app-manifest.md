@@ -447,6 +447,38 @@ Matching template usage:
 
 `gxdev extract-config` (and the `config_extract_strings` MCP tool) scans `src/` for `gxp-track` usage and seeds this section automatically — every discovered prop defaults to `"string"`. Refine the entries by hand (allowed-value lists, relationship objects) afterwards; re-extraction never overwrites an existing definition.
 
+### Session & Portal Context
+
+These keys simulate what the platform injects around a page. All are optional; they map 1:1 onto store state so plugin code reading `store.auth`, `store.portal`, etc. behaves identically in dev and production.
+
+```json
+{
+	"user": {
+		"id": 42,
+		"first_name": "Sam",
+		"last_name": "Speaker",
+		"name": "Sam Speaker",
+		"email": "sam@example.com",
+		"groups": [{ "name": "Speakers", "slug": "speakers" }]
+	},
+	"userSession": "dev-session",
+	"portal": { "id": 1, "project_slug": "expo" },
+	"portalAssets": {},
+	"staticAssets": { "logo.svg": "/dev-assets/images/logo.svg" },
+	"navigationFlags": { "home": true, "schedule": false }
+}
+```
+
+| Key               | Store state                              | Notes                                                              |
+| ----------------- | ---------------------------------------- | ------------------------------------------------------------------ |
+| `user`            | `auth.user` (and dev-only `user` mirror) | Omit for the default dummy user; set `null` to simulate a guest    |
+| `auth`            | `auth`                                   | Full platform object `{ user, ... }`; takes precedence over `user` |
+| `userSession`     | `userSession`                            | Defaults to `"dev-session"`                                        |
+| `portal`          | `portal`                                 | A `project_slug` also creates `sockets.project` / `sockets.portal` |
+| `portalAssets`    | `portalAssets`                           |                                                                    |
+| `staticAssets`    | `staticAssetList`                        | Second lookup for `getAsset()`                                     |
+| `navigationFlags` | `navigationFlagsKeyed`                   | Object keyed by page/flag name                                     |
+
 ## Complete Example
 
 ```json
