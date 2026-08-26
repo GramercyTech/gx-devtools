@@ -8,6 +8,10 @@ description: State management with Pinia and platform integration
 
 The GxP Store (`gxpPortalConfigStore`) is a Pinia store that provides reactive state management and platform integration for your plugin.
 
+:::info One interface, two implementations
+On the platform, `useGxpStore()` resolves to the portal's store (Laravel Echo channels, same-origin API). Under `gxdev dev` it resolves to the dev-server store in this package (a local Socket.IO relay, the mock API or the Vite proxy). Both expose **the same state keys and methods with the same behaviour**, so treat the store as a black box: nothing below is dev-only unless it is explicitly marked **dev-only**. The surface is pinned by `tests/runtime/portal-store.test.js`.
+:::
+
 ## Importing the Store
 
 ```javascript
@@ -21,18 +25,28 @@ const store = useGxpStore()
 
 The store contains several reactive sections populated from your `app-manifest.json` and the platform:
 
-| Section           | Description                       | Source                                                        |
-| ----------------- | --------------------------------- | ------------------------------------------------------------- |
-| `pluginVars`      | Plugin settings/configuration     | `settings` in manifest                                        |
-| `stringsList`     | Translatable strings              | `strings.default` in manifest                                 |
-| `assetList`       | Asset URLs                        | `assets` in manifest                                          |
-| `triggerState`    | Dynamic runtime state             | `triggerState` in manifest                                    |
-| `dependencyList`  | External dependencies             | Platform-injected                                             |
-| `permissionFlags` | Granted permissions               | Platform-injected                                             |
-| `user`            | Logged-in user object (or `null`) | Platform-injected                                             |
-| `theme`           | Platform theme colors             | Platform-injected                                             |
-| `router`          | Navigation methods                | Platform-injected                                             |
-| `form`            | Form store for form-backed apps   | `form` in manifest (dev) / ProjectForm-backed page (platform) |
+| Section                   | Description                                                                       | Source (dev / platform)                                          |
+| ------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `pluginVars`              | Plugin settings/configuration (also `projectId`, `apiBaseUrl`)                    | `settings` in manifest / admin panel                             |
+| `stringsList`             | Translatable strings                                                              | `strings.default` in manifest / platform                         |
+| `assetList`               | Asset URLs                                                                        | `assets` in manifest / platform                                  |
+| `staticAssetList`         | Static asset URLs (checked by `getAsset` after `assetList`)                       | `staticAssets` in manifest / platform                            |
+| `triggerState`            | Dynamic runtime state                                                             | `triggerState` in manifest / state-change events                 |
+| `dependencyList`          | Bound dependency ids, keyed by identifier                                         | `dependencies` in manifest / admin panel                         |
+| `permissionFlags`         | Granted permissions                                                               | `permissions` in manifest / platform                             |
+| `navigationFlagsKeyed`    | Portal page navigation flags, keyed object                                        | `navigationFlags` in manifest / platform                         |
+| `auth`                    | `{ user }` — the logged-in attendee, `auth.user` is `null` for guests             | `user`/`auth` in manifest (dev dummy user by default) / platform |
+| `userSession`             | Session id string                                                                 | `userSession` in manifest (`"dev-session"`) / platform           |
+| `portal` / `portalAssets` | Portal context (`{ id, project_slug, ... }`) and portal-level assets              | `portal`/`portalAssets` in manifest / platform                   |
+| `sockets`                 | Named socket objects (`primary`, `project`, `portal`, `attendee`, per-dependency) | see [Sockets](#sockets)                                          |
+| `connectionStatus`        | `"connected" \| "connecting" \| "disconnected" \| "unavailable"`                  | socket connection                                                |
+| `isOnline`                | Browser `navigator.onLine`, reactive                                              | browser                                                          |
+| `quizChannels`            | Channels opened with `connectQuizChannel`                                         | see [Quiz channels](#quiz-channels)                              |
+| `theme`                   | Theme colours derived from settings (see [Theme](#theme-integration))             | `settings`                                                       |
+| `form`                    | Form store for form-backed apps                                                   | `form` in manifest (dev) / ProjectForm-backed page (platform)    |
+| `apiOperations`           | OpenAPI operation registry used by `callApi`                                      | `${apiDocsBaseUrl}/api-specs/openapi.json`                       |
+| `pushSubscription`        | Current web-push subscription JSON (or `null`)                                    | see [Web push](#web-push)                                        |
+| `user` **(dev-only)**     | Mirror of `auth.user` for the DevTools inspector                                  | —                                                                |
 
 ## Getter Methods
 
@@ -59,7 +73,7 @@ const enabled = store.getSetting("feature_enabled", false)
 
 ### `getAsset(key, defaultValue)`
 
-Get an asset URL from `assetList`:
+Get an asset URL from `assetList`, falling back to `staticAssetList`, then to an asset whose key matches the fallback's file name, then to the fallback itself:
 
 ```javascript
 const logo = store.getAsset("logo", "/fallback-logo.png")
@@ -75,6 +89,8 @@ const step = store.getState("current_step", 1)
 const isActive = store.getState("is_active", false)
 ```
 
+All getters use nullish fallback: an explicit `false`, `0` or `""` is returned as-is; only a missing (`null`/`undefined`) key yields the default.
+
 ### `hasPermission(permission)`
 
 Check if a permission is granted:
@@ -89,28 +105,25 @@ if (store.hasPermission("bluetooth")) {
 }
 ```
 
-### `getUser()` / `getUserName(fallback)` / `getUserEmail(fallback)` / `isAuthenticated()`
-
-Access the currently logged-in user. In production the platform injects the
-real authenticated user; **when no user is logged in, `store.user` and
-`store.getUser()` both return `null`**.
+### `findDependency(identifier)` / `resolveDependency(identifier)`
 
 ```javascript
-const user = store.getUser()
+store.findDependency("form") // raw dependencyList value, e.g. 12 or [12, "#featured"]
+store.resolveDependency("form") // { ids: [12], tags: ["featured"], untagged: false }
+```
+
+`resolveDependency` parses mixed bindings (`[id, "#tag", "@untagged"]`) into buckets, mirroring the server-side dependency matcher.
+
+### Logged-in user: `auth.user`
+
+The authenticated attendee lives at `store.auth.user`; **it is `null` for guests**, so always guard.
+
+```javascript
+const user = store.auth?.user
 if (user) {
 	console.log("Logged in as", user.id, user.email)
 }
-
-// Convenience helpers — return `fallback` (default `null`) when logged out
-const name = store.getUserName("Guest") // "Jane Developer"
-const email = store.getUserEmail() // "jane.developer@example.com"
-
-if (store.isAuthenticated()) {
-	// Gate user-only features behind this check
-}
 ```
-
-The user object has this shape:
 
 ```javascript
 {
@@ -121,19 +134,46 @@ The user object has this shape:
   email: string,
   avatar: string | null,  // URL
   roles: string[],        // e.g. ["attendee", "admin"]
+  groups: [{ name, slug }], // portal-visible groups the attendee belongs to
 }
 ```
 
-:::tip Dev-only dummy user
-During `gxdev dev`, the store ships with a dummy authenticated user (`Jane
-Developer / jane.developer@example.com`) so plugins can develop against the
-happy path without a backend. Open Dev Tools (`Ctrl+Shift+D`) → **Logged-in
-User** to inspect it, or set `store.user = null` from the console to
-simulate the logged-out state. Production builds receive the real user from
-the platform.
+### `getGroups()` / `getGroupNames()` / `getGroupSlugs()` / `inGroup(slug)` / `inAnyGroup(slugs)`
+
+Group membership helpers over `auth.user.groups` (only groups an admin marked portal-visible are present):
+
+```javascript
+store.getGroupSlugs() // ["speakers", "vip"]
+if (store.inGroup("vip")) showLounge()
+if (store.inAnyGroup(["staff", "speakers"])) showBackstage()
+```
+
+### `getUser()` / `getUserName(fallback)` / `getUserEmail(fallback)` / `isAuthenticated()` **(dev-only)**
+
+Convenience wrappers around `store.user`, a dev-only mirror of `auth.user`. **They do not exist on the platform** — plugin code must read `store.auth?.user` instead. They remain for the DevTools inspector and older templates.
+
+:::tip Dev dummy user
+During `gxdev dev`, `auth.user` is a dummy attendee (`Jane Developer / jane.developer@example.com`, `groups: []`) so plugins can develop against the happy path without a backend. Override it, or simulate a guest, from `app-manifest.json`:
+
+```json
+{ "user": { "id": 42, "name": "Sam Speaker", "groups": [{ "name": "Speakers", "slug": "speakers" }] } }
+{ "user": null }
+```
+
+or open Dev Tools (`Ctrl+Shift+D`) → **Logged-in User** and clear it. Production receives the real user from the platform.
 :::
 
 ## Update Methods
+
+Plugins should normally write only to `triggerState`; these exist for dev tooling and platform internals.
+
+### `updatePluginVar(key, value)` / `updateSetting(key, value)` **(alias, dev-only)**
+
+Update a setting value:
+
+```javascript
+store.updatePluginVar("current_mode", "advanced")
+```
 
 ### `updateString(key, value)`
 
@@ -141,14 +181,6 @@ Update a string value:
 
 ```javascript
 store.updateString("dynamic_message", "Processing your request...")
-```
-
-### `updateSetting(key, value)`
-
-Update a setting value:
-
-```javascript
-store.updateSetting("current_mode", "advanced")
 ```
 
 ### `updateAsset(key, url)`
@@ -159,9 +191,9 @@ Update an asset URL:
 store.updateAsset("user_avatar", "https://example.com/avatar.jpg")
 ```
 
-### `updateState(key, value)`
+### `updateState(key, value)` **(dev-only)**
 
-Update trigger state:
+Update trigger state (on the platform, write `store.triggerState[key] = value`):
 
 ```javascript
 store.updateState("current_step", 2)
@@ -178,6 +210,10 @@ Add a development asset with the dev server URL prefix:
 store.addDevAsset("temp_image", "screenshot.png")
 // Result: https://localhost:3060/dev-assets/images/screenshot.png
 ```
+
+### `listAssets()`
+
+Logs and returns `assetList`.
 
 ## Dependency API Client
 
@@ -222,13 +258,22 @@ await store.callApi("access-points.destroy", "access_points", {
 
 **Parameters:**
 
-| Parameter        | Type   | Description                                                  |
-| ---------------- | ------ | ------------------------------------------------------------ |
-| `operationId`    | string | The operation key from your dependency's `operations` object |
-| `identifier`     | string | The dependency identifier from `app-manifest.json`           |
-| `additionalData` | object | Path parameters and/or request body data (optional)          |
+| Parameter        | Type               | Description                                                                                                             |
+| ---------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `operationId`    | string             | The OpenAPI `operationId` (`portal.v1.project.` prefix optional)                                                        |
+| `identifier`     | string \| null     | Dependency identifier whose bound id fills the matching path parameter; `null` for team/project-only                    |
+| `additionalData` | object \| FormData | Path parameters and/or request body data (optional). Blob/File values or a `FormData` are sent as `multipart/form-data` |
 
 **Returns:** `response.data` from the API response
+
+**File uploads:** pass a `Blob`/`File` in the data object (or a ready `FormData`) and `callApi` switches to multipart automatically — no headers to set:
+
+```javascript
+await store.callApi("photos.store", null, {
+	photo: fileInput.files[0],
+	caption,
+})
+```
 
 **How it works:**
 
@@ -259,19 +304,21 @@ Before using `callApi`, make sure you've added the dependency to your `app-manif
 
 ## Low-Level API Client
 
-For direct API calls without the dependency system, use these methods:
+For direct API calls without the dependency system, use these methods. Endpoints are resolved against the API host, so — exactly as on the platform — include the `/api` segment yourself (`callApi` adds it for you):
 
 ### `apiGet(endpoint, params)`
 
 ```javascript
-const response = await store.apiGet("/events/123")
-const events = await store.apiGet("/events", { status: "active" })
+const response = await store.apiGet("/api/v1/projects/acme/expo/events/123")
+const events = await store.apiGet("/api/v1/projects/acme/expo/events", {
+	status: "active",
+})
 ```
 
 ### `apiPost(endpoint, data)`
 
 ```javascript
-const result = await store.apiPost("/checkin", {
+const result = await store.apiPost("/api/v1/projects/acme/expo/checkin", {
 	attendee_id: 456,
 	timestamp: new Date().toISOString(),
 })
@@ -280,7 +327,7 @@ const result = await store.apiPost("/checkin", {
 ### `apiPut(endpoint, data)`
 
 ```javascript
-await store.apiPut("/attendees/456", {
+await store.apiPut("/api/v1/projects/acme/expo/attendees/456", {
 	checked_in: true,
 })
 ```
@@ -288,8 +335,14 @@ await store.apiPut("/attendees/456", {
 ### `apiDelete(endpoint)`
 
 ```javascript
-await store.apiDelete("/sessions/789")
+await store.apiDelete("/api/v1/projects/acme/expo/sessions/789")
 ```
+
+`apiPatch(endpoint, data)` also exists but is **dev-only** — the platform store does not provide it.
+
+:::note Where requests go in dev
+`API_ENV=mock` → the local mock server; any other `API_ENV` under `gxdev dev` → the Vite proxy at `/api-proxy`, which forwards to that environment's host and injects `API_KEY`. In every case the request path is `/api/v1/...`, the same path the platform sends to the portal origin.
+:::
 
 ## Form Store (`store.form`)
 
@@ -392,43 +445,80 @@ Every delivery is logged to the console and broadcast as a `gxp:form-submit` Cus
 
 `schema` accepts the v2 shape (`{ root, cards, elements }`) or `{ sections: [...] }`; a top-level `sections` array also works. Like the other manifest sections, the form store is rebuilt on manifest hot-reload (unsaved `formData` resets).
 
-## Socket.IO Integration
+## Sockets
 
-The store provides methods for real-time communication via Socket.IO:
+`store.sockets` holds named socket objects. On the platform each is a Laravel Echo channel; in dev they all ride one Socket.IO connection to the local relay (`gxdev dev` starts it; `gxdev socket send <event>` injects events). The objects look and behave the same in both.
 
-### `emitSocket(channel, event, data)`
+| Socket                 | When present                        | Methods                                                                                                  |
+| ---------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `sockets.primary`      | always                              | `broadcast(event, data)`, `listen(event, cb)`, `listenForWhisper(event, cb)`, `listenForStateChange(cb)` |
+| `sockets.project`      | portal context has a `project_slug` | `broadcast`, `listen`, `listenForWhisper`                                                                |
+| `sockets.portal`       | portal context has a `project_slug` | `broadcast`, `listen`, `listenForWhisper`                                                                |
+| `sockets.attendee`     | a user is logged in                 | `notification(cb)`, `listen(_event, cb)`                                                                 |
+| `sockets.<identifier>` | dependency declares `events`        | `<eventType>.listen(cb)` per declared event                                                              |
 
-Send a socket event:
+**Every `listen*` returns an unsubscribe function** — call it on unmount. There are no `stopListening*` methods.
 
 ```javascript
-store.emitSocket("primary", "checkin-complete", {
-	attendee_id: 123,
-	badge_printed: true,
+const off = store.sockets.primary.listen("checkin-complete", onCheckin)
+onUnmounted(off)
+
+// State changes: merges e.changes into triggerState, then calls back
+store.sockets.primary.listenForStateChange((e) => console.log(e.changes))
+
+// Dependency events (declared in the manifest / admin panel)
+const stop = store.sockets.ai_interface.completed.listen(onResult)
+```
+
+### `broadcast(socketName, event, data)` / `listen(socketName, event, callback)`
+
+Shorthand for the named socket's methods. `listen` returns the unsubscriber (a no-op function if the socket doesn't exist):
+
+```javascript
+store.broadcast("primary", "checkin-complete", { attendee_id: 123 })
+const off = store.listen("primary", "session-updated", (data) => {
+	store.triggerState.current_session = data
 })
 ```
 
-### `listenSocket(channel, event, callback)`
+`emitSocket`, `listenSocket` and `useSocketListener` are deprecated aliases of `broadcast`/`listen` and still work.
 
-Listen for socket events:
+**Dev-only:** `listen(eventName, permissionIdentifier, callback)` additionally subscribes to an AsyncAPI platform event on the primary socket when the first argument is not a registered socket name.
 
-```javascript
-store.listenSocket("primary", "session-updated", (data) => {
-	console.log("Session updated:", data)
-	store.updateState("current_session", data)
-})
-```
-
-### `useSocketListener(dependencyId, event, callback)`
-
-Set up a socket listener for a specific dependency:
+### Quiz channels
 
 ```javascript
-store.useSocketListener("badge-printer", "print-complete", (result) => {
-	if (result.success) {
-		store.updateState("badge_printing", false)
-	}
-})
+const { channel, echo, leave } = store.connectQuizChannel(formId) // cached per formId
+channel.listen(".QuizStateChanged", onState) // Echo-shaped channel object
+store.leaveQuizChannel(formId)
+await store.resyncQuizState(formId) // callApi("portal.v1.project.quiz.state", "form", { form: formId })
 ```
+
+`store.quizChannels[formId]` holds the open entries.
+
+### Connection state
+
+`store.connectionStatus` reflects the socket connection (`"connected"`, `"connecting"`, `"disconnected"`, `"unavailable"`); `store.isOnline` reflects the browser's connectivity.
+
+### Dev relay notes
+
+The relay rebroadcasts every event to every other client, so `project`/`portal`/quiz "channels" share the wire with `primary` in dev — pick distinct event names. The attendee inbox arrives as a plain `notification` event (`gxdev socket send notification '{...}'`).
+
+## Web push
+
+Same API as the platform. In dev, set `PUSH_NOTIFICATIONS_ENABLED=true` and `VAPID_PUBLIC_KEY` in `.env` to exercise a real service-worker subscription; unset, the helpers behave exactly as the platform does when push is unavailable.
+
+```javascript
+store.pushSubscription // current subscription JSON or null
+await store.loadPushSubscription() // browser subscription or null
+await store.ensurePushSubscription(deviceFingerprint) // re-subscribes silently when permitted, else null
+await store.subscribeToPush(deviceFingerprint) // throws when unsupported / no VAPID key / server rejects
+await store.unsubscribeFromPush()
+```
+
+## Lifecycle (platform internals)
+
+`initializeData(payload)`, `initializeSockets()`, `initializeApiOperations()`, `reset()` and `destroy()` are what the platform page calls to seed and tear down the store. They exist in dev too — `initializeData` accepts the same payload shape — which is handy for harnesses and tests, but a plugin never needs to call them.
 
 ## Reactive Usage in Templates
 
@@ -505,26 +595,34 @@ const formattedCount = computed(
 
 ## Theme Integration
 
-Access platform theme values:
+`store.theme` is computed from settings with the platform's defaults:
+
+| Key                      | Setting read             | Default                                             |
+| ------------------------ | ------------------------ | --------------------------------------------------- |
+| `background_color`       | `background_color`       | `#ffffff`                                           |
+| `text_color`             | `text_color`             | `#333333`                                           |
+| `primary_color`          | `primary_color`          | `#FFD600`                                           |
+| `start_background_color` | `start_background_color` | `linear-gradient(135deg, #667eea 0%, #764ba2 100%)` |
+| `start_text_color`       | `start_text_color`       | `#ffffff`                                           |
+| `final_background_color` | `final_background_color` | `#4CAF50`                                           |
+| `final_text_color`       | `final_text_color`       | `#ffffff`                                           |
 
 ```javascript
 const store = useGxpStore()
 
-// Theme colors
-const primaryColor = store.theme?.primary || "#1976D2"
-const backgroundColor = store.theme?.background || "#ffffff"
-
-// Use in styles
 const buttonStyle = computed(() => ({
-	backgroundColor: store.theme?.primary,
-	color: store.theme?.onPrimary,
+	backgroundColor: store.theme.primary_color,
+	color: store.theme.text_color,
 }))
 ```
+
+Anything beyond these keys is a plugin setting — read it with `store.getSetting(...)`.
 
 ## Best Practices
 
 1. **Use getters with defaults** - Always provide fallback values
 2. **Keep state updates atomic** - Update one value at a time when possible
 3. **Use computed for derived state** - Don't duplicate logic
-4. **Clean up listeners** - Remove socket listeners when components unmount
+4. **Clean up listeners** - Call the unsubscriber returned by `listen*` when components unmount
 5. **Avoid deep nesting** - Keep `triggerState` relatively flat for reactivity
+6. **Stay on the platform surface** - Anything marked **dev-only** above (`user`, `getUser*`, `apiPatch`, `updateSetting`, `updateState`, `manifestLoaded`, `loadManifest`) is not available once deployed; use `auth.user`, `triggerState`, and the platform methods instead

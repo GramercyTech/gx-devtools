@@ -207,11 +207,10 @@ store.getAsset("hero_image", "/fallback.jpg")
 store.getState("current_step", 0)
 store.hasPermission("admin")
 
-// Logged-in user (returns null when no user is authenticated)
-store.getUser() // Full user object or null
-store.getUserName("Guest") // Display name with fallback
-store.getUserEmail() // Email or null
-store.isAuthenticated() // boolean
+// Logged-in user (null when no user is authenticated — same in dev and production)
+store.auth?.user // Attendee object or null
+store.getGroupSlugs() / store.inGroup("vip") / store.inAnyGroup([...]) // Group membership
+// DEV-ONLY, not on the platform: store.user, getUser(), getUserName(), getUserEmail(), isAuthenticated()
 ```
 
 `store.user` is **null when no user is logged in** — always guard. The

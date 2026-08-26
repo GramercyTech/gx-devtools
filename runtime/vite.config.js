@@ -633,6 +633,15 @@ export default defineConfig(async (ctx) => {
 			"import.meta.env.SOCKET_DRIVER": JSON.stringify(
 				env.SOCKET_DRIVER || "io",
 			),
+			// Web push (gxpStore.subscribeToPush etc.). On the platform these come
+			// from the boot vars; unset in dev, the push helpers behave exactly as
+			// they do on the platform when push is unavailable.
+			"import.meta.env.VITE_PUSH_NOTIFICATIONS_ENABLED": JSON.stringify(
+				env.PUSH_NOTIFICATIONS_ENABLED || "false",
+			),
+			"import.meta.env.VITE_VAPID_PUBLIC_KEY": JSON.stringify(
+				env.VAPID_PUBLIC_KEY || "",
+			),
 			// Dev analytics plugin (gxp-track). Set DISABLE_ANALYTICS=true in
 			// .env to skip installing it in the dev harness.
 			"import.meta.env.VITE_DISABLE_ANALYTICS": JSON.stringify(

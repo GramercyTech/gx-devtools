@@ -662,7 +662,9 @@ export const useGxpFormStore = (formKey) => {
 			)
 			if (!base) return null
 			const projectId = customSettings.value?.projectId || "team/project"
-			return `${base}/v1/projects/${projectId}/registration-forms/${encodeURIComponent(
+			// apiBaseUrl is the API host; the API lives under /api on it
+			// (same prefix gxpPortalConfigStore.callApi applies).
+			return `${base}/api/v1/projects/${projectId}/registration-forms/${encodeURIComponent(
 				slug.value,
 			)}${pathSuffix}`
 		}

@@ -1,10 +1,30 @@
 import { defineStore } from "pinia"
-import { ref, computed, reactive } from "vue"
+import { ref, computed, reactive, watch, markRaw } from "vue"
 import axios from "axios"
 import { io } from "socket.io-client"
 import { useGxpFormStore, disposeGxpFormStore } from "./gxpFormStore.js"
 
-// Environment URL configuration (matches constants.js ENVIRONMENT_URLS)
+/**
+ * Dev-server implementation of the platform's gxpPortalConfigStore.
+ *
+ * PARITY CONTRACT: every state key and method the platform store
+ * (experience-portal/resources/js/Store/gxpPortalConfigStore.js) returns
+ * must exist here with the same name, signature, and return shape. The
+ * internals differ — the platform runs on Laravel Echo against the portal
+ * origin, this runs on a local Socket.IO relay against the mock API or the
+ * Vite proxy — but a plugin must not be able to tell the difference. When
+ * the platform store gains a member, add it here (and to
+ * tests/runtime/portal-store.test.js, which asserts the surface).
+ *
+ * Dev-only extras (`user`, `getUser*`, `manifest*`, `apiPatch`,
+ * `updateSetting`, `updateState`) are kept for the DevTools UI and existing
+ * templates; they are NOT available on the platform.
+ */
+
+// Environment URL configuration (matches constants.js ENVIRONMENT_URLS).
+// These are API *hosts*. Like the platform, callApi prefixes every operation
+// path with "/api" itself, so none of these — nor any apiBaseUrl derived
+// from them — should end in "/api".
 const ENVIRONMENT_URLS = {
 	production: {
 		apiBaseUrl: "https://api.gramercy.cloud",
@@ -23,6 +43,11 @@ const ENVIRONMENT_URLS = {
 	},
 }
 
+// Injection key for store ID — the platform uses provide/inject to hand child
+// components the page store's id. The dev server has a single store, so the
+// key is exported for import-compatibility only.
+export const GXP_STORE_ID_KEY = "gxpStoreId"
+
 /**
  * Generate a random bearer token for mock API
  */
@@ -36,11 +61,23 @@ function generateMockToken() {
 }
 
 /**
- * Get API configuration based on API_ENV environment variable
- * During development, non-mock environments use Vite's proxy at /api-proxy
- * which handles CORS and forwards requests to the actual API server.
- * The proxy also injects the Authorization header, so authToken is not needed client-side.
- * @returns {{ apiBaseUrl: string, authToken: string, projectId: string }}
+ * Get API configuration based on API_ENV environment variable.
+ *
+ * `apiBaseUrl` is always the API *host* (or a proxy path that maps to the
+ * host root). callApi appends "/api" + the OpenAPI path on top of it, exactly
+ * like the platform store does against the portal origin, so a plugin's
+ * `apiGet("/api/v1/...")` and `callApi(...)` resolve identically in both.
+ *
+ * - mock:      local mock server (mounts its routes under /api)
+ * - dev-mock:  cloud mock host
+ * - dev+proxy: Vite proxy at /api-proxy — the proxy strips its own prefix and
+ *              forwards to the real host, which injects the Authorization header
+ * - build:     the real host directly
+ *
+ * `apiDocsBaseUrl` is where the OpenAPI spec is fetched from
+ * (`${apiDocsBaseUrl}/api-specs/openapi.json`); it defaults to apiBaseUrl.
+ *
+ * @returns {{ apiBaseUrl: string, apiDocsBaseUrl?: string, authToken: string, projectId: string }}
  */
 function getApiConfig() {
 	const apiEnv = import.meta.env.VITE_API_ENV || "mock"
@@ -53,31 +90,29 @@ function getApiConfig() {
 
 	// Check if we're in development mode (Vite dev server)
 	const isDev = import.meta.env.DEV
+	const protocol = useHttps ? "https" : "http"
 
 	if (apiEnv === "mock") {
 		// Mock API: use local dev server with random token
-		const protocol = useHttps ? "https" : "http"
 		return {
 			apiDocsBaseUrl: ENVIRONMENT_URLS.production.apiBaseUrl,
-			apiBaseUrl: `${protocol}://localhost:${mockPort}/api`,
+			apiBaseUrl: `${protocol}://localhost:${mockPort}`,
 			authToken: generateMockToken(),
 			projectId: "team/project",
 		}
 	}
 	if (apiEnv === "dev-mock") {
 		// cloud dev mock
-		const protocol = useHttps ? "https" : "http"
 		return {
 			apiDocsBaseUrl: ENVIRONMENT_URLS.develop.apiBaseUrl,
-			apiBaseUrl: `https://${socketUrl}/api`,
+			apiBaseUrl: `https://${socketUrl}`,
 			authToken: generateMockToken(),
 			projectId: "team/project",
 		}
 	}
-	// For non-mock environments in development, use the local Vite proxy
-	// The proxy handles CORS and injects the Authorization header
+	// For non-mock environments in development, use the local Vite proxy.
+	// The proxy handles CORS and injects the Authorization header.
 	if (isDev) {
-		const protocol = useHttps ? "https" : "http"
 		return {
 			apiBaseUrl: `${protocol}://localhost:${nodePort}/api-proxy`,
 			authToken: "", // Proxy injects the token server-side
@@ -105,9 +140,89 @@ function getApiConfig() {
 	}
 }
 
+// --- Multipart helpers (mirrors platform store) -----------------------------
+
+// Detects payloads that must be sent as multipart/form-data: a FormData
+// instance, or a plain object containing at least one Blob/File value.
+// Anything else is treated as JSON.
+function dataNeedsMultipart(data) {
+	if (!data) return false
+	if (typeof FormData !== "undefined" && data instanceof FormData) return true
+	if (typeof data !== "object") return false
+	for (const v of Object.values(data)) {
+		if (typeof Blob !== "undefined" && v instanceof Blob) return true
+	}
+	return false
+}
+
+function appendField(fd, key, value) {
+	if (value === undefined || value === null) return
+	if (typeof Blob !== "undefined" && value instanceof Blob) {
+		// Filename hint: caller can encode the extension into the key as
+		// `field.ext`; otherwise derive from the blob's MIME type, falling
+		// back to `bin`.
+		const [name, ext] = key.split(".")
+		const finalExt = ext ?? value.type?.split("/")[1] ?? "bin"
+		fd.append(name, value, `file.${finalExt}`)
+		return
+	}
+	if (Array.isArray(value)) {
+		for (const sub of value) fd.append(`${key}[]`, sub)
+		return
+	}
+	if (typeof value === "object") {
+		for (const [sk, sv] of Object.entries(value)) {
+			if (sv === undefined || sv === null) continue
+			fd.append(`${key}[${sk}]`, sv)
+		}
+		return
+	}
+	fd.append(key, value)
+}
+
+function buildFormData(data) {
+	if (typeof FormData !== "undefined" && data instanceof FormData) return data
+	const fd = new FormData()
+	for (const [k, v] of Object.entries(data ?? {})) appendField(fd, k, v)
+	return fd
+}
+
+/**
+ * Parse a dependency_list value (scalar id, or a mixed array of ids,
+ * "#tag" references, and "@untagged") into structured buckets. Mirrors
+ * the server-side DependencyMatcher grammar (EZ-2798).
+ *
+ * @returns {{ids: number[], tags: string[], untagged: boolean}}
+ */
+function parseDependencyValue(raw) {
+	const ids = []
+	const tags = []
+	let untagged = false
+
+	const tokens =
+		raw === undefined || raw === null ? [] : Array.isArray(raw) ? raw : [raw]
+
+	for (const token of tokens) {
+		if (
+			typeof token === "number" ||
+			(typeof token === "string" && /^\d+$/.test(token))
+		) {
+			ids.push(Number(token))
+		} else if (token === "@untagged") {
+			untagged = true
+		} else if (typeof token === "string" && token.startsWith("#")) {
+			tags.push(token.slice(1))
+		}
+	}
+
+	return { ids, tags, untagged }
+}
+
 // Dev-only fallback user. In production the platform injects the real
 // authenticated user (or null) — this dummy only ships when running under
 // the Vite dev server so plugins can develop against the happy-path shape.
+// `groups` mirrors EZ-3006: the platform attaches the attendee's
+// portal-visible groups as [{ name, slug }].
 const DEV_DUMMY_USER = {
 	id: "dev-user-001",
 	first_name: "Jane",
@@ -116,6 +231,7 @@ const DEV_DUMMY_USER = {
 	email: "jane.developer@example.com",
 	avatar: null,
 	roles: ["attendee"],
+	groups: [],
 }
 
 // Default values used when app-manifest.json doesn't exist or is missing keys
@@ -127,34 +243,73 @@ const defaultData = {
 	},
 	stringsList: {},
 	assetList: {},
+	staticAssetList: {},
 	dependencyList: {},
 	permissionFlags: [],
+	navigationFlagsKeyed: {},
 	triggerState: {},
-	auth: null,
-	userSession: null,
-	user: import.meta.env.DEV ? { ...DEV_DUMMY_USER } : null,
+	// Platform shape: auth.user is the attendee (or null for guests).
+	auth: { user: import.meta.env.DEV ? { ...DEV_DUMMY_USER } : null },
+	userSession: import.meta.env.DEV ? "dev-session" : null,
 	pluginData: {},
 	portalAssets: {},
 	portal: null,
 }
 
-export const useGxpStore = defineStore("gxp-portal-app", () => {
+const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 	// Core configuration - these will be injected by the platform in production
+	const isLoaded = ref(false)
 	const pluginVars = ref({ ...defaultData.pluginVars })
 	const stringsList = ref({ ...defaultData.stringsList })
 	const assetList = ref({ ...defaultData.assetList })
+	const staticAssetList = ref({ ...defaultData.staticAssetList })
 	const dependencyList = ref({ ...defaultData.dependencyList })
 	const dependencies = ref([]) // Store full dependency objects for socket initialization
 	const permissionFlags = ref([...defaultData.permissionFlags])
+	const navigationFlagsKeyed = ref({ ...defaultData.navigationFlagsKeyed })
 	const triggerState = ref({ ...defaultData.triggerState })
 
 	// User session data (injected by platform in production)
-	const auth = ref(defaultData.auth)
+	const auth = ref(
+		defaultData.auth
+			? {
+					...defaultData.auth,
+					user: defaultData.auth.user ? { ...defaultData.auth.user } : null,
+				}
+			: null,
+	)
 	const userSession = ref(defaultData.userSession)
-	const user = ref(defaultData.user ? { ...defaultData.user } : null)
+	// Dev-only convenience mirror of auth.user (the platform exposes only
+	// `auth`). Kept in two-way sync so clearing it from the DevTools store
+	// inspector simulates the logged-out state everywhere.
+	const user = ref(auth.value?.user ?? null)
 	const pluginData = ref({ ...defaultData.pluginData })
 	const portalAssets = ref({ ...defaultData.portalAssets })
 	const portal = ref(defaultData.portal)
+	const pageId = ref(null)
+	const logout = ref(null)
+
+	let syncingUser = false
+	watch(
+		user,
+		(u) => {
+			if (syncingUser) return
+			syncingUser = true
+			auth.value = { ...(auth.value ?? {}), user: u ?? null }
+			syncingUser = false
+		},
+		{ flush: "sync" },
+	)
+	watch(
+		() => auth.value?.user,
+		(u) => {
+			if (syncingUser) return
+			syncingUser = true
+			user.value = u ?? null
+			syncingUser = false
+		},
+		{ flush: "sync" },
+	)
 
 	// Form store for form-backed apps (gxpStore.form.getElements() etc).
 	// Attached automatically when app-manifest.json declares a `form`
@@ -175,6 +330,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		return form.value
 	}
 
+	// API Operations Registry - maps operationIds to endpoint configurations
 	const apiOperations = ref({})
 
 	// Loading state for manifest
@@ -186,9 +342,20 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	const apiDocsBaseUrl = ref(apiConfig.apiDocsBaseUrl ?? apiConfig.apiBaseUrl)
 	const apiBaseUrl = ref(apiConfig.apiBaseUrl)
 	const authToken = ref(apiConfig.authToken)
-	pluginVars.value.projectId = apiConfig.projectId
-	pluginVars.value.apiPageAuthId = apiConfig.authToken
-	pluginVars.value.apiBaseUrl = apiConfig.apiBaseUrl
+	// Page-context token, sent as X-Portal-Page-Token on every request so the
+	// API can resolve which page a call is made from (EZ-2797 dual token).
+	// Defaults to authToken, as on the platform.
+	const pageToken = ref(apiConfig.authToken)
+
+	// The platform surfaces these three through pluginData; plugins (and
+	// callApi) read them from pluginVars, so keep them present across
+	// manifest reloads that replace the settings object.
+	function applyApiPluginVars() {
+		pluginVars.value.projectId ??= apiConfig.projectId
+		pluginVars.value.apiPageAuthId ??= apiConfig.authToken
+		pluginVars.value.apiBaseUrl ??= apiConfig.apiBaseUrl
+	}
+	applyApiPluginVars()
 
 	// Log API configuration for debugging
 	console.log(
@@ -199,6 +366,23 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	// WebSocket configuration - initialized as reactive objects immediately
 	const sockets = reactive({})
 	const socketConnections = reactive({})
+	const connectionStatus = ref("disconnected")
+	const isOnline = ref(
+		typeof navigator !== "undefined" ? navigator.onLine : true,
+	)
+	const quizChannels = reactive({})
+
+	// Internet connectivity listeners
+	const handleOnline = () => {
+		isOnline.value = true
+	}
+	const handleOffline = () => {
+		isOnline.value = false
+	}
+	if (typeof window !== "undefined") {
+		window.addEventListener("online", handleOnline)
+		window.addEventListener("offline", handleOffline)
+	}
 
 	// API client setup
 	const apiClient = axios.create({
@@ -213,6 +397,9 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		if (authToken.value) {
 			config.headers.Authorization = `Bearer ${authToken.value}`
 		}
+		if (pageToken.value) {
+			config.headers["X-Portal-Page-Token"] = pageToken.value
+		}
 		config.baseURL = apiBaseUrl.value
 		return config
 	})
@@ -226,12 +413,223 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		},
 	)
 
+	function authHeaders() {
+		const headers = {}
+		if (authToken.value) {
+			headers.Authorization = `Bearer ${authToken.value}`
+		}
+		if (pageToken.value) {
+			headers["X-Portal-Page-Token"] = pageToken.value
+		}
+		return headers
+	}
+
+	// --- Web Push Notifications (EZ-2502) ----------------------------
+	// Same surface and semantics as the platform. The platform reads the
+	// VAPID key / feature flag from its boot vars; here they come from
+	// VITE_VAPID_PUBLIC_KEY / VITE_PUSH_NOTIFICATIONS_ENABLED, and the
+	// subscribe/unsubscribe/status calls go to the configured API host
+	// instead of the portal origin. Without a key (the usual dev case)
+	// every helper resolves exactly as it does on the platform when push
+	// is unavailable: null / no-op / "not configured" error.
+	const pushSubscription = ref(null)
+	const pushEnv = {
+		enabled: import.meta.env.VITE_PUSH_NOTIFICATIONS_ENABLED === "true",
+		vapidPublicKey: import.meta.env.VITE_VAPID_PUBLIC_KEY || "",
+	}
+
+	function urlBase64ToUint8Array(base64String) {
+		const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
+		const base64 = (base64String + padding)
+			.replace(/-/g, "+")
+			.replace(/_/g, "/")
+		const rawData = atob(base64)
+		const outputArray = new Uint8Array(rawData.length)
+		for (let i = 0; i < rawData.length; ++i) {
+			outputArray[i] = rawData.charCodeAt(i)
+		}
+		return outputArray
+	}
+
+	function pushIsSupported() {
+		return (
+			typeof navigator !== "undefined" &&
+			"serviceWorker" in navigator &&
+			typeof window !== "undefined" &&
+			"PushManager" in window
+		)
+	}
+
+	async function loadPushSubscription() {
+		if (!pushIsSupported()) {
+			pushSubscription.value = null
+			return null
+		}
+		try {
+			const registration = await navigator.serviceWorker.ready
+			const sub = await registration.pushManager.getSubscription()
+			pushSubscription.value = sub ? sub.toJSON() : null
+			return sub
+		} catch (err) {
+			console.warn("loadPushSubscription failed", err)
+			pushSubscription.value = null
+			return null
+		}
+	}
+
+	async function ensurePushSubscription(deviceFingerprint = null) {
+		const existing = await loadPushSubscription()
+
+		if (!existing) {
+			if (
+				typeof Notification === "undefined" ||
+				Notification.permission !== "granted"
+			) {
+				return null
+			}
+			if (!pushEnv.enabled || !pushEnv.vapidPublicKey) {
+				return null
+			}
+
+			try {
+				return await subscribeToPush(deviceFingerprint)
+			} catch (err) {
+				console.warn("auto re-subscribe failed", err)
+				return null
+			}
+		}
+
+		reconcileWithServer(deviceFingerprint, existing).catch(() => {})
+
+		return existing
+	}
+
+	function scheduleIdle(fn) {
+		if (
+			typeof window !== "undefined" &&
+			typeof window.requestIdleCallback === "function"
+		) {
+			window.requestIdleCallback(fn, { timeout: 2000 })
+		} else {
+			setTimeout(fn, 500)
+		}
+	}
+
+	async function reconcileWithServer(deviceFingerprint, browserSub) {
+		if (!browserSub?.endpoint) return
+
+		scheduleIdle(async () => {
+			try {
+				const params = { endpoint: browserSub.endpoint }
+				if (deviceFingerprint) {
+					params.device_fingerprint = deviceFingerprint
+				}
+				const body = await apiGet("/push/status", params)
+				if (body?.endpoint_registered) return
+				await subscribeToPush(deviceFingerprint)
+			} catch (err) {
+				console.warn("push reconcile failed", err)
+			}
+		})
+	}
+
+	let inflightSubscribe = null
+
+	async function subscribeToPush(deviceFingerprint = null) {
+		if (inflightSubscribe) {
+			return inflightSubscribe
+		}
+
+		inflightSubscribe = (async () => {
+			if (!pushIsSupported()) {
+				throw new Error("Push notifications not supported in this browser")
+			}
+			const vapidKey = pushEnv.vapidPublicKey
+			if (!vapidKey) {
+				throw new Error("VAPID public key not configured")
+			}
+
+			const registration = await navigator.serviceWorker.ready
+			let sub = await registration.pushManager.getSubscription()
+			if (!sub) {
+				sub = await registration.pushManager.subscribe({
+					userVisibleOnly: true,
+					applicationServerKey: urlBase64ToUint8Array(vapidKey),
+				})
+			}
+
+			const payload = sub.toJSON()
+			try {
+				await apiClient.post("/push/subscribe", {
+					endpoint: payload.endpoint,
+					keys: payload.keys,
+					device_fingerprint: deviceFingerprint,
+					expires_at: sub.expirationTime
+						? new Date(sub.expirationTime).toISOString()
+						: null,
+				})
+			} catch (err) {
+				// Roll back the browser subscription if the server rejected it.
+				await sub.unsubscribe()
+				const status = err.response?.status
+				const body = err.response?.data
+					? JSON.stringify(err.response.data)
+					: err.message
+				throw new Error(`Subscribe failed: ${status ?? ""} ${body}`)
+			}
+
+			pushSubscription.value = payload
+			return payload
+		})().finally(() => {
+			inflightSubscribe = null
+		})
+
+		return inflightSubscribe
+	}
+
+	async function unsubscribeFromPush() {
+		if (!pushIsSupported()) return
+		try {
+			const registration = await navigator.serviceWorker.ready
+			const sub = await registration.pushManager.getSubscription()
+			if (!sub) {
+				pushSubscription.value = null
+				return
+			}
+			const endpoint = sub.endpoint
+			await sub.unsubscribe()
+			await apiClient.delete("/push/unsubscribe", {
+				data: { endpoint },
+			})
+			pushSubscription.value = null
+		} catch (err) {
+			console.warn("unsubscribeFromPush failed", err)
+		}
+	}
+
+	if (typeof navigator !== "undefined" && navigator.serviceWorker) {
+		navigator.serviceWorker.addEventListener("message", (event) => {
+			if (event.data?.type === "pushsubscriptionchange") {
+				subscribeToPush().catch((err) =>
+					console.warn("re-subscribe after change failed", err),
+				)
+			}
+		})
+	}
+
 	/**
 	 * Load configuration from app-manifest.json
 	 * Maps manifest keys to store properties:
 	 * - settings -> pluginVars
 	 * - strings.default -> stringsList
 	 * - assets -> assetList
+	 * - staticAssets -> staticAssetList
+	 * - dependencies -> dependencies + dependencyList
+	 * - permissions -> permissionFlags
+	 * - navigationFlags -> navigationFlagsKeyed
+	 * - triggerState -> triggerState
+	 * - user / auth / userSession / portal -> session data
+	 * - form -> store.form
 	 */
 	async function loadManifest() {
 		try {
@@ -253,6 +651,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 			// Re-initialize dependency sockets after manifest loads
 			initializeDependencySockets()
+			initializeContextSockets()
 		} catch (error) {
 			console.warn(
 				"[GxP Store] Could not load app-manifest.json:",
@@ -269,6 +668,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	function applyManifest(manifest) {
 		if (manifest.settings && typeof manifest.settings === "object") {
 			pluginVars.value = { ...defaultData.pluginVars, ...manifest.settings }
+			applyApiPluginVars()
 		}
 
 		// Handle strings - can be { default: {...} } or flat object
@@ -285,6 +685,10 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 		if (manifest.assets && typeof manifest.assets === "object") {
 			assetList.value = { ...manifest.assets }
+		}
+
+		if (manifest.staticAssets && typeof manifest.staticAssets === "object") {
+			staticAssetList.value = { ...manifest.staticAssets }
 		}
 
 		if (manifest.dependencies && Array.isArray(manifest.dependencies)) {
@@ -318,8 +722,34 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			permissionFlags.value = [...manifest.permissions]
 		}
 
+		if (
+			manifest.navigationFlags &&
+			typeof manifest.navigationFlags === "object" &&
+			!Array.isArray(manifest.navigationFlags)
+		) {
+			navigationFlagsKeyed.value = { ...manifest.navigationFlags }
+		}
+
 		if (manifest.triggerState && typeof manifest.triggerState === "object") {
 			triggerState.value = { ...manifest.triggerState }
+		}
+
+		// Session data. `user` is the ergonomic dev form; `auth` is the full
+		// platform object ({ user, ... }). Either may be `null` to simulate a
+		// guest. `auth` wins when both are present.
+		if (manifest.auth !== undefined) {
+			auth.value = manifest.auth ? { ...manifest.auth } : null
+		} else if (manifest.user !== undefined) {
+			user.value = manifest.user ? { ...manifest.user } : null
+		}
+		if (manifest.userSession !== undefined) {
+			userSession.value = manifest.userSession
+		}
+		if (manifest.portal !== undefined) {
+			portal.value = manifest.portal ? { ...manifest.portal } : null
+		}
+		if (manifest.portalAssets && typeof manifest.portalAssets === "object") {
+			portalAssets.value = { ...manifest.portalAssets }
 		}
 
 		applyFormSection(manifest)
@@ -363,20 +793,162 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	}
 
 	/**
+	 * Populate the store from a platform-shaped payload. This is what the
+	 * platform's page component calls; the dev server normally uses the
+	 * manifest instead, but exposing it lets harnesses and tests seed the
+	 * store identically in both environments.
+	 */
+	async function initializeData(initialData) {
+		pluginVars.value = { ...(initialData.pluginVars ?? {}) }
+		stringsList.value = initialData.stringsList ?? {}
+		assetList.value = initialData.assetList ?? {}
+		staticAssetList.value =
+			initialData.staticAssetList ?? staticAssetList.value ?? {}
+		dependencyList.value = initialData.dependencyList ?? {}
+		dependencies.value = initialData.dependencies || []
+		permissionFlags.value = initialData.permissionFlags ?? []
+		navigationFlagsKeyed.value =
+			initialData.navigationFlagsKeyed &&
+			!Array.isArray(initialData.navigationFlagsKeyed)
+				? initialData.navigationFlagsKeyed
+				: {}
+		auth.value = initialData.auth ?? null
+		userSession.value = initialData.userSession ?? null
+		portalAssets.value = initialData.portalAssets ?? {}
+		pageId.value = initialData.pageId ?? null
+		portal.value = initialData.portal ?? null
+		if (initialData.apiBaseUrl) {
+			apiBaseUrl.value = initialData.apiBaseUrl
+			pluginVars.value.apiBaseUrl = initialData.apiBaseUrl
+		}
+		if (initialData.authToken !== undefined) {
+			authToken.value = initialData.authToken
+			pluginVars.value.apiPageAuthId = initialData.authToken
+		}
+		pageToken.value = initialData.pageToken ?? authToken.value
+		applyApiPluginVars()
+		logout.value = initialData.logout ?? null
+		triggerState.value = initialData.triggerState ?? {}
+
+		// Form-backed pages: expose the form store as gxpStore.form so
+		// plugin authors don't need to import another store.
+		const vars = initialData.pluginVars || {}
+		if (vars.formId) {
+			const formStore = attachFormStore(vars.formId)
+			if (!formStore.isInitialized) {
+				formStore.initialize({
+					formId: vars.formId,
+					slug: vars.slug,
+					form: vars.form,
+					schema: vars.schema,
+					formSchema: vars.formSchema,
+					settings: vars.settings ?? vars.formSettings,
+					strings: vars.strings ?? vars.formStrings,
+					registrationMode: vars.registrationMode,
+					isAuthenticated: vars.isAuthenticated,
+					resumeSession: vars.resumeSession ?? null,
+					prefillData: vars.prefillData,
+					attendee: vars.attendee,
+					customSettings: vars,
+				})
+			}
+		}
+
+		// Initialize API operations registry from OpenAPI spec
+		await initializeApiOperations()
+	}
+
+	// --- Sockets ------------------------------------------------------------
+	//
+	// The platform multiplexes several Echo channels (page, project, portal,
+	// attendee, per-dependency). The dev server has one Socket.IO relay that
+	// rebroadcasts every event to every other client, so all of those
+	// "channels" share one wire here. Each socket object still exposes the
+	// platform's methods, and — as on the platform — every `listen*` returns
+	// an unsubscribe closure; there are no `stopListening*` methods.
+
+	function makeSocketFacade(primarySocket, { stateChangeEvent } = {}) {
+		const listen = function (event, callback) {
+			primarySocket.on(event, callback)
+			return () => primarySocket.off(event, callback)
+		}
+		const facade = {
+			broadcast: function (event, data) {
+				primarySocket.emit(event, data)
+			},
+			listen,
+			listenForWhisper: listen,
+		}
+		if (stateChangeEvent) {
+			facade.listenForStateChange = function (callback) {
+				// Mirror the platform: apply `changes` to triggerState before
+				// handing the event to the caller.
+				const wrapped = (e) => {
+					if (e && typeof e === "object" && e.changes) {
+						triggerState.value = {
+							...triggerState.value,
+							...e.changes,
+						}
+					}
+					return callback(e)
+				}
+				primarySocket.on(stateChangeEvent, wrapped)
+				return () => primarySocket.off(stateChangeEvent, wrapped)
+			}
+		}
+		return facade
+	}
+
+	function bindConnectionStatus(socket) {
+		connectionStatus.value = socket.connected ? "connected" : "connecting"
+		socket.on("connect", () => {
+			connectionStatus.value = "connected"
+		})
+		socket.on("disconnect", () => {
+			connectionStatus.value = "disconnected"
+		})
+		socket.on("connect_error", () => {
+			connectionStatus.value = "unavailable"
+		})
+		socket.io?.on?.("reconnect_attempt", () => {
+			connectionStatus.value = "connecting"
+		})
+	}
+
+	function clearSockets() {
+		for (const key of Object.keys(sockets)) delete sockets[key]
+	}
+
+	/**
 	 * Initialize primary WebSocket connection
-	 * Called synchronously when store is created
+	 * Called synchronously when store is created; calling it again tears the
+	 * existing connection down first (same guard as the platform).
 	 *
 	 * Controlled by env vars:
 	 *   SOCKET_DRIVER = "io" (default) | "echo" | "false"
 	 *   SOCKET_URL    = explicit socket server URL (overrides auto-detected default)
 	 */
 	function initializeSockets() {
+		if (socketConnections.primary) {
+			socketConnections.primary.disconnect()
+			delete socketConnections.primary
+			clearSockets()
+			connectionStatus.value = "disconnected"
+		}
+
 		const socketDriver = import.meta.env.SOCKET_DRIVER || "io"
 
 		if (socketDriver !== "io") {
-			console.log(
-				`[GxP Store] Sockets disabled (SOCKET_DRIVER=${socketDriver})`,
-			)
+			if (socketDriver === "echo") {
+				console.warn(
+					"[GxP Store] Echo driver selected — configure Echo externally via socketConnections.primary",
+				)
+			} else {
+				console.log(
+					`[GxP Store] Sockets disabled (SOCKET_DRIVER=${socketDriver})`,
+				)
+			}
+			setIsLoaded(true)
 			return
 		}
 
@@ -393,35 +965,108 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			return `${protocol}://localhost:${port}`
 		})()
 
-		if (socketDriver === "io") {
-			console.log(`[GxP Store] Connecting via Socket.IO to ${socketUrl}`)
-			const primarySocket = io(socketUrl)
+		console.log(`[GxP Store] Connecting via Socket.IO to ${socketUrl}`)
+		// markRaw: the socket is a stateful client, not data — keep Vue from
+		// proxying it (and hand plugins the real object via quiz `echo`).
+		const primarySocket = markRaw(io(socketUrl))
+		socketConnections.primary = primarySocket
+		bindConnectionStatus(primarySocket)
 
-			sockets.primary = {
-				broadcast: function (event, data) {
-					primarySocket.emit(event, data)
-				},
-				listen: function (event, callback) {
-					return primarySocket.on(event, callback)
-				},
-				listenForStateChange: function (callback) {
-					return primarySocket.on("state-change", callback)
-				},
+		// --- Primary socket (platform: portal.pages.{pageId}) ---
+		sockets.primary = makeSocketFacade(primarySocket, {
+			stateChangeEvent: "state-change",
+		})
+
+		initializeContextSockets()
+		initializeDependencySockets()
+		setIsLoaded(true)
+	}
+
+	/**
+	 * Project / portal / attendee sockets. On the platform these exist when
+	 * the page has a portal context and a logged-in attendee; here they are
+	 * built from `portal` and `auth.user` (manifest-provided) over the same
+	 * relay connection.
+	 */
+	function initializeContextSockets() {
+		const primarySocket = socketConnections.primary
+		if (!primarySocket) return
+
+		delete sockets.project
+		delete sockets.portal
+		delete sockets.attendee
+
+		if (portal.value?.project_slug) {
+			sockets.project = makeSocketFacade(primarySocket)
+			sockets.portal = makeSocketFacade(primarySocket)
+		}
+
+		// Attendee notification inbox (EZ-2954). Platform event name is
+		// Laravel's BroadcastNotificationCreated; the relay carries it as a
+		// plain "notification" event (`gxdev socket send notification ...`).
+		if (auth.value?.user?.id) {
+			const attendeeNotification = function (callback) {
+				primarySocket.on("notification", callback)
+				return () => primarySocket.off("notification", callback)
 			}
-
-			socketConnections.primary = primarySocket
-		} else if (socketDriver === "echo") {
-			console.log(`[GxP Store] Connecting via Laravel Echo to ${socketUrl}`)
-			// Echo driver — consumers can extend this via socketConnections.primary
-			console.warn(
-				"[GxP Store] Echo driver selected — configure Echo externally via socketConnections.primary",
-			)
-		} else {
-			console.warn(
-				`[GxP Store] Unknown SOCKET_DRIVER "${socketDriver}", sockets not initialized`,
-			)
+			sockets.attendee = {
+				notification: attendeeNotification,
+				listen: (_event, callback) => attendeeNotification(callback),
+			}
 		}
 	}
+
+	/**
+	 * Initialize dependency-based sockets
+	 * Called after manifest loads to set up dependency-specific listeners
+	 */
+	function initializeDependencySockets() {
+		const primarySocket = socketConnections.primary
+		if (!primarySocket) return
+
+		const makeEventSocket = (eventName, channel) => ({
+			listen: function (callback) {
+				const handler = (data) => {
+					console.log(`Socket event received: ${eventName} on ${channel}`, data)
+					callback(data)
+				}
+				primarySocket.on(eventName, handler)
+				return () => primarySocket.off(eventName, handler)
+			},
+		})
+		const noopSocket = () => ({ listen: () => () => {} })
+
+		const bind = (permission, identifier) => {
+			if (permission.events && Object.keys(permission.events).length > 0) {
+				sockets[identifier] = {}
+				for (const eventType of Object.keys(permission.events)) {
+					const eventName = permission.events[eventType]
+					const channel = `private.${permission.model}.${identifier}`
+					sockets[identifier][eventType] = makeEventSocket(eventName, channel)
+				}
+			} else {
+				// For dependencies without events, create empty listeners
+				sockets[identifier] = {
+					created: noopSocket(),
+					updated: noopSocket(),
+					deleted: noopSocket(),
+				}
+			}
+		}
+
+		if (Array.isArray(dependencies.value)) {
+			for (const permission of dependencies.value) {
+				if (permission.identifier) {
+					bind(permission, permission.identifier)
+				} else if (Array.isArray(permission.identifiers)) {
+					for (const identifier of permission.identifiers) {
+						bind(permission, identifier)
+					}
+				}
+			}
+		}
+	}
+
 	/**
 	 * Initialize API operations registry from OpenAPI spec
 	 */
@@ -471,89 +1116,10 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			apiOperations.value = {}
 		}
 	}
-	/**
-	 * Initialize dependency-based sockets
-	 * Called after manifest loads to set up dependency-specific listeners
-	 */
-	function initializeDependencySockets() {
-		const primarySocket = socketConnections.primary
-		if (!primarySocket) return
 
-		// Initialize dependency-based sockets based on the new structure
-		if (Array.isArray(dependencies.value)) {
-			dependencies.value.forEach((permission) => {
-				if (permission.identifier) {
-					if (permission.events && Object.keys(permission.events).length > 0) {
-						// Create socket listeners for each event type
-						sockets[permission.identifier] = {}
-						Object.keys(permission.events).forEach((eventType) => {
-							const eventName = permission.events[eventType]
-							const channel = `private.${permission.model}.${permission.identifier}`
-
-							sockets[permission.identifier][eventType] = {
-								listen: function (callback) {
-									// Listen for the specific event on the primary socket
-									return primarySocket.on(eventName, (data) => {
-										console.log(
-											`Socket event received: ${eventName} on ${channel}`,
-											data,
-										)
-										callback(data)
-									})
-								},
-							}
-						})
-					} else {
-						// For dependencies without events, create empty listeners
-						sockets[permission.identifier] = {
-							created: { listen: () => () => {} },
-							updated: { listen: () => () => {} },
-							deleted: { listen: () => () => {} },
-						}
-					}
-				} else if (
-					permission.identifiers &&
-					Array.isArray(permission.identifiers)
-				) {
-					permission.identifiers.forEach((identifier) => {
-						if (
-							permission.events &&
-							Object.keys(permission.events).length > 0
-						) {
-							// Create socket listeners for each event type
-							sockets[identifier] = {}
-							Object.keys(permission.events).forEach((eventType) => {
-								const eventName = permission.events[eventType]
-								const channel = `private.${permission.model}.${identifier}`
-
-								sockets[identifier][eventType] = {
-									listen: function (callback) {
-										// Listen for the specific event on the primary socket
-										return primarySocket.on(eventName, (data) => {
-											console.log(
-												`Socket event received: ${eventName} on ${channel}`,
-												data,
-											)
-											callback(data)
-										})
-									},
-								}
-							})
-						} else {
-							// For dependencies without events, create empty listeners
-							sockets[identifier] = {
-								created: { listen: () => () => {} },
-								updated: { listen: () => () => {} },
-								deleted: { listen: () => () => {} },
-							}
-						}
-					})
-				}
-			})
-		}
-	}
-
-	// API methods for common operations
+	// API methods for common operations. Endpoints are resolved against the
+	// API host, so — as on the platform — pass the full path including the
+	// "/api" segment (e.g. apiGet("/api/v1/projects/...")).
 	async function apiGet(endpoint, params = {}) {
 		try {
 			const response = await apiClient.get(endpoint, { params })
@@ -581,6 +1147,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		}
 	}
 
+	// Dev-only: the platform store does not expose apiPatch.
 	async function apiPatch(endpoint, data = {}) {
 		try {
 			const response = await apiClient.patch(endpoint, data)
@@ -598,11 +1165,32 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			throw new Error(`DELETE ${endpoint}: ${error.message}`)
 		}
 	}
-	async function callApi(operationId, permissionIdentifier, data = {}) {
+
+	/**
+	 * Resolve a page dependency by identifier into parsed { ids, tags,
+	 * untagged }. Used by data-scoped API callers to build filters.
+	 */
+	function resolveDependency(identifier) {
+		return parseDependencyValue(dependencyList.value?.[identifier])
+	}
+
+	/**
+	 * Call an API operation using its OpenAPI operationId
+	 *
+	 * @param {string} operationId - The operationId from OpenAPI spec (e.g., 'portal.v1.project.quiz.state')
+	 * @param {string|null} identifier - Key to look up parent object ID from dependencyList.
+	 *                                   Set to null when API only requires team/project context.
+	 * @param {object} data - Additional path parameters and request body data.
+	 *                        A FormData instance, or an object containing Blob/File
+	 *                        values, is sent as multipart/form-data.
+	 * @returns {Promise<any>} - API response data
+	 */
+	async function callApi(operationId, identifier, data = {}) {
 		// Initialize operations if not done
 		if (Object.keys(apiOperations.value).length === 0) {
 			await initializeApiOperations()
 		}
+
 		let operationConfig = apiOperations.value[operationId]
 		if (!operationConfig) {
 			operationConfig = apiOperations.value["portal.v1.project." + operationId]
@@ -618,18 +1206,17 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 
 		// Build context parameters from multiple sources:
 		// 1. Auto-inject teamSlug and projectSlug from portal context
-		// 2. Look up permissionIdentifier value from dependencyList (if permissionIdentifier provided)
+		// 2. Look up identifier value from dependencyList (if identifier provided)
 		// 3. Merge in additional data parameters
-		let projectTeamId = apiConfig.projectId?.split("/")
+		let projectTeamId = pluginVars.value?.projectId?.split("/")
 		if (!projectTeamId || projectTeamId.length !== 2) {
 			console.log(
-				`[GxP Store] Invalid projectId format in apiConfig: ${apiConfig.projectId}, expected "teamSlug/projectSlug"`,
+				`[GxP Store] Invalid projectId "${pluginVars.value?.projectId}", expected "teamSlug/projectSlug" (set API_PROJECT_ID)`,
 			)
 			return []
 		}
 		let teamSlug = projectTeamId[0]
 		let projectSlug = projectTeamId[1]
-
 		const contextParams = {
 			teamSlug: teamSlug,
 			projectSlug: projectSlug,
@@ -637,19 +1224,23 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		if (parameters.includes("form") && pluginVars.value?.formId) {
 			contextParams["form"] = pluginVars.value?.formId
 		}
-		// If permissionIdentifier is provided, look up its value from dependencyList
-		// dependencyList stores parent object IDs as { 'permissionIdentifier': idValue }
-		if (
-			permissionIdentifier !== null &&
-			permissionIdentifier !== undefined &&
-			permissionIdentifier !== "project"
-		) {
-			const permissionIdentifierValue =
-				dependencyList.value?.[permissionIdentifier]
-			if (permissionIdentifierValue !== undefined) {
-				// Add the permissionIdentifier value using the permissionIdentifier key as the param name
-				// e.g., permissionIdentifier='form' with dependencyList.form='quiz-123' adds { form: 'quiz-123' }
-				contextParams[permissionIdentifier] = permissionIdentifierValue
+		// If identifier is provided, look up its value from dependencyList
+		// dependencyList stores parent object IDs as { 'identifier': idValue }
+		if (identifier !== null && identifier !== undefined) {
+			const identifierValue = dependencyList.value?.[identifier]
+			if (identifierValue !== undefined) {
+				// dependencyList values may be mixed arrays ([id, "#tag",
+				// "@untagged"]); a path param needs a scalar. Use the parsed model
+				// ids (CSV) and leave the param unset for tag-only bindings so the
+				// loop below raises a clear missing-param error.
+				if (Array.isArray(identifierValue)) {
+					const { ids } = parseDependencyValue(identifierValue)
+					if (ids.length) {
+						contextParams[identifier] = ids.join(",")
+					}
+				} else {
+					contextParams[identifier] = identifierValue
+				}
 			}
 		}
 		const parsedData = {}
@@ -687,21 +1278,46 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		for (const param of parameters) {
 			delete bodyData[param]
 		}
-		// Also remove permissionIdentifier from body if it was in data
-		if (permissionIdentifier && bodyData[permissionIdentifier] !== undefined) {
-			delete bodyData[permissionIdentifier]
+		// Also remove identifier from body if it was in data
+		if (identifier && bodyData[identifier] !== undefined) {
+			delete bodyData[identifier]
 		}
+
+		// OpenAPI paths are relative to the API root ("/v1/..."); the API
+		// itself lives under "/api" on every host — same prefix the platform
+		// store applies against the portal origin.
+		const requestPath = "/api" + resolvedPath
 
 		try {
 			let response
 			if (method === "get" || method === "delete") {
 				// GET/DELETE: params go in query string
-				response = await apiClient[method](resolvedPath, {
+				response = await apiClient[method](requestPath, {
 					params: bodyData,
 				})
+			} else if (dataNeedsMultipart(data)) {
+				// Multipart branch: apiClient's default `Content-Type:
+				// application/json` would cause axios to JSON-stringify the
+				// body (Blobs serialize to "{}"), and prevents the browser
+				// from auto-setting the multipart boundary. Bypass it with
+				// bare axios and re-add the auth headers manually.
+				if (!["post", "put", "patch"].includes(method)) {
+					throw new Error(
+						`callApi: multipart not supported for ${method.toUpperCase()} ${operationId}`,
+					)
+				}
+				const body = data instanceof FormData ? data : buildFormData(bodyData)
+				response = await axios[method](
+					`${apiBaseUrl.value}${requestPath}`,
+					body,
+					{
+						timeout: 30000,
+						headers: authHeaders(),
+					},
+				)
 			} else {
 				// POST/PUT/PATCH: params go in body
-				response = await apiClient[method](resolvedPath, bodyData)
+				response = await apiClient[method](requestPath, bodyData)
 			}
 			return response.data
 		} catch (error) {
@@ -718,37 +1334,72 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		}
 	}
 
-	// Utility methods
+	// Utility methods — nullish semantics like the platform: an explicit
+	// `false`, `0` or `""` is a real value, only null/undefined fall back.
 	function getString(key, fallback = "") {
-		return stringsList.value[key] || fallback
+		return stringsList.value[key] ?? fallback
 	}
 
 	function getSetting(key, fallback = null) {
-		return pluginVars.value[key] || fallback
+		return pluginVars.value[key] ?? fallback
 	}
 
 	function getAsset(key, fallback = "") {
-		return assetList.value[key] || fallback
+		let assetUrl = assetList.value[key] || staticAssetList.value[key]
+		if (!assetUrl) {
+			if (fallback.includes("/")) {
+				key = fallback.split("/").pop() //last segment of the path
+			} else {
+				key = fallback
+			}
+			assetUrl = assetList.value[key] || staticAssetList.value[key] || fallback
+		}
+		return assetUrl
+	}
+
+	function findDependency(identifier) {
+		return dependencyList.value[identifier]
 	}
 
 	function getState(key, fallback = null) {
-		return triggerState.value[key] || fallback
+		return triggerState.value[key] ?? fallback
 	}
-	function findDependency(permissionIdentifier) {
-		return dependencyList.value[permissionIdentifier]
-	}
+
 	function hasPermission(flag) {
 		return permissionFlags.value.includes(flag)
 	}
 
 	/**
-	 * Return the logged-in user object, or null when no user is authenticated.
+	 * The groups the logged-in attendee belongs to (EZ-3006). In dev, seed
+	 * them via the manifest: `"user": { ..., "groups": [{ "name", "slug" }] }`.
 	 *
-	 * In production the platform injects the real user. In dev (Vite dev
-	 * server) a dummy user is provided so plugins can develop against the
-	 * happy path without a backend — clear it from the Dev Tools store
-	 * inspector to simulate the logged-out state.
+	 * @returns {Array<{name: string, slug: string}>}
 	 */
+	function getGroups() {
+		return auth.value?.user?.groups ?? []
+	}
+
+	function getGroupNames() {
+		return getGroups().map((group) => group.name)
+	}
+
+	function getGroupSlugs() {
+		return getGroups().map((group) => group.slug)
+	}
+
+	function inGroup(slug) {
+		return getGroups().some((group) => group.slug === slug)
+	}
+
+	/**
+	 * @param {string|Array<string>} slugs one slug or a list of them
+	 */
+	function inAnyGroup(slugs) {
+		const wanted = Array.isArray(slugs) ? slugs : [slugs]
+		return getGroups().some((group) => wanted.includes(group.slug))
+	}
+
+	// --- Dev-only user helpers (not on the platform; read auth.user there) ---
 	function getUser() {
 		return user.value ?? null
 	}
@@ -757,11 +1408,6 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		return user.value !== null && user.value !== undefined
 	}
 
-	/**
-	 * Convenience helper — returns the user's display name (or `name`,
-	 * or `first_name + last_name` if `name` is absent). Returns `fallback`
-	 * when no user is logged in.
-	 */
 	function getUserName(fallback = null) {
 		const u = user.value
 		if (!u) {
@@ -774,40 +1420,190 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 		return parts.length > 0 ? parts.join(" ") : fallback
 	}
 
-	/**
-	 * Returns the user's email, or `fallback` when no user is logged in.
-	 */
 	function getUserEmail(fallback = null) {
 		return user.value?.email ?? fallback
 	}
 
-	// Convenience method to add dev assets with proper URL
+	// Theme configuration — same keys and defaults as the platform, derived
+	// from settings so a plugin's theme handling behaves identically.
+	const theme = computed(() => ({
+		background_color: getSetting("background_color", "#ffffff"),
+		text_color: getSetting("text_color", "#333333"),
+		primary_color: getSetting("primary_color", "#FFD600"),
+		start_background_color: getSetting(
+			"start_background_color",
+			"linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+		),
+		start_text_color: getSetting("start_text_color", "#ffffff"),
+		final_background_color: getSetting("final_background_color", "#4CAF50"),
+		final_text_color: getSetting("final_text_color", "#ffffff"),
+	}))
+
+	// Configuration update methods (for development)
+	function updatePluginVar(key, value) {
+		pluginVars.value[key] = value
+	}
+
+	function updateString(key, value) {
+		stringsList.value[key] = value
+	}
+
+	function updateAsset(key, value) {
+		assetList.value[key] = value
+	}
+
+	// Dev-only aliases used by the DevTools store inspector.
+	function updateSetting(key, value) {
+		updatePluginVar(key, value)
+	}
+
+	function updateState(key, value) {
+		triggerState.value = { ...triggerState.value, [key]: value }
+	}
+
 	function addDevAsset(key, filename) {
+		const appProtocol =
+			typeof window !== "undefined" && window.location.protocol === "https:"
+				? "https"
+				: "http"
 		const appPort =
 			typeof window !== "undefined" ? window.location.port || 3000 : 3000
-		const appProtocol =
-			typeof window !== "undefined" ? window.location.protocol : "http:"
-		const assetUrl = `${appProtocol}//localhost:${appPort}/dev-assets/images/${filename}`
-		updateAsset(key, assetUrl)
+		const url = `${appProtocol}://localhost:${appPort}/dev-assets/images/${filename}`
+		assetList.value[key] = url
+	}
+
+	function listAssets() {
+		console.log("📁 Current Assets:")
+		for (const [key, url] of Object.entries(assetList.value)) {
+			console.log(`   ${key}: ${url}`)
+		}
+		return assetList.value
+	}
+
+	const setIsLoaded = (value) => {
+		isLoaded.value = value
+	}
+
+	const reset = () => {
+		if (socketConnections.primary) {
+			socketConnections.primary.disconnect()
+			delete socketConnections.primary
+		}
+		connectionStatus.value = "disconnected"
+		clearSockets()
+		for (const key of Object.keys(quizChannels)) delete quizChannels[key]
+
+		isLoaded.value = false
+		pluginVars.value = {}
+		stringsList.value = {}
+		assetList.value = {}
+		staticAssetList.value = {}
+		dependencyList.value = {}
+		dependencies.value = []
+		permissionFlags.value = []
+		navigationFlagsKeyed.value = {}
+		auth.value = null
+		userSession.value = null
+		portalAssets.value = {}
+		portal.value = null
+		pageId.value = null
+		form.value = null
+	}
+
+	const destroy = () => {
+		reset()
+		if (typeof window !== "undefined") {
+			window.removeEventListener("online", handleOnline)
+			window.removeEventListener("offline", handleOffline)
+		}
+	}
+
+	// Quiz channel helpers for live quiz mode. The platform returns
+	// { channel, echo, leave } where `channel` is an Echo private channel;
+	// here `channel` is an Echo-shaped facade over the relay connection and
+	// `echo` is the underlying Socket.IO socket.
+	function connectQuizChannel(formId) {
+		if (quizChannels[formId]) {
+			return quizChannels[formId]
+		}
+
+		const primarySocket = socketConnections.primary
+		if (!primarySocket) {
+			console.warn(
+				"[GxP Store] connectQuizChannel(): primary socket not initialized",
+			)
+			return null
+		}
+
+		const channelName = `quiz.${formId}`
+		const channel = {
+			name: channelName,
+			listen(event, callback) {
+				primarySocket.on(event, callback)
+				return channel
+			},
+			stopListening(event, callback) {
+				primarySocket.off(event, callback)
+				return channel
+			},
+			listenForWhisper(event, callback) {
+				primarySocket.on(event, callback)
+				return channel
+			},
+			stopListeningForWhisper(event, callback) {
+				primarySocket.off(event, callback)
+				return channel
+			},
+			whisper(event, data) {
+				primarySocket.emit(event, data)
+				return channel
+			},
+			notification(callback) {
+				primarySocket.on("notification", callback)
+				return channel
+			},
+		}
+
+		quizChannels[formId] = {
+			channel,
+			echo: primarySocket,
+			leave: () => {
+				delete quizChannels[formId]
+			},
+		}
+
+		return quizChannels[formId]
+	}
+
+	function leaveQuizChannel(formId) {
+		if (quizChannels[formId]) {
+			quizChannels[formId].leave()
+		}
+	}
+
+	async function resyncQuizState(formId) {
+		return await callApi("portal.v1.project.quiz.state", "form", {
+			form: formId,
+		})
 	}
 
 	// Standard Socket helper methods
 	//
 	// Polymorphic — supports two forms:
 	//
-	//   1. listen(socketName, event, callback)
+	//   1. listen(socketName, event, callback)      — platform form
 	//      Subscribes to `event` on the named socket (e.g. 'primary' or a
 	//      dependency identifier whose socket was initialized via
-	//      initializeDependencySockets). This matches the legacy shape.
+	//      initializeDependencySockets).
 	//
-	//   2. listen(eventName, permissionIdentifier, callback)
+	//   2. listen(eventName, permissionIdentifier, callback)   — dev extra
 	//      Subscribes to an AsyncAPI-defined platform event on the primary
 	//      socket, scoped to a permission identifier from dependencyList
 	//      (or the reserved "project" identifier). Use this for events whose
 	//      `x-triggered-by` matches a callApi operationId.
 	//
 	// Disambiguation: if arg1 names a registered socket we take form 1,
-	// otherwise we fall through to form 2.
+	// otherwise we fall through to form 2. Both return an unsubscribe closure.
 	function listen(arg1, arg2, arg3) {
 		const hasRegisteredSocket =
 			sockets[arg1] && typeof sockets[arg1].listen === "function"
@@ -875,44 +1671,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	}
 
 	function useSocketListener(socketName, event, callback) {
-		return listenSocket(socketName, event, callback)
-	}
-
-	// Theme configuration
-	const theme = computed(() => ({
-		primary: "#FFD600",
-		page_background_color: "#000466",
-		page_text_color: "#ffffff",
-		input_field_background_color: "#03054a",
-		input_field_text_color: "#ffffff",
-		input_field_border_color: "#888c92",
-		primary_button_background_color: "#ffffff",
-		primary_button_text_color: "#000596",
-		primary_button_border_color: "#ffffff",
-		secondary_button_background_color: "#000466",
-		secondary_button_text_color: "#ffffff",
-		secondary_button_border_color: "#ffffff",
-		tertiary_button_background_color: "#ffffff00",
-		tertiary_button_text_color: "#ffffff",
-		tertiary_button_border_color: "#ffffff00",
-		spinner_background_color: "#03054a",
-		spinner_color: "#ffffff",
-		modal_background_color: "#ffffff",
-		modal_text_color: "#222222",
-		modal_primary_button_background_color: "#000596",
-		modal_primary_button_text_color: "#ffffff",
-		modal_primary_button_border_color: "#000596",
-		modal_secondary_button_background_color: "#ffffff",
-		modal_secondary_button_text_color: "#000596",
-		modal_secondary_button_border_color: "#000596",
-	}))
-
-	function listAssets() {
-		console.log("📁 Current Assets:")
-		Object.entries(assetList.value).forEach(([key, url]) => {
-			console.log(`   ${key}: ${url}`)
-		})
-		return assetList.value
+		return listen(socketName, event, callback)
 	}
 
 	// Initialize sockets SYNCHRONOUSLY when store is created
@@ -930,6 +1689,7 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 			console.log("[GxP Store] Hot-reloading app-manifest.json")
 			applyManifest(data)
 			initializeDependencySockets()
+			initializeContextSockets()
 		})
 
 		// Also support full-reload trigger if needed
@@ -940,63 +1700,117 @@ export const useGxpStore = defineStore("gxp-portal-app", () => {
 	}
 
 	return {
-		// State
+		// State (platform)
 		pluginVars,
 		stringsList,
 		assetList,
+		staticAssetList,
 		dependencyList,
 		permissionFlags,
+		navigationFlagsKeyed,
 		auth,
 		userSession,
-		user,
-		pluginData,
 		portalAssets,
 		portal,
-		form,
 		sockets,
+		connectionStatus,
+		isOnline,
+		quizChannels,
 		theme,
 		triggerState,
+		form,
+		attachFormStore,
+
+		// State (dev-only)
+		user,
+		pluginData,
 		manifestLoaded,
 		manifestError,
 
-		// API methods
+		// API methods (platform)
 		apiGet,
 		apiPost,
-		apiPatch,
 		apiPut,
 		apiDelete,
 		callApi,
+		resolveDependency,
+		initializeApiOperations,
+		apiOperations,
+		// API methods (dev-only)
+		apiPatch,
 
-		// Utility methods
+		// Utility methods (platform)
 		getString,
 		getSetting,
 		getAsset,
 		getState,
+		hasPermission,
+		findDependency,
+		getGroups,
+		getGroupNames,
+		getGroupSlugs,
+		inGroup,
+		inAnyGroup,
+		// Utility methods (dev-only)
 		getUser,
 		getUserName,
 		getUserEmail,
 		isAuthenticated,
-		hasPermission,
-		findDependency,
 
-		// Update methods (for DevTools and programmatic updates)
-		addDevAsset,
-
-		// Form store
-		attachFormStore,
-
-		// Socket methods
+		// Socket methods (platform)
+		connectQuizChannel,
+		leaveQuizChannel,
+		resyncQuizState,
 		emitSocket,
 		listenSocket,
 		listen,
 		broadcast,
 		useSocketListener,
 
-		// Manifest methods
+		// Web Push (platform)
+		pushSubscription,
+		loadPushSubscription,
+		ensurePushSubscription,
+		subscribeToPush,
+		unsubscribeFromPush,
+
+		// Development methods (platform)
+		updatePluginVar,
+		updateString,
+		updateAsset,
+		addDevAsset,
+		listAssets,
+		initializeData,
+		initializeSockets,
+		reset,
+		destroy,
+		// Development methods (dev-only)
+		updateSetting,
+		updateState,
 		loadManifest,
 		applyManifest,
-
-		// Development methods
-		listAssets,
 	}
 })
+
+/**
+ * Resolve the GxP store.
+ *
+ * The platform's `useGxpStore(storeId?)` keys one store per plugin page and
+ * resolves the id via provide/inject. The dev server hosts a single plugin,
+ * so there is exactly one store; the optional id is accepted for
+ * call-compatibility and ignored.
+ */
+export const useGxpStore = (_storeId) => useGxpStoreDefinition()
+
+/** Platform-compat: with a single dev store every id resolves to it. */
+export const getGxpStoreById = (_storeId) => useGxpStore()
+
+/** Platform-compat: tear the dev store down. */
+export const disposeGxpStore = (_storeId) => {
+	const store = useGxpStore()
+	store.destroy()
+	store.$dispose?.()
+}
+
+/** Platform-compat no-op: the dev server has no page store to switch to. */
+export const setDefaultPageStoreId = (_storeId) => {}

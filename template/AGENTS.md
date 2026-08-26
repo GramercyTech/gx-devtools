@@ -241,11 +241,12 @@ store.triggerState["my_key"] = "value"
 ### Logged-in user
 
 ```javascript
-const user = store.getUser() // Full user object, or `null` if logged out
-store.getUserName("Guest") // Display name with fallback
-store.getUserEmail() // Email or null
-store.isAuthenticated() // boolean
-// Or read the ref directly: store.user
+const user = store.auth?.user // Attendee object, or `null` if logged out — same in dev and production
+store.getGroupSlugs() // ["speakers", "vip"] — portal-visible groups
+store.inGroup("vip") / store.inAnyGroup(["staff", "speakers"]) // boolean
+
+// DEV-ONLY (not on the platform — do not ship code that calls these):
+// store.user, store.getUser(), store.getUserName(), store.getUserEmail(), store.isAuthenticated()
 ```
 
 `store.user` is **`null` when no user is authenticated** — always guard
