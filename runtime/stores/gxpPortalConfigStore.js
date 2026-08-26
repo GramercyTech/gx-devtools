@@ -102,7 +102,12 @@ function getApiConfig() {
 		}
 	}
 	if (apiEnv === "dev-mock") {
-		// cloud dev mock
+		// cloud dev mock — the host comes from SOCKET_URL
+		if (!import.meta.env.SOCKET_URL) {
+			console.warn(
+				"[GxP Store] API_ENV=dev-mock requires SOCKET_URL (the cloud mock host); requests will fail until it is set",
+			)
+		}
 		return {
 			apiDocsBaseUrl: ENVIRONMENT_URLS.develop.apiBaseUrl,
 			apiBaseUrl: `https://${socketUrl}`,
@@ -1334,8 +1339,10 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		}
 	}
 
-	// Utility methods — nullish semantics like the platform: an explicit
-	// `false`, `0` or `""` is a real value, only null/undefined fall back.
+	// Utility methods — same semantics as the platform: getString/getSetting/
+	// getState use nullish fallback (an explicit `false`, `0` or `""` is a real
+	// value); getAsset deliberately keeps the platform's truthiness check, so
+	// an empty asset URL counts as "not configured" and falls through.
 	function getString(key, fallback = "") {
 		return stringsList.value[key] ?? fallback
 	}
@@ -1536,38 +1543,42 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		}
 
 		const channelName = `quiz.${formId}`
+		// Echo.leave() drops every listener on the channel; the relay socket is
+		// shared, so track what this channel registered and remove exactly that.
+		const registered = []
+		const on = (event, callback) => {
+			primarySocket.on(event, callback)
+			registered.push([event, callback])
+			return channel
+		}
+		const off = (event, callback) => {
+			primarySocket.off(event, callback)
+			const i = registered.findIndex(
+				([e, cb]) => e === event && cb === callback,
+			)
+			if (i !== -1) registered.splice(i, 1)
+			return channel
+		}
 		const channel = {
 			name: channelName,
-			listen(event, callback) {
-				primarySocket.on(event, callback)
-				return channel
-			},
-			stopListening(event, callback) {
-				primarySocket.off(event, callback)
-				return channel
-			},
-			listenForWhisper(event, callback) {
-				primarySocket.on(event, callback)
-				return channel
-			},
-			stopListeningForWhisper(event, callback) {
-				primarySocket.off(event, callback)
-				return channel
-			},
+			listen: on,
+			stopListening: off,
+			listenForWhisper: on,
+			stopListeningForWhisper: off,
 			whisper(event, data) {
 				primarySocket.emit(event, data)
 				return channel
 			},
-			notification(callback) {
-				primarySocket.on("notification", callback)
-				return channel
-			},
+			notification: (callback) => on("notification", callback),
 		}
 
 		quizChannels[formId] = {
 			channel,
 			echo: primarySocket,
 			leave: () => {
+				for (const [event, callback] of registered.splice(0)) {
+					primarySocket.off(event, callback)
+				}
 				delete quizChannels[formId]
 			},
 		}

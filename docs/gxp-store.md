@@ -89,7 +89,7 @@ const step = store.getState("current_step", 1)
 const isActive = store.getState("is_active", false)
 ```
 
-All getters use nullish fallback: an explicit `false`, `0` or `""` is returned as-is; only a missing (`null`/`undefined`) key yields the default.
+`getString`, `getSetting` and `getState` use nullish fallback: an explicit `false`, `0` or `""` is returned as-is; only a missing (`null`/`undefined`) key yields the default. `getAsset` is the exception — like the platform, it treats an empty asset URL as unconfigured and falls through.
 
 ### `hasPermission(permission)`
 

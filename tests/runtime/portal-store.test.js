@@ -508,6 +508,38 @@ describe("sockets", () => {
 		expect(store.quizChannels.f1).toBeUndefined()
 	})
 
+	it("leaving a quiz channel removes every listener it registered (Echo.leave semantics)", async () => {
+		const store = await freshStore()
+		const { channel, leave } = store.connectQuizChannel("f2")
+		const onState = vi.fn()
+		const onWhisper = vi.fn()
+		const onNote = vi.fn()
+		const detached = vi.fn()
+		channel
+			.listen(".QuizStateChanged", onState)
+			.listenForWhisper("typing", onWhisper)
+			.notification(onNote)
+			.listen("early", detached)
+			.stopListening("early", detached)
+		socketMock.off.mockClear()
+
+		leave()
+
+		expect(socketMock.off).toHaveBeenCalledWith(".QuizStateChanged", onState)
+		expect(socketMock.off).toHaveBeenCalledWith("typing", onWhisper)
+		expect(socketMock.off).toHaveBeenCalledWith("notification", onNote)
+		// already-detached listener is not touched again
+		expect(socketMock.off).not.toHaveBeenCalledWith("early", detached)
+		expect(store.quizChannels.f2).toBeUndefined()
+	})
+
+	it("dev-mock without SOCKET_URL warns instead of failing silently", async () => {
+		await freshStore({ VITE_API_ENV: "dev-mock" })
+		expect(console.warn).toHaveBeenCalledWith(
+			expect.stringMatching(/dev-mock requires SOCKET_URL/),
+		)
+	})
+
 	it("tracks connectionStatus from the relay connection", async () => {
 		const store = await freshStore()
 		const handler = (name) =>
