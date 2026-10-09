@@ -93,6 +93,7 @@ describe("files.js (real fs)", () => {
 			expect(pkg.dependencies).toEqual(REQUIRED_DEPENDENCIES)
 			expect(pkg.devDependencies).toEqual(REQUIRED_DEV_DEPENDENCIES)
 			expect(pkg.devDependencies["happy-dom"]).toBe("^20.14.5")
+			expect(pkg.devDependencies["@vitejs/plugin-vue"]).toBe("^6.0.6")
 			expect(pkg.overrides["shell-quote"]).toBe("1.12.0")
 			// DEFAULT_SCRIPTS should all be present (createPackageJson also adds
 			// a "placeholder" override on top of them).

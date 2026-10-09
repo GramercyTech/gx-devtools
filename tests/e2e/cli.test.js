@@ -172,6 +172,56 @@ describe.runIf(ENABLED)("gxdev e2e", () => {
 		})
 	})
 
+	it("runs a Vue component test with the shipped config after clean install", () => {
+		const env = { ...process.env }
+		delete env.NODE_PATH
+		const npm = process.platform === "win32" ? "npm.cmd" : "npm"
+		const install = spawnSync(npm, ["ci", "--no-audit", "--no-fund"], {
+			cwd: projectDir,
+			env,
+			encoding: "utf8",
+			timeout: 300_000,
+			shell: process.platform === "win32",
+		})
+		expect(install.status, install.stdout + install.stderr).toBe(0)
+		const component = path.join(projectDir, "src", "ScaffoldAcceptance.vue")
+		const spec = path.join(projectDir, "src", "ScaffoldAcceptance.test.js")
+		fs.writeFileSync(
+			component,
+			'<script setup>import { ref } from "vue"; const count = ref(0)</script><template><button @click="count++">{{ count }}</button></template>',
+		)
+		fs.writeFileSync(
+			spec,
+			`import { it, expect } from "vitest"
+import { mount } from "@vue/test-utils"
+import Component from "./ScaffoldAcceptance.vue"
+it("compiles Vue and handles interaction", async () => {
+ const wrapper = mount(Component)
+ await wrapper.get("button").trigger("click")
+ expect(wrapper.text()).toBe("1")
+ wrapper.unmount()
+})`,
+		)
+		try {
+			const result = spawnSync(
+				npm,
+				["test", "--", "src/ScaffoldAcceptance.test.js"],
+				{
+					cwd: projectDir,
+					env,
+					encoding: "utf8",
+					timeout: 120_000,
+					shell: process.platform === "win32",
+				},
+			)
+			expect(result.status, result.stdout + result.stderr).toBe(0)
+			expect(result.stdout).toMatch(/1 passed/)
+		} finally {
+			fs.rmSync(component, { force: true })
+			fs.rmSync(spec, { force: true })
+		}
+	}, 450_000)
+
 	describe("gxdev build", () => {
 		it("produces a .gxpapp file in dist/", () => {
 			const buildResult = spawnSync(process.execPath, [GXDEV_BIN, "build"], {

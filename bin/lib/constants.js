@@ -27,6 +27,7 @@ const REQUIRED_DEV_DEPENDENCIES = {
 	globals: "^17.5.0",
 	prettier: "^3.8.3",
 	vitest: "^4.1.5",
+	"@vitejs/plugin-vue": "^6.0.6",
 	"@vue/test-utils": "^2.4.6",
 	"happy-dom": "^20.14.5",
 	tailwindcss: TAILWIND_VERSION,
