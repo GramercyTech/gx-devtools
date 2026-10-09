@@ -300,6 +300,30 @@ it("compiles Vue and handles interaction", async () => {
 				)
 			}
 
+			try {
+				const base = `http://127.0.0.1:${port}`
+				const html = await (await fetch(base)).text()
+				const modules = [
+					...html.matchAll(
+						/<script\b[^>]*type="module"[^>]*src="([^"]+)"[^>]*>/g,
+					),
+				]
+				expect(modules.length).toBeGreaterThan(0)
+				for (const [, source] of modules) {
+					const response = await fetch(new URL(source, base))
+					expect(response.status, source + "\n" + (await response.text())).toBe(
+						200,
+					)
+				}
+				const bootstrap = await (
+					await fetch(`${base}/@gx-runtime/main.js`)
+				).text()
+				expect(bootstrap).toContain("window.Pinia = Pinia")
+				expect(bootstrap).toContain("window.Vue = Vue")
+			} finally {
+				devProcess.kill("SIGTERM")
+			}
+
 			// Clean shutdown — SIGTERM and wait up to 10s for exit.
 			devProcess.kill("SIGTERM")
 			const exitedCleanly = await new Promise((resolve) => {
