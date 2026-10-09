@@ -69,11 +69,12 @@ jobs:
           fi
           echo "Publishing version $PKG_VERSION"
 
+      - name: Build the TUI
+        # Process-security tests import the compiled services from dist/tui.
+        run: npm run build:tui
+
       - name: Unit tests
         run: npm test
-
-      - name: Build the TUI
-        run: npm run build:tui
 
       - name: CLI end-to-end tests
         # Same harness as ci.yml's cli-e2e job — but blocking, here, so a

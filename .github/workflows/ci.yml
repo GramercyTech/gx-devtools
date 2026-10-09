@@ -34,10 +34,8 @@ jobs:
         run: npm ci
 
       - name: Build the TUI
-        # build:tui compiles bin/lib/tui/*.tsx → dist/tui/*.js, which is what
-        # the published CLI ships. We don't strictly need it for unit tests
-        # (no test in tests/** imports the TUI) but running it here catches
-        # TypeScript regressions in the same job that catches Vitest ones.
+        # Process-security tests import the compiled services from dist/tui.
+        # Keep this before the unit suite, matching release.yml.
         run: npm run build:tui
 
       - name: Run unit suite
