@@ -92,8 +92,12 @@ export function startExtension(options: ExtensionOptions): void {
 		const errorState = serviceManager.start({
 			id: serviceId,
 			name: `${browser.charAt(0).toUpperCase() + browser.slice(1)} Extension`,
-			command: "echo",
-			args: [`Extension not found for ${browser}`],
+			command: process.execPath,
+			args: [
+				"-e",
+				"console.error(process.argv[1]);process.exitCode=1",
+				`Extension not found for ${browser}`,
+			],
 			cwd,
 		})
 		return
@@ -106,9 +110,9 @@ export function startExtension(options: ExtensionOptions): void {
 		const config: ServiceConfig = {
 			id: serviceId,
 			name: "Firefox Extension",
-			command: "npx",
+			command: process.execPath,
 			args: [
-				"web-ext",
+				path.join(getToolkitRoot(), "scripts", "web-ext.js"),
 				"run",
 				"--source-dir",
 				extensionPath,
@@ -134,8 +138,12 @@ export function startExtension(options: ExtensionOptions): void {
 			const errorState = serviceManager.start({
 				id: serviceId,
 				name: "Chrome Extension",
-				command: "echo",
-				args: ["Chrome launcher script not found"],
+				command: process.execPath,
+				args: [
+					"-e",
+					"console.error(process.argv[1]);process.exitCode=1",
+					"Chrome launcher script not found",
+				],
 				cwd,
 			})
 			return
@@ -144,7 +152,7 @@ export function startExtension(options: ExtensionOptions): void {
 		const config: ServiceConfig = {
 			id: serviceId,
 			name: "Chrome Extension",
-			command: "node",
+			command: process.execPath,
 			args: [scriptPath],
 			cwd,
 			env: {

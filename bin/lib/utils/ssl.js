@@ -6,34 +6,27 @@
 
 const path = require("path")
 const fs = require("fs")
-const shell = require("shelljs")
+const { spawnSync } = require("node:child_process")
 
-/**
- * Checks if mkcert is installed globally
- */
+/** Detect the native mkcert CLI, not the unrelated npm package. */
 function isMkcertInstalled() {
-	return shell.which("mkcert") !== null
+	const result = spawnSync("mkcert", ["-version"], {
+		encoding: "utf8",
+		shell: false,
+	})
+	return (
+		result.status === 0 && /^v?\d+\.\d+\.\d+/.test((result.stdout || "").trim())
+	)
 }
 
-/**
- * Installs mkcert globally if not already installed
- */
 function ensureMkcertInstalled() {
 	if (isMkcertInstalled()) {
-		console.log("✓ mkcert is already installed globally")
 		return true
 	}
-
-	console.log("Installing mkcert globally...")
-	const result = shell.exec("npm install -g mkcert", { silent: true })
-
-	if (result.code === 0) {
-		console.log("✓ mkcert installed successfully")
-		return true
-	} else {
-		console.warn("⚠ Could not install mkcert globally, will use local version")
-		return false
-	}
+	console.warn(
+		"Native mkcert is required to generate HTTPS certificates. Install it using your OS package manager (macOS: brew install mkcert), then run mkcert -install and retry. Existing certificates can still be used.",
+	)
+	return false
 }
 
 /**
@@ -67,7 +60,7 @@ function findExistingCertificates(certsDir) {
 			if (certStats.size > 0 && keyStats.size > 0) {
 				return { certPath, keyPath }
 			}
-		} catch (error) {
+		} catch {
 			// Files don't exist or can't be read
 		}
 	}
@@ -131,54 +124,27 @@ function generateSSLCertificates(projectPath) {
 	// Clean up any leftover certificate files to avoid naming conflicts
 	cleanupOldCertificates(certsDir)
 
-	// Try global mkcert first
-	let mkcertCmd = "mkcert"
-	if (!isMkcertInstalled()) {
-		// Use local mkcert via npx
-		mkcertCmd = "npx mkcert"
-	}
-
-	// Change to certs directory and generate certificates
-	const currentDir = process.cwd()
-	try {
-		process.chdir(certsDir)
-
-		// Install CA if needed (only for global mkcert)
-		if (isMkcertInstalled()) {
-			shell.exec(`${mkcertCmd} -install`, { silent: true })
-		}
-
-		// Generate certificates for localhost
-		const result = shell.exec(`${mkcertCmd} localhost 127.0.0.1 ::1`, {
-			silent: true,
-		})
-
-		if (result.code === 0) {
-			// Find the actual generated certificate files
-			const generatedCerts = findExistingCertificates(certsDir)
-			if (generatedCerts) {
-				console.log("✓ SSL certificates generated successfully")
-				console.log(`📁 Certificate: ${path.basename(generatedCerts.certPath)}`)
-				console.log(`🔑 Key: ${path.basename(generatedCerts.keyPath)}`)
-				return generatedCerts
-			} else {
-				console.warn(
-					"⚠ Certificates generated but not found in expected location",
-				)
-				return null
-			}
-		} else {
-			console.warn(
-				"⚠ Failed to generate SSL certificates, falling back to HTTP",
-			)
-			return null
-		}
-	} catch (error) {
-		console.warn("⚠ Error generating SSL certificates:", error.message)
+	if (!ensureMkcertInstalled()) {
 		return null
-	} finally {
-		process.chdir(currentDir)
 	}
+
+	const options = { cwd: certsDir, encoding: "utf8", shell: false }
+	const trusted = spawnSync("mkcert", ["-install"], options)
+	if (trusted.status !== 0) {
+		console.warn(
+			"⚠ Could not install the local certificate authority. Run mkcert -install and retry.",
+		)
+		return null
+	}
+	const result = spawnSync("mkcert", ["localhost", "127.0.0.1", "::1"], options)
+	const certificates =
+		result.status === 0 ? findExistingCertificates(certsDir) : null
+	if (!certificates) {
+		console.warn(
+			"⚠ Failed to generate SSL certificates; check native mkcert setup and retry.",
+		)
+	}
+	return certificates
 }
 
 /**

@@ -5,7 +5,8 @@
  * Environment detection: reads VITE_API_ENV/API_ENV from the project's .env
  * file first, then falls back to process.env, then defaults to "develop".
  *
- * Cache: 5-minute TTL, shared across all callers in the same process.
+ * GXDEV_API_SPEC_BASE_URL optionally selects an operator-configured HTTPS origin.
+ * Cache: independent 5-minute TTL per resolved specification URL.
  */
 
 const fs = require("fs")
@@ -54,12 +55,7 @@ const ENVIRONMENT_URLS = {
 }
 
 const CACHE_TTL = 5 * 60 * 1000
-const specCache = {
-	openapi: null,
-	asyncapi: null,
-	webhooks: null,
-	lastFetch: null,
-}
+const specCache = new Map()
 
 function getEnvironment() {
 	const envPath = path.join(process.cwd(), ".env")
@@ -75,7 +71,29 @@ function getEnvironment() {
 
 function getEnvUrls() {
 	const env = getEnvironment()
-	return ENVIRONMENT_URLS[env] || ENVIRONMENT_URLS.develop
+	const defaults = ENVIRONMENT_URLS[env]
+	if (!defaults) throw new Error(`Unknown API environment: ${env}`)
+	const override = process.env.GXDEV_API_SPEC_BASE_URL
+	if (!override) return defaults
+	const base = new URL(override)
+	if (
+		base.protocol !== "https:" ||
+		base.username ||
+		base.password ||
+		base.search ||
+		base.hash ||
+		base.pathname !== "/"
+	) {
+		throw new Error(
+			"GXDEV_API_SPEC_BASE_URL must be an HTTPS origin without credentials",
+		)
+	}
+	return {
+		apiBaseUrl: base.origin,
+		openApiSpec: `${base.origin}/api-specs/openapi.json`,
+		asyncApiSpec: `${base.origin}/api-specs/asyncapi.json`,
+		webhookSpec: `${base.origin}/api-specs/webhooks.json`,
+	}
 }
 
 async function fetchSpec(specType) {
@@ -90,22 +108,20 @@ async function fetchSpec(specType) {
 		throw new Error(`Unknown spec type: ${specType}`)
 	}
 
-	const now = Date.now()
-	if (
-		specCache[specType] &&
-		specCache.lastFetch &&
-		now - specCache.lastFetch < CACHE_TTL
-	) {
-		return specCache[specType]
+	const cached = specCache.get(url)
+	if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) {
+		return cached.spec
 	}
 
-	const res = await fetch(url)
+	const res = await fetch(url, {
+		redirect: "error",
+		signal: AbortSignal.timeout(10_000),
+	})
 	if (!res.ok) {
 		throw new Error(`Failed to fetch ${specType} spec: ${res.status}`)
 	}
 	const spec = await res.json()
-	specCache[specType] = spec
-	specCache.lastFetch = now
+	specCache.set(url, { spec, fetchedAt: Date.now() })
 	return spec
 }
 
@@ -114,16 +130,26 @@ async function fetchSpec(specType) {
  * Returns a restore function.
  */
 function __setCacheForTest(overrides) {
-	const prev = {
-		openapi: specCache.openapi,
-		asyncapi: specCache.asyncapi,
-		webhooks: specCache.webhooks,
-		lastFetch: specCache.lastFetch,
+	const previous = new Map(specCache)
+	const urls = getEnvUrls()
+	for (const [kind, field] of Object.entries({
+		openapi: "openApiSpec",
+		asyncapi: "asyncApiSpec",
+		webhooks: "webhookSpec",
+	})) {
+		if (Object.prototype.hasOwnProperty.call(overrides, kind)) {
+			if (overrides[kind] == null) specCache.delete(urls[field])
+			else
+				specCache.set(urls[field], {
+					spec: overrides[kind],
+					fetchedAt: Date.now(),
+				})
+		}
 	}
-	Object.assign(specCache, overrides, {
-		lastFetch: Date.now(),
-	})
-	return () => Object.assign(specCache, prev)
+	return () => {
+		specCache.clear()
+		for (const [url, value] of previous) specCache.set(url, value)
+	}
 }
 
 module.exports = {

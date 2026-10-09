@@ -92,6 +92,8 @@ describe("files.js (real fs)", () => {
 			expect(pkg.type).toBe("module")
 			expect(pkg.dependencies).toEqual(REQUIRED_DEPENDENCIES)
 			expect(pkg.devDependencies).toEqual(REQUIRED_DEV_DEPENDENCIES)
+			expect(pkg.devDependencies["happy-dom"]).toBe("^20.14.5")
+			expect(pkg.overrides["shell-quote"]).toBe("1.12.0")
 			// DEFAULT_SCRIPTS should all be present (createPackageJson also adds
 			// a "placeholder" override on top of them).
 			for (const key of Object.keys(DEFAULT_SCRIPTS)) {
@@ -107,6 +109,25 @@ describe("files.js (real fs)", () => {
 			)
 			expect(pkg.description).toBe("GxP Plugin: my-plugin")
 		})
+	})
+
+	it("updates security overrides while preserving unrelated overrides", () => {
+		createPackageJson(tmpDir, "security-fixture")
+		const manifestPath = path.join(tmpDir, "package.json")
+		const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
+		manifest.overrides = {
+			"shell-quote": "1.9.0",
+			cheerio: { "encoding-sniffer": "1.0.2" },
+		}
+		fs.writeFileSync(manifestPath, JSON.stringify(manifest))
+
+		expect(updateExistingProject(tmpDir)).toBe(true)
+		const updated = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
+		expect(updated.overrides).toEqual({
+			"shell-quote": "1.12.0",
+			cheerio: { "encoding-sniffer": "1.0.2" },
+		})
+		expect(updateExistingProject(tmpDir)).toBe(false)
 	})
 
 	describe("updateAppManifest", () => {

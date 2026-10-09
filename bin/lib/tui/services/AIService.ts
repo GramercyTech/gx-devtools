@@ -312,8 +312,8 @@ export class AIService extends EventEmitter {
 				: message
 
 			const claude = spawn("claude", ["--print", "-p", fullPrompt], {
-				stdio: ["pipe", "pipe", "pipe"],
-				shell: true,
+				stdio: ["ignore", "pipe", "pipe"],
+				shell: false,
 			})
 
 			claude.stdout.on("data", (data) => {
@@ -353,10 +353,23 @@ export class AIService extends EventEmitter {
 				? `${systemContext}\n\nUser: ${message}`
 				: message
 
-			const codex = spawn("codex", ["--quiet", "-p", fullPrompt], {
-				stdio: ["pipe", "pipe", "pipe"],
-				shell: true,
-			})
+			const codex = spawn(
+				"codex",
+				[
+					"exec",
+					"--sandbox",
+					"read-only",
+					"--color",
+					"never",
+					"--skip-git-repo-check",
+					"--",
+					fullPrompt,
+				],
+				{
+					stdio: ["ignore", "pipe", "pipe"],
+					shell: false,
+				},
+			)
 
 			codex.stdout.on("data", (data) => {
 				output += data.toString()
@@ -409,8 +422,8 @@ export class AIService extends EventEmitter {
 			let errorOutput = ""
 
 			const gemini = spawn("gemini", ["-p", prompt], {
-				stdio: ["pipe", "pipe", "pipe"],
-				shell: true,
+				stdio: ["ignore", "pipe", "pipe"],
+				shell: false,
 			})
 
 			gemini.stdout.on("data", (data) => {

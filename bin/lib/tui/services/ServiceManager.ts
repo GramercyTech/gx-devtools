@@ -1,4 +1,4 @@
-import { spawn, ChildProcess, execSync } from "child_process"
+import { spawn, ChildProcess } from "child_process"
 import { EventEmitter } from "events"
 
 export type ServiceStatus = "stopped" | "starting" | "running" | "error"
@@ -111,7 +111,7 @@ export class ServiceManager extends EventEmitter {
 					FORCE_COLOR: "1",
 					CI: "true",
 				},
-				shell: true,
+				shell: false,
 				stdio: ["ignore", "pipe", "pipe"],
 				detached: true,
 			})
@@ -166,6 +166,7 @@ export class ServiceManager extends EventEmitter {
 			// Handle process exit
 			proc.on("close", (code) => {
 				state.process = undefined
+				state.pid = undefined
 				if (code === 0 || code === null) {
 					state.status = "stopped"
 					this.addLog(config.id, `[${config.name}] Stopped`)
@@ -185,6 +186,7 @@ export class ServiceManager extends EventEmitter {
 				state.status = "error"
 				state.error = err.message
 				state.process = undefined
+				state.pid = undefined
 				this.addLog(config.id, `[${config.name}] Error: ${err.message}`)
 				this.emit("statusChange", config.id, "error")
 			})
@@ -214,24 +216,24 @@ export class ServiceManager extends EventEmitter {
 
 		this.addLog(id, `[${service.name}] Stopping...`)
 
-		// Kill the process tree
+		const target = service.process
 		try {
-			process.kill(-service.process.pid!, "SIGTERM")
+			process.kill(-target.pid!, "SIGTERM")
 		} catch {
-			// Process group kill failed, try direct kill
-			service.process.kill("SIGTERM")
+			target.kill("SIGTERM")
 		}
 
-		// Force kill after timeout
-		setTimeout(() => {
-			if (service.process && !service.process.killed) {
+		const forceTimer = setTimeout(() => {
+			if (target.exitCode === null && target.signalCode === null) {
 				try {
-					process.kill(-service.process.pid!, "SIGKILL")
+					process.kill(-target.pid!, "SIGKILL")
 				} catch {
-					service.process.kill("SIGKILL")
+					target.kill("SIGKILL")
 				}
 			}
 		}, 2000)
+		forceTimer.unref()
+		target.once("close", () => clearTimeout(forceTimer))
 
 		return true
 	}
@@ -265,19 +267,6 @@ export class ServiceManager extends EventEmitter {
 					// Ignore errors
 				}
 			}
-		}
-
-		// Also try to kill any orphaned vite/nodemon processes using lsof on common ports
-		try {
-			// Kill processes on typical dev ports synchronously
-			execSync("lsof -ti :3060 | xargs kill -9 2>/dev/null || true", {
-				stdio: "ignore",
-			})
-			execSync("lsof -ti :3069 | xargs kill -9 2>/dev/null || true", {
-				stdio: "ignore",
-			})
-		} catch {
-			// Ignore errors - best effort cleanup
 		}
 	}
 

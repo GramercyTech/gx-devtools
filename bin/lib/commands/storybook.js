@@ -15,7 +15,7 @@
 
 const path = require("path")
 const fs = require("fs")
-const shell = require("shelljs")
+const commands = require("../utils/process")
 const readline = require("readline")
 const { findProjectRoot } = require("../utils")
 const { resolveAppUi } = require("../utils/app-ui")
@@ -109,7 +109,10 @@ async function storybookCommand(argv) {
 		const projectRoot = findProjectRoot()
 		const installCmd = `npm install --save-dev --no-fund --no-audit ${missing.map((m) => `"${m}"`).join(" ")}`
 		console.log(`▶ ${installCmd}`)
-		const installResult = shell.exec(installCmd, { cwd: projectRoot })
+		const installResult = commands.npm(
+			["install", "--save-dev", "--no-fund", "--no-audit", ...missing],
+			{ cwd: projectRoot },
+		)
 		if (installResult.code !== 0) {
 			console.error("❌ Install failed. Resolve the errors and try again.")
 			process.exit(installResult.code)
@@ -122,7 +125,7 @@ async function storybookCommand(argv) {
 	console.log(label)
 	console.log(`📁 AppUI path: ${appUiRoot}`)
 
-	const result = shell.exec(`npm run ${scriptName}`, { cwd: appUiRoot })
+	const result = commands.npm(["run", scriptName], { cwd: appUiRoot })
 	if (result.code !== 0) {
 		process.exit(result.code)
 	}

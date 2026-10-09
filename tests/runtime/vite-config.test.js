@@ -7,10 +7,32 @@
  * surviving reference (reka-ui, vee-validate, etc.) throws ReferenceError in
  * production while dev works fine.
  */
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi, afterEach } from "vitest"
 import viteConfigFactory from "../../runtime/vite.config.js"
 
 describe("runtime vite config", () => {
+	afterEach(() => vi.unstubAllEnvs())
+
+	it("exposes the configured preview origin to the runtime", async () => {
+		vi.stubEnv("DEV_SERVER_ORIGIN", "https://session.dev.gxp.test")
+		const config = await viteConfigFactory({
+			mode: "development",
+			command: "serve",
+		})
+		expect(config.define["import.meta.env.VITE_DEV_SERVER_ORIGIN"]).toBe(
+			'"https://session.dev.gxp.test"',
+		)
+	})
+
+	it("leaves the runtime origin empty for extension defaults", async () => {
+		vi.stubEnv("DEV_SERVER_ORIGIN", "")
+		const config = await viteConfigFactory({
+			mode: "development",
+			command: "serve",
+		})
+		expect(config.define["import.meta.env.VITE_DEV_SERVER_ORIGIN"]).toBe('""')
+	})
+
 	it("defines process.env.NODE_ENV for production builds", async () => {
 		const config = await viteConfigFactory({
 			mode: "production",

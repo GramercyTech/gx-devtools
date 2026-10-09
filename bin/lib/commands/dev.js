@@ -8,7 +8,6 @@
 const path = require("path")
 const fs = require("fs")
 const childProcess = require("child_process")
-const shell = require("shelljs")
 const dotenv = require("dotenv")
 
 // Module-private spawn reference so tests can swap in a stub via
@@ -60,9 +59,10 @@ function createLogger(jsonMode) {
  * Spawn a service and pipe each line of its stdout/stderr through the logger.
  * Returns the child process.
  */
-function spawnService(name, command, logger) {
-	const child = _spawn(command, {
-		shell: true,
+function spawnService(name, command, logger, args = []) {
+	const child = _spawn(command, args, {
+		shell: false,
+		detached: process.platform !== "win32",
 		stdio: ["ignore", "pipe", "pipe"],
 		env: process.env,
 	})
@@ -105,41 +105,73 @@ function spawnService(name, command, logger) {
 function runServicesJson(services, logger) {
 	const children = services.map((svc) => {
 		logger.info(`starting ${svc.name}: ${svc.command}`, svc.name)
-		return { svc, child: spawnService(svc.name, svc.command, logger) }
+		return {
+			svc,
+			child: spawnService(svc.name, svc.command, logger, svc.args || []),
+			closed: false,
+		}
 	})
-
 	let shuttingDown = false
-	function shutdown(code) {
-		if (shuttingDown) {
-			return
-		}
-		shuttingDown = true
-		for (const { child } of children) {
-			if (!child.killed && child.exitCode === null) {
-				child.kill("SIGTERM")
-			}
-		}
-		process.exit(code ?? 0)
+	let exitCode = 0
+	let forceTimer
+	const interrupt = () => shutdown(130)
+	const terminate = () => shutdown(143)
+	function finish() {
+		if (!shuttingDown || children.some((entry) => !entry.closed)) return
+		clearTimeout(forceTimer)
+		process.removeListener("SIGINT", interrupt)
+		process.removeListener("SIGTERM", terminate)
+		process.exit(exitCode)
 	}
-
-	for (const { svc, child } of children) {
+	function stop(child, signal) {
+		try {
+			if (child.pid && process.platform !== "win32")
+				process.kill(-child.pid, signal)
+			else if (child.pid && process.platform === "win32") {
+				childProcess.spawnSync(
+					"taskkill",
+					["/PID", String(child.pid), "/T", "/F"],
+					{ shell: false, stdio: "ignore" },
+				)
+			} else child.kill(signal)
+		} catch (error) {
+			if (error.code !== "ESRCH")
+				logger.error(`Cannot stop child: ${error.message}`)
+		}
+	}
+	function shutdown(code) {
+		if (shuttingDown) return
+		shuttingDown = true
+		exitCode = code ?? 0
+		for (const { child, closed } of children)
+			if (!closed) stop(child, "SIGTERM")
+		forceTimer = setTimeout(() => {
+			for (const { child, closed } of children)
+				if (!closed) stop(child, "SIGKILL")
+		}, 3000)
+		forceTimer.unref()
+		finish()
+	}
+	for (const entry of children) {
+		const { svc, child } = entry
 		child.on("exit", (code, signal) => {
 			logger.info(
-				`${svc.name} exited (code=${code ?? "null"}${
-					signal ? `, signal=${signal}` : ""
-				})`,
+				`${svc.name} exited (code=${code ?? "null"}, signal=${signal || "none"})`,
 				svc.name,
 			)
-			shutdown(code ?? 0)
+			shutdown(code ?? (signal ? 1 : 0))
 		})
-		child.on("error", (err) => {
-			logger.error(`${svc.name} failed to spawn: ${err.message}`, svc.name)
+		child.on("close", () => {
+			entry.closed = true
+			finish()
+		})
+		child.on("error", (error) => {
+			logger.error(`${svc.name} failed to spawn: ${error.message}`, svc.name)
 			shutdown(1)
 		})
 	}
-
-	process.on("SIGINT", () => shutdown(130))
-	process.on("SIGTERM", () => shutdown(143))
+	process.on("SIGINT", interrupt)
+	process.on("SIGTERM", terminate)
 }
 
 /**
@@ -175,7 +207,15 @@ function getBrowserExtensionConfig(browser, projectPath, paths, options = {}) {
 		return {
 			name: "FIREFOX",
 			color: "yellow",
-			command: `npx web-ext run --source-dir "${extensionPath}" --start-url "${startUrl}"`,
+			command: process.execPath,
+			args: [
+				path.join(paths.packageRoot, "scripts", "web-ext.js"),
+				"run",
+				"--source-dir",
+				extensionPath,
+				"--start-url",
+				startUrl,
+			],
 			extensionPath,
 			startUrl,
 		}
@@ -209,7 +249,8 @@ function getBrowserExtensionConfig(browser, projectPath, paths, options = {}) {
 			name: "CHROME",
 			color: "blue",
 			// Inline KEY=VALUE env syntax doesn't work on Windows; env vars are set on process.env before exec
-			command: `node "${normalizedScriptPath}"`,
+			command: process.execPath,
+			args: [normalizedScriptPath],
 			extensionPath,
 			startUrl,
 		}
@@ -309,7 +350,7 @@ function devCommand(argv) {
 		} else {
 			serverJsPath = serverJs.path
 			logger.info(
-				`📡 Starting Socket.IO server with nodemon... (${
+				`📡 Starting Socket.IO server with Node watch... (${
 					serverJs.isLocal ? "local" : "package"
 				} version)`,
 			)
@@ -419,7 +460,22 @@ function devCommand(argv) {
 	services.push({
 		name: "VITE",
 		color: "cyan",
-		command: `npx vite dev --config "${normalizedViteConfigPath}" --port ${finalPort}`,
+		command: process.execPath,
+		args: [
+			path.join(
+				path.dirname(
+					require.resolve("vite/package.json", {
+						paths: [projectPath, __dirname],
+					}),
+				),
+				"bin/vite.js",
+			),
+			"dev",
+			"--config",
+			normalizedViteConfigPath,
+			"--port",
+			String(finalPort),
+		],
 	})
 
 	if (serverJsPath) {
@@ -427,7 +483,8 @@ function devCommand(argv) {
 		services.push({
 			name: "SOCKET",
 			color: "green",
-			command: `npx nodemon "${normalizedServerPath}"`,
+			command: process.execPath,
+			args: ["--watch", "--watch-preserve-output", normalizedServerPath],
 		})
 	}
 
@@ -436,6 +493,7 @@ function devCommand(argv) {
 			name: firefoxConfig.name,
 			color: firefoxConfig.color,
 			command: firefoxConfig.command,
+			args: firefoxConfig.args,
 		})
 	}
 
@@ -444,28 +502,11 @@ function devCommand(argv) {
 			name: chromeConfig.name,
 			color: chromeConfig.color,
 			command: chromeConfig.command,
+			args: chromeConfig.args,
 		})
 	}
 
-	// In JSON mode we orchestrate the children ourselves so we can wrap every
-	// stdout/stderr line as NDJSON. Concurrently's prefixed output would defeat
-	// that. Outside JSON mode, keep the legacy concurrently-based behavior.
-	if (logger.jsonMode) {
-		runServicesJson(services, logger)
-		return
-	}
-
-	let command
-	if (services.length > 1) {
-		const quoted = services.map((s) => `"${s.command}"`).join(" ")
-		const names = services.map((s) => s.name).join(",")
-		const colors = services.map((s) => s.color).join(",")
-		command = `npx concurrently --names "${names}" --prefix-colors "${colors}" ${quoted}`
-	} else {
-		command = services[0].command
-	}
-
-	shell.exec(command)
+	runServicesJson(services, logger)
 }
 
 /**

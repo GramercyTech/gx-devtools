@@ -50,7 +50,11 @@ const FAKE_OPENAPI = {
 				operationId: "attendees.index",
 				summary: "List attendees",
 				tags: ["Attendees"],
-				"x-permission": "attendees.read",
+				"x-model": { name: "Attendee" },
+				"x-permission": {
+					permission: "attendees.read",
+					permission_key: "attendees",
+				},
 				"x-permission-key": "attendees",
 				responses: {
 					200: {
@@ -69,7 +73,11 @@ const FAKE_OPENAPI = {
 				operationId: "attendees.store",
 				summary: "Create attendee",
 				tags: ["Attendees"],
-				"x-permission": "attendees.write",
+				"x-model": { name: "Attendee" },
+				"x-permission": {
+					permission: "attendees.write",
+					permission_key: "attendees",
+				},
 				requestBody: {
 					content: {
 						"application/json": {
@@ -93,7 +101,11 @@ const FAKE_OPENAPI = {
 						schema: { type: "string" },
 					},
 				],
-				"x-permission": "attendees.read",
+				"x-model": { name: "Attendee" },
+				"x-permission": {
+					permission: "attendees.read",
+					permission_key: "attendees",
+				},
 				responses: {
 					200: {
 						content: {
@@ -214,9 +226,7 @@ describe("AsyncAPI event tools", () => {
 	})
 
 	it("api_list_events returns every message with triggeredBy", async () => {
-		const out = parseResult(
-			await handleExtApiToolCall("api_list_events", {}),
-		)
+		const out = parseResult(await handleExtApiToolCall("api_list_events", {}))
 		const names = out.events.map((e) => e.eventName).sort()
 		expect(names).toEqual([
 			"OrphanEvent",
@@ -301,7 +311,10 @@ describe("api_get_operation_parameters", () => {
 		expect(out.path).toBe("/v1/attendees/{id}")
 		expect(out.method).toBe("GET")
 		expect(out.parameters).toHaveLength(1)
-		expect(out.permission).toBe("attendees.read")
+		expect(out.permission).toEqual({
+			permission: "attendees.read",
+			permission_key: "attendees",
+		})
 	})
 	it("reports missing operations cleanly", async () => {
 		const out = parseResult(
@@ -362,7 +375,7 @@ describe("api_generate_dependency", () => {
 		)
 		expect(out.ok).toBe(true)
 		expect(out.dependency.identifier).toBe("attendees")
-		expect(out.dependency.model).toBe("Attendees")
+		expect(out.dependency.model).toBe("Attendee")
 		expect(out.dependency.permissionKey).toBe("attendees")
 		expect(out.dependency.permissions).toEqual(
 			expect.arrayContaining(["attendees.read", "attendees.write"]),

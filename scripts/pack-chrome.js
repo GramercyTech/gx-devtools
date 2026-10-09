@@ -2,17 +2,18 @@
 
 const path = require("path")
 const fs = require("fs")
-const shell = require("shelljs")
+const { spawnSync } = require("node:child_process")
 
 /**
  * Packages Chrome extension into a distributable format
  */
 function packChromeExtension() {
-	const extensionPath =
-		process.env.CHROME_EXTENSION_PATH ||
-		path.resolve(__dirname, "../browser-extensions/chrome")
-	const distPath =
-		process.env.CHROME_BUILD_OUTPUT || path.resolve(__dirname, "../dist/chrome")
+	const extensionPath = process.env.CHROME_EXTENSION_PATH
+		? path.resolve(process.env.CHROME_EXTENSION_PATH)
+		: path.resolve(__dirname, "../browser-extensions/chrome")
+	const distPath = process.env.CHROME_BUILD_OUTPUT
+		? path.resolve(process.env.CHROME_BUILD_OUTPUT)
+		: path.resolve(__dirname, "../dist/chrome")
 
 	console.log("📦 Packaging Chrome extension...")
 
@@ -39,30 +40,30 @@ function packChromeExtension() {
 		console.warn("⚠️ Could not read manifest version, using default")
 	}
 
+	if (!/^\d+(?:\.\d+){0,3}$/.test(version)) {
+		throw new Error("Invalid Chrome extension version")
+	}
+
 	// Create zip file
 	const zipName = `gx-chrome-extension-v${version}.zip`
 	const zipPath = path.join(distPath, zipName)
 
 	console.log("🗜️ Creating zip archive...")
 
-	// Change to extension directory and create zip
-	const currentDir = process.cwd()
-
 	try {
-		process.chdir(extensionPath)
-
 		// Remove existing zip if it exists
 		if (fs.existsSync(zipPath)) {
 			fs.unlinkSync(zipPath)
 		}
 
 		// Create zip using native zip command (works on macOS/Linux)
-		const result = shell.exec(
-			`zip -r "${zipPath}" . -x "*.DS_Store" "*.git*" "node_modules/*"`,
-			{ silent: true },
+		const result = spawnSync(
+			"zip",
+			["-r", zipPath, ".", "-x", "*.DS_Store", "*.git*", "node_modules/*"],
+			{ cwd: extensionPath, encoding: "utf8", shell: false },
 		)
 
-		if (result.code === 0) {
+		if (result.status === 0) {
 			console.log("✅ Chrome extension packaged successfully!")
 			console.log("📁 Package location:", zipPath)
 			console.log("")
@@ -78,8 +79,6 @@ function packChromeExtension() {
 	} catch (error) {
 		console.error("❌ Error packaging extension:", error.message)
 		process.exit(1)
-	} finally {
-		process.chdir(currentDir)
 	}
 }
 

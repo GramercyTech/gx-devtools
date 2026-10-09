@@ -421,19 +421,87 @@ async function generateDependency({
 		}
 	}
 
-	const operations = {}
+	if (
+		operationIds?.some((id) => !scoped.some(({ op }) => op.operationId === id))
+	) {
+		return {
+			ok: false,
+			error: "Every requested operation must exist under the selected tag.",
+		}
+	}
+
+	const operations = Object.create(null)
 	const permissions = new Set()
+	let model = null
 	let permissionKey = null
+	let bindingParameter = null
 	for (const { path: p, method, op } of scoped) {
-		if (!op.operationId) continue
+		if (typeof op.operationId !== "string" || !op.operationId.trim())
+			return { ok: false, error: "Operation ID is missing." }
+		const relation = op["x-relation"]
+		const operationModel = relation
+			? relation.parent_model?.name
+			: op["x-model"]?.name
+		const raw = op["x-permission"]
+		const requirements = Array.isArray(raw) ? raw : [raw]
+		if (
+			!requirements.length ||
+			requirements.some(
+				(r) =>
+					!r ||
+					typeof r !== "object" ||
+					Array.isArray(r) ||
+					typeof r.permission !== "string" ||
+					!r.permission.trim() ||
+					typeof r.permission_key !== "string" ||
+					!r.permission_key.trim(),
+			)
+		) {
+			return {
+				ok: false,
+				error: "Complete structured permission metadata is required.",
+			}
+		}
+		const keys = new Set(requirements.map((r) => r.permission_key))
+		const operationKey = relation
+			? relation.parent_permission_key
+			: keys.size === 1
+				? requirements[0].permission_key
+				: null
+		const parameter = relation?.parent_parameter || null
+		if (
+			typeof operationModel !== "string" ||
+			!operationModel.trim() ||
+			typeof operationKey !== "string" ||
+			!keys.has(operationKey) ||
+			(relation && (!parameter || !p.includes(`{${parameter}}`)))
+		) {
+			return {
+				ok: false,
+				error: "Explicit model and permission binding metadata is required.",
+			}
+		}
+		if (
+			model &&
+			(model !== operationModel ||
+				permissionKey !== operationKey ||
+				bindingParameter !== parameter)
+		) {
+			return {
+				ok: false,
+				error: "Selected operations require separate dependency bindings.",
+			}
+		}
+		model = operationModel
+		permissionKey = operationKey
+		bindingParameter = parameter
 		const cleanOpId = op.operationId.replace(/^portal\.v1\.project\./, "")
+		if (Object.hasOwn(operations, cleanOpId)) {
+			return { ok: false, error: "Duplicate normalized operation ID." }
+		}
 		operations[cleanOpId] = `${method.toLowerCase()}:${p}`
-
-		const perm = op["x-permission"] || op.security?.[0]?.permission || null
-		if (perm) permissions.add(perm)
-
-		const key = op["x-permission-key"] || op["x-permissionKey"] || null
-		if (!permissionKey && key) permissionKey = key
+		for (const requirement of requirements)
+			permissions.add(requirement.permission)
 	}
 
 	const events = {}
@@ -445,7 +513,7 @@ async function generateDependency({
 
 	const dependency = {
 		identifier,
-		model: tag,
+		model,
 		permissionKey,
 		permissions: Array.from(permissions).sort(),
 		operations,

@@ -6,8 +6,24 @@
 
 const path = require("path")
 const fs = require("fs")
-const shell = require("shelljs")
+const commands = require("../utils/process")
+const { spawnSync } = require("node:child_process")
+const webExtLauncher = path.resolve(__dirname, "../../../scripts/web-ext.js")
 const { findProjectRoot, resolveGxPaths } = require("../utils")
+
+async function openBrowserSettings(browser, url) {
+	try {
+		const { default: open, apps } = await import("open")
+		await open(url, {
+			app: { name: browser === "chrome" ? apps.chrome : apps.firefox },
+			wait: false,
+		})
+	} catch (error) {
+		console.warn(
+			`Could not open browser settings: ${error.message}. Open ${url} manually.`,
+		)
+	}
+}
 
 /**
  * Launch Firefox with extension command
@@ -45,7 +61,12 @@ function extensionFirefoxCommand() {
 
 	console.log("🦊 Launching Firefox with extension...")
 	console.log("📁 Extension path:", extensionPath)
-	shell.exec(`npx web-ext run --source-dir "${extensionPath}"`)
+	const result = spawnSync(
+		process.execPath,
+		[webExtLauncher, "run", "--source-dir", extensionPath],
+		{ stdio: "inherit", shell: false },
+	)
+	process.exitCode = result.status ?? 1
 }
 
 /**
@@ -98,7 +119,7 @@ function extensionChromeCommand() {
 
 	// Set the extension path as an environment variable for the script
 	process.env.CHROME_EXTENSION_PATH = extensionPath
-	shell.exec(`node "${scriptPath}"`)
+	process.exitCode = commands.run(process.execPath, [scriptPath]).code
 }
 
 /**
@@ -155,15 +176,8 @@ function extensionInstallCommand(argv) {
 		console.log("")
 
 		// Try to open Chrome to the extensions page
-		const openCommand =
-			process.platform === "darwin"
-				? 'open -a "Google Chrome" "chrome://extensions/"'
-				: process.platform === "win32"
-					? 'start chrome "chrome://extensions/"'
-					: 'google-chrome "chrome://extensions/"'
-
 		console.log("🌐 Attempting to open Chrome extensions page...")
-		shell.exec(openCommand, { silent: true })
+		openBrowserSettings("chrome", "chrome://extensions/")
 	} else if (browser === "firefox") {
 		console.log("🦊 Firefox Installation Instructions:")
 		console.log("─".repeat(50))
@@ -198,15 +212,8 @@ function extensionInstallCommand(argv) {
 		console.log("")
 
 		// Try to open Firefox to the debugging page
-		const openCommand =
-			process.platform === "darwin"
-				? 'open -a "Firefox" "about:debugging#/runtime/this-firefox"'
-				: process.platform === "win32"
-					? 'start firefox "about:debugging#/runtime/this-firefox"'
-					: 'firefox "about:debugging#/runtime/this-firefox"'
-
 		console.log("🌐 Attempting to open Firefox debugging page...")
-		shell.exec(openCommand, { silent: true })
+		openBrowserSettings("firefox", "about:debugging#/runtime/this-firefox")
 	}
 }
 
@@ -242,9 +249,22 @@ function extensionBuildCommand() {
 		const outputDir = useProjectExtensions
 			? "dist/firefox"
 			: path.join(projectPath, "dist/firefox")
-		shell.exec(
-			`npx web-ext build --source-dir "${firefoxPath}" --artifacts-dir "${outputDir}"`,
+		const result = spawnSync(
+			process.execPath,
+			[
+				webExtLauncher,
+				"build",
+				"--source-dir",
+				firefoxPath,
+				"--artifacts-dir",
+				outputDir,
+			],
+			{ stdio: "inherit", shell: false },
 		)
+		if (result.status !== 0) {
+			process.exitCode = result.status ?? 1
+			return
+		}
 	} else {
 		console.log("⚠️ No Firefox extension found to build")
 	}
@@ -282,7 +302,7 @@ function extensionBuildCommand() {
 		// Set environment variable for the script to know where the extension is
 		process.env.CHROME_EXTENSION_PATH = chromeExtensionPath
 		process.env.CHROME_BUILD_OUTPUT = path.join(projectPath, "dist/chrome")
-		shell.exec(`node "${chromeScriptPath}"`)
+		process.exitCode = commands.run(process.execPath, [chromeScriptPath]).code
 	} else {
 		console.log("⚠️ No Chrome extension found to build")
 	}

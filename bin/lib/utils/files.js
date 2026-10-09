@@ -6,10 +6,11 @@
 
 const path = require("path")
 const fs = require("fs")
-const shell = require("shelljs")
+const commands = require("./process")
 const {
 	REQUIRED_DEPENDENCIES,
 	REQUIRED_DEV_DEPENDENCIES,
+	REQUIRED_OVERRIDES,
 	DEFAULT_SCRIPTS,
 	BASE_FRAMEWORK,
 } = require("../constants")
@@ -57,6 +58,7 @@ function createPackageJson(projectPath, projectName, description = "") {
 		},
 		dependencies: REQUIRED_DEPENDENCIES,
 		devDependencies: REQUIRED_DEV_DEPENDENCIES,
+		overrides: { ...REQUIRED_OVERRIDES },
 		author: globalConfig.author || "Your Name",
 		license: "ISC",
 	}
@@ -137,16 +139,21 @@ function ensureBaseFramework(projectPath) {
  */
 function installDependencies(projectPath) {
 	console.log("\n📦 Installing dependencies...")
-	const currentDir = process.cwd()
-
-	try {
-		process.chdir(projectPath)
-		const result = shell.exec("npm install", { silent: false })
-		if (result.code !== 0) {
-			console.warn("⚠ npm install completed with warnings")
-		}
-	} finally {
-		process.chdir(currentDir)
+	const options = { cwd: projectPath, silent: false }
+	const installed = commands.npm(["install"], options)
+	if (installed.code !== 0) {
+		throw new Error(
+			`Dependency installation failed (exit ${installed.code}). Initialization aborted.`,
+		)
+	}
+	const verified = commands.npm(
+		["ci", "--dry-run", "--ignore-scripts", "--no-audit", "--no-fund"],
+		options,
+	)
+	if (verified.code !== 0) {
+		throw new Error(
+			`Dependency lockfile verification failed (exit ${verified.code}). Initialization aborted.`,
+		)
 	}
 }
 
@@ -227,6 +234,16 @@ function updateExistingProject(projectPath) {
 			}
 		}
 
+		for (const [dependency, version] of Object.entries(REQUIRED_OVERRIDES)) {
+			if (packageJson.overrides?.[dependency] !== version) {
+				packageJson.overrides = {
+					...packageJson.overrides,
+					[dependency]: version,
+				}
+				updated = true
+			}
+		}
+
 		// Check and add missing scripts
 		if (!packageJson.scripts) {
 			packageJson.scripts = {}
@@ -285,7 +302,7 @@ function migrateMcpJson(projectPath) {
  * Checks if ImageMagick is available globally
  */
 function isImageMagickInstalled() {
-	return shell.which("magick") !== null || shell.which("convert") !== null
+	return commands.which("magick") !== null || commands.which("convert") !== null
 }
 
 /**

@@ -6,9 +6,55 @@
 
 const path = require("path")
 const fs = require("fs")
-const shell = require("shelljs")
+const commands = require("../utils/process")
 const AdmZip = require("adm-zip")
 const { findProjectRoot, resolveGxPaths } = require("../utils")
+
+/**
+ * Resolve a packaging path without allowing traversal or symbolic links.
+ * Checks existing ancestors too, so a missing destination cannot hide a link.
+ */
+function confinedPath(projectPath, candidate) {
+	const root = fs.realpathSync(projectPath)
+	const resolved = path.resolve(projectPath, candidate)
+	const relative = path.relative(path.resolve(projectPath), resolved)
+	if (
+		relative === ".." ||
+		relative.startsWith(`..${path.sep}`) ||
+		path.isAbsolute(relative)
+	) {
+		throw new Error("Packaging path must stay inside the project")
+	}
+	let current = root
+	for (const part of relative.split(path.sep).filter(Boolean)) {
+		current = path.join(current, part)
+		try {
+			const stat = fs.lstatSync(current)
+			if (stat.isSymbolicLink()) {
+				throw new Error("Packaging paths must not contain symbolic links")
+			}
+			if (!stat.isFile() && !stat.isDirectory()) {
+				throw new Error("Packaging paths must be regular files or directories")
+			}
+		} catch (error) {
+			if (error.code !== "ENOENT") throw error
+		}
+	}
+	return resolved
+}
+
+/** Validate the complete asset/build tree before copying or archiving it. */
+function validatePackageTree(projectPath, directory) {
+	confinedPath(projectPath, directory)
+	if (!fs.existsSync(directory)) return
+	for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+		const entryPath = confinedPath(
+			projectPath,
+			path.join(directory, entry.name),
+		)
+		if (entry.isDirectory()) validatePackageTree(projectPath, entryPath)
+	}
+}
 
 /**
  * Get the plugin name from app-manifest.json (preferred) or package.json
@@ -78,7 +124,19 @@ async function packagePlugin(projectPath, buildPath, outputPath) {
 
 	// Resolve asset directory path (remove leading slash for path.join)
 	const assetDirClean = assetDir.replace(/^\//, "").replace(/\/$/, "")
-	const assetSourcePath = path.join(projectPath, assetDirClean)
+	const assetSourcePath = confinedPath(projectPath, assetDirClean)
+	const buildRelativeToAssets = path.relative(assetSourcePath, buildPath)
+	if (
+		buildRelativeToAssets === "" ||
+		(!buildRelativeToAssets.startsWith(`..${path.sep}`) &&
+			buildRelativeToAssets !== ".." &&
+			!path.isAbsolute(buildRelativeToAssets))
+	) {
+		throw new Error(
+			"Packaging path for assets must not contain the build directory",
+		)
+	}
+	validatePackageTree(projectPath, assetSourcePath)
 	const assetDestPath = path.join(buildPath, "assets")
 
 	// Copy assets to dist/build/assets
@@ -139,6 +197,8 @@ async function packagePlugin(projectPath, buildPath, outputPath) {
 
 	console.log(`📦 Creating ${gxpFileName}...`)
 
+	validatePackageTree(projectPath, buildPath)
+	confinedPath(projectPath, gxpFilePath)
 	await createGxpPackage(buildPath, gxpFilePath)
 
 	console.log(`\n✅ Plugin packaged successfully!`)
@@ -158,7 +218,7 @@ function processOptionalBundleFiles(manifest, projectPath, buildPath) {
 	// Handle appInstructions
 	if (manifest.appInstructionsFile) {
 		// Copy file from specified path
-		const srcPath = path.join(projectPath, manifest.appInstructionsFile)
+		const srcPath = confinedPath(projectPath, manifest.appInstructionsFile)
 		const destPath = path.join(buildPath, "appInstructions.md")
 		if (fs.existsSync(srcPath)) {
 			fs.copyFileSync(srcPath, destPath)
@@ -180,7 +240,7 @@ function processOptionalBundleFiles(manifest, projectPath, buildPath) {
 	// Handle defaultStyling
 	if (manifest.defaultStylingFile) {
 		// Copy file from specified path
-		const srcPath = path.join(projectPath, manifest.defaultStylingFile)
+		const srcPath = confinedPath(projectPath, manifest.defaultStylingFile)
 		const destPath = path.join(buildPath, "default-styling.css")
 		if (fs.existsSync(srcPath)) {
 			fs.copyFileSync(srcPath, destPath)
@@ -202,7 +262,7 @@ function processOptionalBundleFiles(manifest, projectPath, buildPath) {
 	// Handle configuration
 	if (manifest.configurationFile) {
 		// Copy file from specified path
-		const srcPath = path.join(projectPath, manifest.configurationFile)
+		const srcPath = confinedPath(projectPath, manifest.configurationFile)
 		const destPath = path.join(buildPath, "configuration.json")
 		if (fs.existsSync(srcPath)) {
 			fs.copyFileSync(srcPath, destPath)
@@ -323,13 +383,25 @@ async function buildCommand(argv) {
 
 	// Normalize path separators to forward slashes for cross-platform shell compatibility
 	const normalizedViteConfigPath = viteConfigPath.replace(/\\/g, "/")
-	const command = `npx vite build --config "${normalizedViteConfigPath}"`
-
-	const result = shell.exec(command)
+	const viteCli = path.join(
+		path.dirname(
+			require.resolve("vite/package.json", { paths: [projectPath, __dirname] }),
+		),
+		"bin/vite.js",
+	)
+	const result = commands.run(process.execPath, [
+		viteCli,
+		"build",
+		"--config",
+		normalizedViteConfigPath,
+	])
 
 	// Only proceed with packaging if build succeeded
 	if (result.code === 0) {
 		try {
+			confinedPath(projectPath, path.join(projectPath, "app-manifest.json"))
+			confinedPath(projectPath, path.join(projectPath, "package.json"))
+			validatePackageTree(projectPath, distPath)
 			// Move built files from dist/ to dist/build/
 			await moveBuildFiles(distPath, buildPath)
 			// Package the plugin (reads from buildPath, outputs .gxpapp to distPath)

@@ -272,8 +272,8 @@ async function generateWithClaude(userPrompt, projectName, description) {
 			"claude",
 			["--print", "-p", `${SCAFFOLD_SYSTEM_PROMPT}\n\n${fullPrompt}`],
 			{
-				stdio: ["pipe", "pipe", "pipe"],
-				shell: true,
+				stdio: ["ignore", "pipe", "pipe"],
+				shell: false,
 			},
 		)
 
@@ -355,10 +355,19 @@ async function generateWithCodex(userPrompt, projectName, description) {
 		// Use codex CLI
 		const codex = spawn(
 			"codex",
-			["--quiet", "-p", `${SCAFFOLD_SYSTEM_PROMPT}\n\n${fullPrompt}`],
+			[
+				"exec",
+				"--sandbox",
+				"read-only",
+				"--color",
+				"never",
+				"--skip-git-repo-check",
+				"--",
+				`${SCAFFOLD_SYSTEM_PROMPT}\n\n${fullPrompt}`,
+			],
 			{
-				stdio: ["pipe", "pipe", "pipe"],
-				shell: true,
+				stdio: ["ignore", "pipe", "pipe"],
+				shell: false,
 			},
 		)
 
@@ -465,8 +474,8 @@ async function generateWithGeminiCli(fullPrompt) {
 			"gemini",
 			["-p", `${SCAFFOLD_SYSTEM_PROMPT}\n\n${fullPrompt}`],
 			{
-				stdio: ["pipe", "pipe", "pipe"],
-				shell: true,
+				stdio: ["ignore", "pipe", "pipe"],
+				shell: false,
 			},
 		)
 
@@ -1132,7 +1141,7 @@ function launchInteractiveAISession(
 
 		// Do NOT pass shell: true here. The initial prompt contains backticks,
 		// parentheses, and quotes; going through /bin/sh -c would require
-		// shell-escaping every special character. Without shell: true, spawn
+		// shell-escaping every special character. Without shell: false, spawn
 		// execs the binary directly and the argv is delivered as-is.
 		const child = spawn(command, args, {
 			cwd: projectPath,

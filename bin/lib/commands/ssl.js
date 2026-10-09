@@ -6,7 +6,6 @@
 
 const {
 	findProjectRoot,
-	ensureMkcertInstalled,
 	generateSSLCertificates,
 	updateEnvWithCertPaths,
 } = require("../utils")
@@ -18,9 +17,6 @@ function setupSSLCommand() {
 	const projectPath = findProjectRoot()
 
 	console.log("Setting up SSL certificates for HTTPS development...")
-
-	// Ensure mkcert is available
-	ensureMkcertInstalled()
 
 	// Generate certificates
 	const certs = generateSSLCertificates(projectPath)

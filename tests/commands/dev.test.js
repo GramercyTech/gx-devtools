@@ -207,7 +207,7 @@ describe("dev command — spawnService", () => {
 		expect(logger.info).not.toHaveBeenCalled()
 	})
 
-	it("spawns the command via shell with stdout/stderr piped", () => {
+	it("spawns the command without a shell with stdout/stderr piped", () => {
 		spawnMock.mockReturnValue(makeFakeChild())
 		const logger = {
 			jsonMode: true,
@@ -216,12 +216,13 @@ describe("dev command — spawnService", () => {
 			error: vi.fn(),
 		}
 
-		dev.spawnService("VITE", "npx vite", logger)
+		dev.spawnService("VITE", "node", logger, ["vite cli.js"])
 
 		expect(spawnMock).toHaveBeenCalledTimes(1)
-		const [cmd, opts] = spawnMock.mock.calls[0]
-		expect(cmd).toBe("npx vite")
-		expect(opts.shell).toBe(true)
+		const [cmd, args, opts] = spawnMock.mock.calls[0]
+		expect(cmd).toBe("node")
+		expect(args).toEqual(["vite cli.js"])
+		expect(opts.shell).toBe(false)
 		expect(opts.stdio).toEqual(["ignore", "pipe", "pipe"])
 	})
 })
@@ -316,6 +317,9 @@ describe("dev command — runServicesJson", () => {
 		viteChild.emit("exit", 2, null)
 
 		expect(socketChild.kill).toHaveBeenCalledWith("SIGTERM")
+		expect(exitSpy).not.toHaveBeenCalled()
+		viteChild.emit("close")
+		socketChild.emit("close")
 		expect(exitSpy).toHaveBeenCalledWith(2)
 	})
 
@@ -337,6 +341,7 @@ describe("dev command — runServicesJson", () => {
 			expect.stringContaining("ENOENT"),
 			"VITE",
 		)
+		child.emit("close")
 		expect(exitSpy).toHaveBeenCalledWith(1)
 	})
 })

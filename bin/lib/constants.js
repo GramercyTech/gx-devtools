@@ -28,9 +28,13 @@ const REQUIRED_DEV_DEPENDENCIES = {
 	prettier: "^3.8.3",
 	vitest: "^4.1.5",
 	"@vue/test-utils": "^2.4.6",
-	"happy-dom": "^15.11.0",
+	"happy-dom": "^20.14.5",
 	tailwindcss: TAILWIND_VERSION,
 	"@tailwindcss/vite": TAILWIND_VERSION,
+}
+
+const REQUIRED_OVERRIDES = {
+	"shell-quote": "1.12.0",
 }
 
 const BASE_FRAMEWORK = `tailwindcss@${TAILWIND_VERSION}`
@@ -137,6 +141,7 @@ module.exports = {
 	exportCmd,
 	REQUIRED_DEPENDENCIES,
 	REQUIRED_DEV_DEPENDENCIES,
+	REQUIRED_OVERRIDES,
 	DEFAULT_SCRIPTS,
 	DEFAULT_PORTS,
 	PACKAGE_NAME,

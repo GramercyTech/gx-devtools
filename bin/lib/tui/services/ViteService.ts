@@ -3,6 +3,7 @@ import path from "path"
 import fs from "fs"
 import { fileURLToPath } from "url"
 import dotenv from "dotenv"
+import { createRequire } from "node:module"
 
 export interface ViteOptions {
 	noHttps?: boolean
@@ -89,8 +90,18 @@ export function startVite(options: ViteOptions = {}): void {
 	const config: ServiceConfig = {
 		id: "vite",
 		name: "Vite",
-		command: "npx",
-		args: ["vite", "dev", "--config", viteConfigPath],
+		command: process.execPath,
+		args: [
+			path.join(
+				path.dirname(
+					createRequire(import.meta.url).resolve("vite/package.json"),
+				),
+				"bin/vite.js",
+			),
+			"dev",
+			"--config",
+			viteConfigPath,
+		],
 		cwd,
 		env,
 	}

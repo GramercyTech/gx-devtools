@@ -1,4 +1,5 @@
 import { createApp } from "vue"
+import { getDevServerBaseUrl } from "@gx-runtime/devServerOrigin.js"
 import * as Vue from "vue"
 import * as Pinia from "pinia"
 import { createPinia, setActivePinia } from "pinia"
@@ -31,10 +32,7 @@ async function init() {
 	// Build the dev server base URL so gxp-src default paths resolve to the
 	// local dev server instead of the current domain (important when the app
 	// is injected into the cloud platform via browser extension).
-	const devProtocol =
-		import.meta.env.VITE_USE_HTTPS !== "false" ? "https" : "http"
-	const devPort = import.meta.env.VITE_NODE_PORT || "3060"
-	const devServerBaseUrl = `${devProtocol}://localhost:${devPort}`
+	const devServerBaseUrl = getDevServerBaseUrl(import.meta.env)
 
 	app.use(createGxpStringsPlugin(gxpStore, { devServerBaseUrl }))
 

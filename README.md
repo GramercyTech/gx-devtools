@@ -81,6 +81,18 @@ It does **not** overwrite your source files (`src/`, `theme-layouts/`, etc.).
 | `gxdev ext:chrome` / `ext:firefox` | Launch the browser inspector extension                                                                                                                                                                |
 | `gxdev ext:build`                  | Build the browser extensions for distribution                                                                                                                                                         |
 
+### Optional local browser and HTTPS tools
+
+Firefox extension commands require a separate pinned local installation:
+
+```sh
+npm install --prefix "$HOME/.gxp/browser-tools" --save-exact web-ext@10.7.0
+```
+
+Set `GXP_BROWSER_TOOLS_DIR` to use another installation directory. The existing Firefox launch/build commands use this installation; they never download it automatically. This optional dependency tree is excluded from generated-app installations and still needs its own security review and updates.
+
+HTTPS certificate generation requires the native `mkcert` executable (on macOS, `brew install mkcert`). Run `mkcert -install` to set up local trust, then `gxdev setup-ssl`. Existing `.certs` certificates remain usable without installing mkcert. The toolkit does not install global npm packages.
+
 ## Features
 
 - **Platform emulator** — `PortalContainer.vue` mimics the live GxP environment so plugins render exactly like production.

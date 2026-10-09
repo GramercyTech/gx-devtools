@@ -63,7 +63,7 @@ export function startSocket(options: SocketOptions = {}): void {
 	const config: ServiceConfig = {
 		id: "socket",
 		name: withMock ? "Socket.IO + Mock API" : "Socket.IO",
-		command: "node",
+		command: process.execPath,
 		args: [getServerPath()],
 		cwd,
 		env,

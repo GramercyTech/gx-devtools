@@ -626,6 +626,9 @@ export default defineConfig(async (ctx) => {
 				useHttps ? "true" : "false",
 			),
 			"import.meta.env.VITE_NODE_PORT": JSON.stringify(env.NODE_PORT || "3060"),
+			"import.meta.env.VITE_DEV_SERVER_ORIGIN": JSON.stringify(
+				env.DEV_SERVER_ORIGIN || "",
+			),
 			"import.meta.env.VITE_SOCKET_IO_PORT": JSON.stringify(
 				env.SOCKET_IO_PORT || "3069",
 			),

@@ -6,7 +6,7 @@
 
 const path = require("path")
 const fs = require("fs")
-const shell = require("shelljs")
+const commands = require("../utils/process")
 const {
 	findProjectRoot,
 	resolveGxPaths,
@@ -401,7 +401,7 @@ async function initDatastoreInExistingProject() {
 
 		// Install new dependencies
 		console.log("📦 Installing dependencies...")
-		const result = shell.exec("npm install", {
+		const result = commands.npm(["install"], {
 			cwd: projectPath,
 			silent: false,
 		})

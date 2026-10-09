@@ -6,7 +6,7 @@
 
 const path = require("path")
 const fs = require("fs")
-const shell = require("shelljs")
+const commands = require("../utils/process")
 const {
 	findProjectRoot,
 	resolveGxPaths,
@@ -91,7 +91,7 @@ async function generatePlaceholderImage(argv) {
 	}
 
 	// Use magick command (ImageMagick 7) or convert (ImageMagick 6)
-	const magickCmd = shell.which("magick") ? "magick" : "convert"
+	const magickCmd = commands.which("magick") ? "magick" : "convert"
 	const finalPort = argv.port || process.env.NODE_PORT || 3000
 
 	const generatedAssets = []
@@ -111,11 +111,22 @@ async function generatePlaceholderImage(argv) {
 
 		// Create command with style variations
 		const styleOptions = getStyleOptions(style, color)
-		const command = `${magickCmd} -size ${size} ${styleOptions.background} -gravity center ${styleOptions.text} -annotate +0+0 "${text}" "${outputPath}"`
+		const args = [
+			"-size",
+			size,
+			...styleOptions.background,
+			"-gravity",
+			"center",
+			...styleOptions.text,
+			"-annotate",
+			"+0+0",
+			text,
+			outputPath,
+		]
 
 		console.log(`🎨 Generating: ${filename} (${color}, ${style.name})`)
 
-		const result = shell.exec(command, { silent: true })
+		const result = commands.run(magickCmd, args, { silent: true })
 
 		if (result.code === 0) {
 			console.log(`✅ Generated: ${filename}`)
@@ -195,28 +206,46 @@ function getStyleOptions(style, color) {
 	switch (style.name) {
 		case "bright":
 			return {
-				background: `"xc:${lighterColor}"`,
-				text: `-pointsize 24 -fill "${darkerColor}"`,
+				background: [`xc:${lighterColor}`],
+				text: ["-pointsize", "24", "-fill", darkerColor],
 			}
 		case "outline":
 			return {
-				background: `"xc:${color}"`,
-				text: `-pointsize 24 -fill none -stroke white -strokewidth 2`,
+				background: [`xc:${color}`],
+				text: [
+					"-pointsize",
+					"24",
+					"-fill",
+					"none",
+					"-stroke",
+					"white",
+					"-strokewidth",
+					"2",
+				],
 			}
 		case "shadow":
 			return {
-				background: `"xc:${color}"`,
-				text: `-pointsize 24 -fill white -stroke black -strokewidth 1`,
+				background: [`xc:${color}`],
+				text: [
+					"-pointsize",
+					"24",
+					"-fill",
+					"white",
+					"-stroke",
+					"black",
+					"-strokewidth",
+					"1",
+				],
 			}
 		case "minimal":
 			return {
-				background: `"xc:${lighterColor}"`,
-				text: `-pointsize 20 -fill "${darkerColor}"`,
+				background: [`xc:${lighterColor}`],
+				text: ["-pointsize", "20", "-fill", darkerColor],
 			}
 		default: // solid
 			return {
-				background: `"xc:${color}"`,
-				text: `-pointsize 24 -fill white`,
+				background: [`xc:${color}`],
+				text: ["-pointsize", "24", "-fill", "white"],
 			}
 	}
 }

@@ -142,7 +142,7 @@ async function sendSocketEvent(eventName, identifier) {
 				console.log("💡 Make sure the server is running:")
 				console.log("   npm run dev")
 				console.log("   or")
-				console.log("   nodemon server.js")
+				console.log("   node --watch server.js")
 			} else {
 				console.error(`❌ Error sending event: ${error.message}`)
 			}
