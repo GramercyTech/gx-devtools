@@ -1350,7 +1350,14 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 				message,
 				error.response?.data,
 			)
-			throw new Error(`${method.toUpperCase()} ${resolvedPath}: ${message}`)
+			const failure = new Error(
+				`${method.toUpperCase()} ${resolvedPath}: ${message}`,
+			)
+			const status = error.response?.status
+			if (Number.isInteger(status) && status >= 400 && status <= 599) {
+				failure.status = status
+			}
+			throw failure
 		}
 	}
 

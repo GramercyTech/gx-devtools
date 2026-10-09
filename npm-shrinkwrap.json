@@ -1,12 +1,12 @@
 {
 	"name": "@gxp-dev/tools",
-	"version": "2.1.31",
+	"version": "2.1.32",
 	"lockfileVersion": 3,
 	"requires": true,
 	"packages": {
 		"": {
 			"name": "@gxp-dev/tools",
-			"version": "2.1.31",
+			"version": "2.1.32",
 			"license": "ISC",
 			"dependencies": {
 				"@faker-js/faker": "^10.6.0",

@@ -244,6 +244,32 @@ describe("platform surface parity", () => {
 })
 
 describe("callApi request paths", () => {
+	it.each([403, 500, undefined, "403", 0, 600])(
+		"preserves only valid HTTP error status %s without request credentials",
+		async (status) => {
+			const store = await freshStore()
+			const secret = "synthetic-sensitive-header"
+			apiClientMock.get.mockRejectedValueOnce({
+				message: "Request failed",
+				response: { status, data: { message: "Denied" } },
+				config: { headers: { Authorization: secret } },
+			})
+			const failure = await store
+				.callApi("portal.v1.project.pages.list", null)
+				.catch((error) => error)
+			expect(failure).toBeInstanceOf(Error)
+			expect(failure.message).toContain("Denied")
+			expect(failure.status).toBe(
+				Number.isInteger(status) && status >= 400 && status <= 599
+					? status
+					: undefined,
+			)
+			expect(failure.config).toBeUndefined()
+			expect(failure.response).toBeUndefined()
+			expect(JSON.stringify(failure)).not.toContain(secret)
+		},
+	)
+
 	it("mock env: base is the host root and requests carry the /api prefix", async () => {
 		const store = await freshStore({ VITE_API_ENV: "mock" })
 		expect(store.pluginVars.apiBaseUrl).toMatch(/^http:\/\/localhost:\d+$/)

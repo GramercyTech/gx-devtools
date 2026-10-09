@@ -213,7 +213,7 @@ const result = await store.callApi(operationId, identifier, data)
 | identifier | Permission identifier from app-manifest.json → dependencies (e.g. "quiz_form") OR the reserved "project" for project-wide operations. |
 | data | Body/query/path params. A value like "pluginVars.keyName" is resolved from pluginVars at call time. teamSlug, projectSlug, and form (when pluginVars.formId exists) are auto-injected. |
 
-Returns parsed response data. Throws on HTTP errors.
+Returns parsed response data. Throws on HTTP errors with a numeric error.status (400–599), e.g. error.status === 403 for forbidden access. Transport failures have no status. The error does not expose the underlying request configuration or headers.
 
 ## Low-Level HTTP (avoid unless necessary — bypasses permission model)
 
