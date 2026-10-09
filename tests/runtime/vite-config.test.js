@@ -8,7 +8,13 @@
  * production while dev works fine.
  */
 import { describe, it, expect, vi, afterEach } from "vitest"
-import viteConfigFactory from "../../runtime/vite.config.js"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
+import { createRequire } from "node:module"
+import viteConfigFactory, {
+	resolveRuntimePackage,
+} from "../../runtime/vite.config.js"
 
 describe("runtime vite config", () => {
 	afterEach(() => vi.unstubAllEnvs())
@@ -62,5 +68,30 @@ describe("runtime vite config", () => {
 			vue: "Vue",
 			pinia: "Pinia",
 		})
+	})
+})
+
+describe("runtime package resolution", () => {
+	it("uses the project package when installed, otherwise the toolkit package", () => {
+		const project = fs.mkdtempSync(path.join(os.tmpdir(), "gxdev-resolution-"))
+		try {
+			const toolkitRequire = createRequire(import.meta.url)
+			for (const name of ["vue", "pinia"]) {
+				expect(resolveRuntimePackage(name, project)).toBe(
+					path.dirname(toolkitRequire.resolve(`${name}/package.json`)),
+				)
+				const local = path.join(project, "node_modules", name)
+				fs.mkdirSync(local, { recursive: true })
+				fs.writeFileSync(
+					path.join(local, "package.json"),
+					JSON.stringify({ name, version: "1.0.0" }),
+				)
+				expect(resolveRuntimePackage(name, project)).toBe(
+					fs.realpathSync(local),
+				)
+			}
+		} finally {
+			fs.rmSync(project, { recursive: true, force: true })
+		}
 	})
 })

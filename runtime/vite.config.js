@@ -10,6 +10,16 @@ import { gxpSourceTrackerPlugin } from "./vite-source-tracker-plugin.js"
 
 const require = createRequire(import.meta.url)
 
+export function resolveRuntimePackage(name, projectRoot = process.cwd()) {
+	const projectRequire = createRequire(path.join(projectRoot, "package.json"))
+	try {
+		return path.dirname(projectRequire.resolve(`${name}/package.json`))
+	} catch (error) {
+		if (error.code !== "MODULE_NOT_FOUND") throw error
+		return path.dirname(require.resolve(`${name}/package.json`))
+	}
+}
+
 /**
  * Packages that must NOT be auto-pre-bundled even if a plugin lists them as
  * a dependency. @gxp-dev/tools is the dev-harness runtime itself — it's
@@ -893,8 +903,8 @@ export default defineConfig(async (ctx) => {
 				// GxP Toolkit runtime (PortalContainer, etc.) - from node_modules
 				"@gx-runtime": runtimeDir,
 				// Ensure single Vue and Pinia instances
-				vue: path.resolve(process.cwd(), "node_modules/vue"),
-				pinia: path.resolve(process.cwd(), "node_modules/pinia"),
+				vue: resolveRuntimePackage("vue"),
+				pinia: resolveRuntimePackage("pinia"),
 			},
 			// Dedupe Vue and Pinia to ensure only one instance is used
 			dedupe: ["vue", "pinia"],
