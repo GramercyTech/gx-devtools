@@ -66,7 +66,12 @@ describe("build packaging with the installed archive library", () => {
 			{ cwd: project, timeout: 10000 },
 		)
 
-		const archive = new AdmZip(path.join(project, "dist/archive-qa.gxpapp"))
+		expect(
+			fs
+				.readdirSync(path.join(project, "dist"))
+				.filter((name) => name.endsWith(".gxpapp")),
+		).toEqual(["Archive-QA.gxpapp"])
+		const archive = new AdmZip(path.join(project, "dist/Archive-QA.gxpapp"))
 		expect(archive.readAsText("appInstructions.md")).toBe("safe instructions")
 		expect(archive.readAsText("default-styling.css")).toBe(".safe {}")
 		expect(archive.readAsText("configuration.json")).toBe("{}")
