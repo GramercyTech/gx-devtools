@@ -21,6 +21,11 @@ on:
   # run failed mid-flight. Whatever's in package.json gets published.
   workflow_dispatch:
     inputs:
+      dist-tag:
+        description: "npm distribution tag (use ez2140 until the matching platform catalog is deployed)"
+        required: false
+        type: string
+        default: latest
       dry-run:
         description: "Dry run (npm publish --dry-run; nothing actually goes to npm)"
         required: false
@@ -40,7 +45,14 @@ jobs:
       contents: read
       id-token: write # required for npm provenance
 
+    env:
+      NPM_DIST_TAG: ${{ inputs.dist-tag || 'latest' }}
+
     steps:
+      - name: Validate npm distribution tag
+        run: |
+          node -e 'const tag = process.env.NPM_DIST_TAG; if (!/^[a-z][a-z0-9-]{0,63}$/.test(tag)) { console.error("Invalid npm distribution tag"); process.exit(1); }'
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -93,13 +105,13 @@ jobs:
 
       - name: Publish (dry run)
         if: ${{ inputs.dry-run }}
-        run: npm publish --dry-run --access public
+        run: npm publish --dry-run --access public --tag "$NPM_DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_DEPLOY_TOKEN }}
 
       - name: Publish
         if: ${{ !inputs.dry-run }}
-        run: npm publish --access public
+        run: npm publish --access public --tag "$NPM_DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_DEPLOY_TOKEN }}
 
@@ -110,6 +122,7 @@ jobs:
             echo "## Published"
             echo ""
             echo "**Package:** \`@gxp-dev/tools\`"
+            echo "**Distribution tag:** $NPM_DIST_TAG"
             echo "**Version:** \`$(node -p "require('./package.json').version")\`"
             echo ""
             echo "### Install"

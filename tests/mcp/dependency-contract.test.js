@@ -21,6 +21,12 @@ function fixture() {
 					"x-relation": {
 						parent_model: { name: "Group" },
 						parent_parameter: "group",
+						parent_route_key: "slug",
+						parent_picker: {
+							route: "dashboard.project.groups.index",
+							valueField: "slug",
+							labelField: "name",
+						},
 						parent_permission_key: "group",
 					},
 					"x-permission": [
@@ -50,7 +56,11 @@ function load(spec) {
 			return loadModule(name)
 		},
 	})
-	return { generate: module.exports.generateDependency, writes: () => writes }
+	return {
+		generate: module.exports.generateDependency,
+		parameters: module.exports.getOperationParameters,
+		writes: () => writes,
+	}
 }
 const args = {
 	identifier: "groups",
@@ -63,6 +73,13 @@ test("relation uses parent binding and complete string permissions", async () =>
 	const tools = load(fixture())
 	const result = await tools.generate(args)
 	assert.equal(result.ok, true)
+	assert.equal(result.dependency.key, "slug")
+	assert.equal(
+		result.configurationField.route,
+		"dashboard.project.groups.index",
+	)
+	assert.equal(result.configurationField.valueField, "slug")
+	assert.equal(result.configurationField.name, "dependency_list.groups")
 	assert.equal(result.dependency.model, "Group")
 	assert.equal(result.dependency.permissionKey, "group")
 	assert.deepEqual(Array.from(result.dependency.permissions), [
@@ -74,6 +91,23 @@ test("relation uses parent binding and complete string permissions", async () =>
 		"get:/groups/{group}/attendees",
 	)
 	assert.equal(result.wrote, false)
+})
+test("operation details expose the same verified binding metadata", async () => {
+	const result = await load(fixture()).parameters(operationId)
+	assert.equal(result.binding.parent_route_key, "slug")
+	assert.equal(result.binding.parent_picker.valueField, "slug")
+})
+test("a documented numeric key is preserved without assuming model slugs", async () => {
+	const spec = fixture()
+	op(spec)["x-relation"].parent_route_key = "id"
+	op(spec)["x-relation"].parent_picker.valueField = "id"
+	const result = await load(spec).generate(args)
+	assert.equal(result.dependency.key, "id")
+	assert.equal(result.configurationField.valueField, "id")
+})
+test("literal scope identifiers do not create a resource picker", async () => {
+	const result = await load(fixture()).generate({ ...args, identifier: "*" })
+	assert.equal(result.configurationField, null)
 })
 test("permission ordering does not change parent binding", async () => {
 	const spec = fixture()
@@ -91,6 +125,47 @@ test("single ordinary model descriptor works", async () => {
 	assert.equal(result.dependency.model, "Group")
 })
 for (const [name, mutate, extra] of [
+	[
+		"malformed false picker",
+		(s) => {
+			op(s)["x-relation"].parent_picker = false
+		},
+	],
+	[
+		"missing parent route key",
+		(s) => {
+			delete op(s)["x-relation"].parent_route_key
+		},
+	],
+	[
+		"invalid parent route key",
+		(s) => {
+			op(s)["x-relation"].parent_route_key = "groups.slug"
+		},
+	],
+	[
+		"picker key mismatch",
+		(s) => {
+			op(s)["x-relation"].parent_picker.valueField = "id"
+		},
+	],
+	[
+		"picker external URL",
+		(s) => {
+			op(s)["x-relation"].parent_picker.route = "https://example.test"
+		},
+	],
+	[
+		"mixed route keys",
+		(s) => {
+			const other = structuredClone(op(s))
+			other.operationId = "other"
+			other["x-relation"].parent_route_key = "id"
+			other["x-relation"].parent_picker.valueField = "id"
+			s.paths["/other/{group}/attendees"] = { get: other }
+		},
+		{ operationIds: [] },
+	],
 	[
 		"missing parent key",
 		(s) => {
@@ -201,6 +276,8 @@ test(
 		const result = await load(spec).generate(args)
 		assert.equal(result.ok, true, result.error)
 		assert.equal(result.dependency.model, "Group")
+		assert.equal(result.dependency.key, "slug")
+		assert.equal(result.configurationField.valueField, "slug")
 		assert.equal(result.dependency.permissionKey, "group")
 		assert.deepEqual(Array.from(result.dependency.permissions), [
 			"view_attendees",

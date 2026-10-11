@@ -35,7 +35,7 @@ function refName(ref) {
 	return ref.split("/").pop()
 }
 
-function summarizeProperty(prop, spec) {
+function summarizeProperty(prop, spec, depth = 0) {
 	if (!prop || typeof prop !== "object") {
 		return { type: "unknown" }
 	}
@@ -65,13 +65,29 @@ function summarizeProperty(prop, spec) {
 			? refName(prop.items.$ref)
 			: prop.items.type || "unknown"
 	}
+	if (Array.isArray(prop.required)) out.required = prop.required
+	if (prop.properties || prop.allOf) {
+		if (depth >= 6) out.truncated = true
+		else
+			out.properties =
+				summarizeProperties(prop, spec, new Set(), depth + 1) || {}
+	}
+	if (
+		prop.type === "array" &&
+		prop.items &&
+		!prop.items.$ref &&
+		prop.items.properties
+	) {
+		if (depth >= 6) out.truncated = true
+		else out.itemsSchema = summarizeProperty(prop.items, spec, depth + 1)
+	}
 	for (const k of Object.keys(out)) {
 		if (out[k] === undefined) delete out[k]
 	}
 	return out
 }
 
-function summarizeProperties(schema, spec, seen = new Set()) {
+function summarizeProperties(schema, spec, seen = new Set(), depth = 0) {
 	if (!schema || typeof schema !== "object") return null
 	let target = schema
 	if (target.$ref) {
@@ -82,13 +98,13 @@ function summarizeProperties(schema, spec, seen = new Set()) {
 	const out = {}
 	if (Array.isArray(target.allOf)) {
 		for (const piece of target.allOf) {
-			const sub = summarizeProperties(piece, spec, seen)
+			const sub = summarizeProperties(piece, spec, seen, depth)
 			if (sub) Object.assign(out, sub)
 		}
 	}
 	if (target.properties && typeof target.properties === "object") {
 		for (const [name, prop] of Object.entries(target.properties)) {
-			out[name] = summarizeProperty(prop, spec)
+			out[name] = summarizeProperty(prop, spec, depth)
 		}
 	}
 	return Object.keys(out).length > 0 ? out : null

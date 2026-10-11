@@ -294,6 +294,7 @@ async function getOperationParameters(operationId) {
 		requestBody: op.requestBody || null,
 		responses: op.responses || {},
 		permission,
+		binding: op["x-relation"] || null,
 		security: op.security || spec.security || [],
 	}
 }
@@ -435,6 +436,8 @@ async function generateDependency({
 	let model = null
 	let permissionKey = null
 	let bindingParameter = null
+	let routeKey = null
+	let picker = null
 	for (const { path: p, method, op } of scoped) {
 		if (typeof op.operationId !== "string" || !op.operationId.trim())
 			return { ok: false, error: "Operation ID is missing." }
@@ -469,6 +472,42 @@ async function generateDependency({
 				? requirements[0].permission_key
 				: null
 		const parameter = relation?.parent_parameter || null
+		const operationRouteKey = relation?.parent_route_key || null
+		const rawPicker = relation?.parent_picker ?? null
+		let operationPicker = null
+		if (
+			relation &&
+			(typeof operationRouteKey !== "string" ||
+				!/^[A-Za-z_][A-Za-z0-9_]*$/.test(operationRouteKey))
+		) {
+			return {
+				ok: false,
+				error:
+					"Explicit parent route-key metadata is required; do not assume a numeric ID.",
+			}
+		}
+		if (rawPicker !== null) {
+			if (
+				typeof rawPicker !== "object" ||
+				Array.isArray(rawPicker) ||
+				typeof rawPicker.route !== "string" ||
+				!/^[A-Za-z][A-Za-z0-9_.-]*$/.test(rawPicker.route) ||
+				rawPicker.valueField !== operationRouteKey ||
+				typeof rawPicker.labelField !== "string" ||
+				!/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(rawPicker.labelField)
+			) {
+				return {
+					ok: false,
+					error:
+						"Picker metadata must use a named route and the parent binding key.",
+				}
+			}
+			operationPicker = {
+				route: rawPicker.route,
+				valueField: rawPicker.valueField,
+				labelField: rawPicker.labelField,
+			}
+		}
 		if (
 			typeof operationModel !== "string" ||
 			!operationModel.trim() ||
@@ -485,7 +524,9 @@ async function generateDependency({
 			model &&
 			(model !== operationModel ||
 				permissionKey !== operationKey ||
-				bindingParameter !== parameter)
+				bindingParameter !== parameter ||
+				routeKey !== operationRouteKey ||
+				JSON.stringify(picker) !== JSON.stringify(operationPicker))
 		) {
 			return {
 				ok: false,
@@ -495,6 +536,8 @@ async function generateDependency({
 		model = operationModel
 		permissionKey = operationKey
 		bindingParameter = parameter
+		routeKey = operationRouteKey
+		picker = operationPicker
 		const cleanOpId = op.operationId.replace(/^portal\.v1\.project\./, "")
 		if (Object.hasOwn(operations, cleanOpId)) {
 			return { ok: false, error: "Duplicate normalized operation ID." }
@@ -514,13 +557,23 @@ async function generateDependency({
 	const dependency = {
 		identifier,
 		model,
+		...(routeKey ? { key: routeKey } : {}),
 		permissionKey,
 		permissions: Array.from(permissions).sort(),
 		operations,
 		events,
 	}
 
-	const result = { ok: true, dependency, wrote: false }
+	const configurationField =
+		picker && /^[A-Za-z_][A-Za-z0-9_-]*$/.test(identifier)
+			? {
+					type: "asyncSelect",
+					name: `dependency_list.${identifier}`,
+					label: model,
+					...picker,
+				}
+			: null
+	const result = { ok: true, dependency, configurationField, wrote: false }
 
 	if (writeTo) {
 		const absPath = path.resolve(process.cwd(), writeTo)

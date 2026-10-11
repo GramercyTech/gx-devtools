@@ -184,6 +184,7 @@ beforeEach(() => {
 	for (const fn of Object.values(apiClientMock)) {
 		if (typeof fn?.mockClear === "function") fn.mockClear()
 	}
+	apiClientMock.get.mockReset().mockResolvedValue({ data: { ok: true } })
 	axios.post.mockClear()
 })
 
@@ -244,6 +245,50 @@ describe("platform surface parity", () => {
 })
 
 describe("callApi request paths", () => {
+	it.each([
+		["group", "bound_group", true],
+		[null, "group", true],
+		[null, "bound_group", false],
+		["teamSlug", "bound_group", false],
+		["notInPath", "bound_group", false],
+	])(
+		"maps dependency %s/%s only through valid catalog metadata",
+		async (parent, identifier, succeeds) => {
+			const store = await freshStore()
+			store.pluginVars = { projectId: "team/proj" }
+			store.dependencyList = { [identifier]: "safe/group" }
+			axios.get.mockResolvedValueOnce({
+				data: {
+					paths: {
+						"/v1/projects/{teamSlug}/{projectSlug}/groups/{group}/attendees": {
+							get: {
+								operationId: "portal.v1.project.groups.attendees.index",
+								"x-relation": { parent_parameter: parent },
+							},
+						},
+					},
+				},
+			})
+			await store.initializeApiOperations()
+			apiClientMock.get.mockResolvedValueOnce({ data: { meta: { total: 0 } } })
+			const request = store.callApi("groups.attendees.index", identifier, {
+				limit: 1,
+			})
+			if (succeeds) {
+				await expect(request).resolves.toEqual({ meta: { total: 0 } })
+				expect(apiClientMock.get).toHaveBeenCalledWith(
+					"/api/v1/projects/team/proj/groups/safe%2Fgroup/attendees",
+					{ params: { limit: 1 } },
+				)
+			} else {
+				await expect(request).rejects.toThrow(
+					"Missing required parameter: group",
+				)
+				expect(apiClientMock.get).not.toHaveBeenCalled()
+			}
+		},
+	)
+
 	it.each([403, 500, undefined, "403", 0, 600])(
 		"preserves only valid HTTP error status %s without request credentials",
 		async (status) => {

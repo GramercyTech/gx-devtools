@@ -144,6 +144,65 @@ describe("describeDataModels", () => {
 })
 
 describe("summarizeProperties helper", () => {
+	it("preserves nested pagination metadata instead of describing it as a generic object", () => {
+		const schema = {
+			type: "object",
+			properties: {
+				meta: {
+					type: "object",
+					required: ["total"],
+					properties: {
+						total: { type: "integer", minimum: 0 },
+						page: {
+							type: "object",
+							properties: { current: { type: "integer" } },
+						},
+					},
+				},
+			},
+		}
+		const summary = summarizeProperties(schema, {})
+		expect(summary.meta.required).toEqual(["total"])
+		expect(summary.meta.properties.total.type).toBe("integer")
+		expect(summary.meta.properties.page.properties.current.type).toBe("integer")
+	})
+
+	it("preserves nested contracts for inline array items", () => {
+		const summary = summarizeProperties(
+			{
+				properties: {
+					pages: {
+						type: "array",
+						items: {
+							type: "object",
+							required: ["total"],
+							properties: { total: { type: "integer" } },
+						},
+					},
+				},
+			},
+			{},
+		)
+		expect(summary.pages.items).toBe("object")
+		expect(summary.pages.itemsSchema.required).toEqual(["total"])
+		expect(summary.pages.itemsSchema.properties.total.type).toBe("integer")
+	})
+
+	it("bounds deeply nested inline objects and marks the truncated contract", () => {
+		let schema = { type: "object", properties: { leaf: { type: "integer" } } }
+		for (let index = 0; index < 50; index++)
+			schema = { type: "object", properties: { child: schema } }
+		const summary = summarizeProperties(schema, {})
+		let property = summary.child
+		let depth = 0
+		while (property.properties?.child) {
+			property = property.properties.child
+			depth++
+		}
+		expect(depth).toBeLessThan(10)
+		expect(property.truncated).toBe(true)
+	})
+
 	it("walks $ref one level deep without infinite recursion", () => {
 		const self = {
 			type: "object",

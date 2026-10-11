@@ -1119,6 +1119,15 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 								method,
 								path,
 								parameters: pathParams,
+								parentParameter:
+									pathParams.includes(
+										operation["x-relation"]?.parent_parameter,
+									) &&
+									!["teamSlug", "projectSlug"].includes(
+										operation["x-relation"]?.parent_parameter,
+									)
+										? operation["x-relation"].parent_parameter
+										: null,
 							}
 						}
 					}
@@ -1249,6 +1258,14 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		if (identifier !== null && identifier !== undefined) {
 			const identifierValue = dependencyList.value?.[identifier]
 			if (identifierValue !== undefined) {
+				const bindingParameter = parameters.includes(identifier)
+					? identifier
+					: parameters.includes(operationConfig.parentParameter) &&
+						  !["teamSlug", "projectSlug"].includes(
+								operationConfig.parentParameter,
+						  )
+						? operationConfig.parentParameter
+						: identifier
 				// dependencyList values may be mixed arrays ([id, "#tag",
 				// "@untagged"]); a path param needs a scalar. Use the parsed model
 				// ids (CSV) and leave the param unset for tag-only bindings so the
@@ -1256,10 +1273,10 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 				if (Array.isArray(identifierValue)) {
 					const { ids } = parseDependencyValue(identifierValue)
 					if (ids.length) {
-						contextParams[identifier] = ids.join(",")
+						contextParams[bindingParameter] = ids.join(",")
 					}
 				} else {
-					contextParams[identifier] = identifierValue
+					contextParams[bindingParameter] = identifierValue
 				}
 			}
 		}
