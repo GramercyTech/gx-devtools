@@ -28,6 +28,7 @@ const cache = {
 	asyncApi: null,
 	webhooks: null,
 	lastFetch: null,
+	sourceKey: null,
 }
 
 // Default cache TTL (5 minutes)
@@ -47,16 +48,43 @@ function getCacheTTL() {
  */
 function getEnvironmentConfig(env) {
 	const envName = env || process.env.API_ENV || "production"
-	const config = ENVIRONMENT_URLS[envName]
+	let config = ENVIRONMENT_URLS[envName]
 
 	if (!config) {
 		console.warn(
 			`⚠️  Unknown environment "${envName}", falling back to production`,
 		)
-		return ENVIRONMENT_URLS.production
+		config = ENVIRONMENT_URLS.production
 	}
 
-	return config
+	const override = process.env.GXDEV_API_SPEC_BASE_URL
+	if (!override) return config
+	let base
+	try {
+		base = new URL(override)
+	} catch {
+		throw new Error(
+			"GXDEV_API_SPEC_BASE_URL must be an HTTPS origin without credentials",
+		)
+	}
+	if (
+		base.protocol !== "https:" ||
+		base.username ||
+		base.password ||
+		base.search ||
+		base.hash ||
+		base.pathname !== "/"
+	) {
+		throw new Error(
+			"GXDEV_API_SPEC_BASE_URL must be an HTTPS origin without credentials",
+		)
+	}
+	return {
+		...config,
+		openApiSpec: `${base.origin}/api-specs/openapi.json`,
+		asyncApiSpec: `${base.origin}/api-specs/asyncapi.json`,
+		webhookSpec: `${base.origin}/api-specs/webhooks.json`,
+	}
 }
 
 /**
@@ -197,8 +225,16 @@ function isCacheValid() {
  * @returns {object} Object containing all specs
  */
 async function loadSpecs(projectRoot, forceRefresh = false) {
+	const root = projectRoot || process.cwd()
+	const config = getEnvironmentConfig()
+	const sourceKey = JSON.stringify([
+		root,
+		config.openApiSpec,
+		config.asyncApiSpec,
+		config.webhookSpec,
+	])
 	// Return cached if valid and not forcing refresh
-	if (!forceRefresh && isCacheValid()) {
+	if (!forceRefresh && cache.sourceKey === sourceKey && isCacheValid()) {
 		console.log("📦 Using cached specs")
 		return {
 			openApi: cache.openApi,
@@ -206,8 +242,6 @@ async function loadSpecs(projectRoot, forceRefresh = false) {
 			webhooks: cache.webhooks,
 		}
 	}
-
-	const root = projectRoot || process.cwd()
 
 	console.log("🔄 Loading API specs...")
 	console.log(`   Environment: ${process.env.API_ENV || "production"}`)
@@ -224,6 +258,7 @@ async function loadSpecs(projectRoot, forceRefresh = false) {
 	cache.asyncApi = asyncApi
 	cache.webhooks = webhooks
 	cache.lastFetch = Date.now()
+	cache.sourceKey = sourceKey
 
 	// Log summary
 	const loaded = []
