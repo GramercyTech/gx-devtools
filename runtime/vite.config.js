@@ -138,6 +138,31 @@ function getOptimizeDepsEntries(env = {}) {
 	return entries
 }
 
+function publicApiSpecOrigin(value) {
+	if (!value) return ""
+	let url
+	try {
+		url = new URL(value)
+	} catch {
+		throw new Error(
+			"GXDEV_API_SPEC_BASE_URL must be an HTTPS origin without credentials",
+		)
+	}
+	if (
+		url.protocol !== "https:" ||
+		url.username ||
+		url.password ||
+		url.pathname !== "/" ||
+		url.search ||
+		url.hash
+	) {
+		throw new Error(
+			"GXDEV_API_SPEC_BASE_URL must be an HTTPS origin without credentials",
+		)
+	}
+	return url.origin
+}
+
 // Environment URL configuration for API proxy
 const ENVIRONMENT_URLS = {
 	production: "https://api.gramercy.cloud",
@@ -625,6 +650,9 @@ export default defineConfig(async (ctx) => {
 				? { "process.env.NODE_ENV": JSON.stringify("production") }
 				: {}),
 			"import.meta.env.VITE_API_ENV": JSON.stringify(env.API_ENV || "mock"),
+			"import.meta.env.VITE_API_SPEC_BASE_URL": JSON.stringify(
+				publicApiSpecOrigin(env.GXDEV_API_SPEC_BASE_URL),
+			),
 			"import.meta.env.VITE_API_BASE_URL": JSON.stringify(
 				env.API_BASE_URL || "",
 			),

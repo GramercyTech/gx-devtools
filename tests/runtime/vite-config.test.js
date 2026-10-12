@@ -18,6 +18,33 @@ import viteConfigFactory, {
 } from "../../runtime/vite.config.js"
 
 describe("runtime vite config", () => {
+	it("exposes only the configured public specification origin", async () => {
+		vi.stubEnv("GXDEV_API_SPEC_BASE_URL", "https://api.gxp.test/")
+		const config = await viteConfigFactory({
+			mode: "development",
+			command: "serve",
+		})
+		expect(config.define["import.meta.env.VITE_API_SPEC_BASE_URL"]).toBe(
+			'"https://api.gxp.test"',
+		)
+	})
+
+	it.each([
+		"https://user:secret@api.gxp.test",
+		"https://api.gxp.test/private",
+		"https://api.gxp.test/?token=secret",
+		"https://api.gxp.test/#secret",
+		"http://api.gxp.test",
+		"invalid",
+	])("rejects unsafe specification origin %s", async (origin) => {
+		vi.stubEnv("GXDEV_API_SPEC_BASE_URL", origin)
+		await expect(
+			viteConfigFactory({ mode: "development", command: "serve" }),
+		).rejects.toThrow(
+			"GXDEV_API_SPEC_BASE_URL must be an HTTPS origin without credentials",
+		)
+	})
+
 	afterEach(() => vi.unstubAllEnvs())
 
 	it("exposes the configured preview origin to the runtime", async () => {

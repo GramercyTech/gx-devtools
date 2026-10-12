@@ -605,6 +605,16 @@ describe("sockets", () => {
 		expect(store.quizChannels.f2).toBeUndefined()
 	})
 
+	it("uses the selected environment's public spec without changing mock transport", async () => {
+		vi.stubEnv("VITE_API_SPEC_BASE_URL", "https://api.gxp.test")
+		axios.get.mockClear()
+		const store = await freshStore({ VITE_API_ENV: "dev-mock" })
+		expect(axios.get).toHaveBeenCalledWith(
+			"https://api.gxp.test/api-specs/openapi.json",
+		)
+		expect(store.pluginVars.projectId).toBe("team/project")
+	})
+
 	it("dev-mock without SOCKET_URL warns instead of failing silently", async () => {
 		await freshStore({ VITE_API_ENV: "dev-mock" })
 		expect(console.warn).toHaveBeenCalledWith(

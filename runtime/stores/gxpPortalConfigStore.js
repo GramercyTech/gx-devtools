@@ -344,7 +344,11 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 
 	// API configuration - initialized from environment
 	const apiConfig = getApiConfig()
-	const apiDocsBaseUrl = ref(apiConfig.apiDocsBaseUrl ?? apiConfig.apiBaseUrl)
+	const apiDocsBaseUrl = ref(
+		import.meta.env.VITE_API_SPEC_BASE_URL ||
+			apiConfig.apiDocsBaseUrl ||
+			apiConfig.apiBaseUrl,
+	)
 	const apiBaseUrl = ref(apiConfig.apiBaseUrl)
 	const authToken = ref(apiConfig.authToken)
 	// Page-context token, sent as X-Portal-Page-Token on every request so the
