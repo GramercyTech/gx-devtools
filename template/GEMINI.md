@@ -136,7 +136,7 @@ await store.callApi("posts.store", "social_stream_two", {
 
 ### The `"project"` identifier
 
-For project-wide operations (creating the parent resource itself, or any top-level call not scoped to a dependency) use the reserved identifier `"project"`. You must pass any required IDs in `data`:
+For project-wide operations (creating the parent resource itself, or any top-level call not scoped to a dependency) use the reserved identifier `"project"`. This selects project context and does not grant permissions: declare the operation and required grants, confirm authorization, and pass any required IDs in `data`:
 
 ```javascript
 const stream = await store.callApi("social_streams.store", "project", {
@@ -151,7 +151,7 @@ await store.callApi("posts.store", "project", {
 
 ### Low-level methods
 
-`store.apiGet` / `apiPost` / `apiPut` / `apiPatch` / `apiDelete` bypass the permission model. Avoid unless you have a specific reason. Never use axios or fetch directly.
+Use declared `callApi` bindings for generated platform access. Do not replace a missing or denied binding with a raw endpoint helper. Existing legacy helpers do not grant permissions or bypass server authorization; preserve supported legacy behavior when maintaining existing code. `apiPatch` is development-only and is not part of the production store contract. Never use axios or fetch directly.
 
 ## Store Data Access
 
