@@ -12,6 +12,7 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { createRequire } from "node:module"
+import { createServer } from "vite"
 import viteConfigFactory, {
 	resolveRuntimePackage,
 } from "../../runtime/vite.config.js"
@@ -91,6 +92,72 @@ describe("runtime package resolution", () => {
 				)
 			}
 		} finally {
+			fs.rmSync(project, { recursive: true, force: true })
+		}
+	})
+})
+
+describe("selected toolkit runtime compatibility", () => {
+	it("resolves legacy and current store imports to the selected runtime despite an older workspace copy", async () => {
+		const project = fs.mkdtempSync(
+			path.join(os.tmpdir(), "gxdev-legacy-runtime-"),
+		)
+		let server
+		try {
+			const legacyRoot = path.join(project, "node_modules/@gxp-dev/tools")
+			fs.mkdirSync(path.join(legacyRoot, "runtime/stores"), { recursive: true })
+			fs.writeFileSync(
+				path.join(legacyRoot, "package.json"),
+				JSON.stringify({
+					name: "@gxp-dev/tools",
+					version: "2.1.33",
+					type: "module",
+				}),
+			)
+			fs.writeFileSync(
+				path.join(legacyRoot, "runtime/stores/gxpPortalConfigStore.js"),
+				"export const useGxpStore = () => 'stale workspace runtime'\n",
+			)
+			const config = await viteConfigFactory({
+				mode: "development",
+				command: "serve",
+			})
+			server = await createServer({
+				configFile: false,
+				root: project,
+				resolve: config.resolve,
+				server: { middlewareMode: true, hmr: false, watch: null },
+				optimizeDeps: { noDiscovery: true, include: [] },
+			})
+			const importer = path.join(project, "src/stores/index.js")
+			const resolver = server.environments.client.pluginContainer
+			const current = await resolver.resolveId(
+				"@gx-runtime/stores/gxpPortalConfigStore",
+				importer,
+			)
+			const legacy = await resolver.resolveId(
+				"@gxp-dev/tools/runtime/stores/gxpPortalConfigStore",
+				importer,
+			)
+			expect(current?.id).toBeTruthy()
+			expect(legacy?.id).toBe(current.id)
+			expect(fs.readFileSync(legacy.id, "utf8")).not.toContain(
+				"stale workspace runtime",
+			)
+			const withExtension = await resolver.resolveId(
+				"@gxp-dev/tools/runtime/stores/gxpPortalConfigStore.js",
+				importer,
+			)
+			expect(withExtension?.id).toBe(current.id)
+			const packageFile = await resolver.resolveId(
+				"@gxp-dev/tools/package.json",
+				importer,
+			)
+			expect(packageFile?.id).toBe(
+				path.join(fs.realpathSync(legacyRoot), "package.json"),
+			)
+		} finally {
+			await server?.close()
 			fs.rmSync(project, { recursive: true, force: true })
 		}
 	})

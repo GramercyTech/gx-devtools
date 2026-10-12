@@ -902,6 +902,10 @@ export default defineConfig(async (ctx) => {
 				"@layouts": layoutsDir,
 				// GxP Toolkit runtime (PortalContainer, etc.) - from node_modules
 				"@gx-runtime": runtimeDir,
+				// Older scaffolds import this package path directly. Keep them on
+				// the selected runtime, including when --use-global overrides an
+				// older workspace toolkit install.
+				"@gxp-dev/tools/runtime": runtimeDir,
 				// Ensure single Vue and Pinia instances
 				vue: resolveRuntimePackage("vue"),
 				pinia: resolveRuntimePackage("pinia"),
