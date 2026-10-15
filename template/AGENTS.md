@@ -145,7 +145,7 @@ await store.callApi(operationId, identifier, data)
 | `identifier`  | A **permission identifier** declared in `app-manifest.json` → `dependencies` / `permissions`. Determines which resource's permissions the call runs under, and supplies the parent object ID that gets substituted into the path. |
 | `data`        | Additional params — body fields, query params, or path params not covered by the identifier. Pass `"pluginVars.someKey"` as a value to pull from settings at call time.                                                           |
 
-NEVER use axios/fetch directly. `apiGet`/`apiPost`/`apiPut`/`apiPatch`/`apiDelete` still exist as low-level escape hatches, but `callApi` is the default — only it participates in the permission model.
+Generated platform calls must use declared `callApi` operation bindings. Do not replace a missing or denied binding with `apiGet`/`apiPost`/`apiPut`/`apiDelete`, and never use axios/fetch directly. Legacy helpers do not grant permissions or bypass server-side authorization. `apiPatch` is development-only and is not part of the production store contract.
 
 ### Permission identifiers
 
@@ -188,7 +188,7 @@ The admin assigns `social_stream_one` read-only access to stream A and `social_s
 
 ### The `project` identifier — project-wide, top-level operations
 
-When you need to create the parent resource itself (e.g. the social stream), or hit any endpoint scoped at the project level rather than to a specific dependency, use the reserved identifier `"project"`. `callApi` will run with project-wide permissions — but you must pass any path params the endpoint needs in `data`.
+When you need to create the parent resource itself (e.g. the social stream), or hit any endpoint scoped at the project level rather than to a specific dependency, use the reserved identifier `"project"`. The identifier selects project context; it does not grant project-wide permission. Declare the required operation binding and permissions, confirm the current caller is authorized, and pass any path params the endpoint needs in `data`.
 
 ```javascript
 // Create a new social stream under the project
@@ -208,17 +208,9 @@ Rule of thumb:
 - Operating on a resource the admin will bind later → declare a dependency identifier and pass it.
 - Creating the parent resource itself, or acting across the whole project → use `"project"` and pass the relevant IDs in `data`.
 
-### Low-level methods (avoid unless necessary)
+### Legacy endpoint helpers
 
-```javascript
-await store.apiGet("/api/v1/endpoint", { param: "value" })
-await store.apiPost("/api/v1/endpoint", { data: "value" })
-await store.apiPut("/api/v1/endpoint/123", { data: "value" })
-await store.apiPatch("/api/v1/endpoint/123", { data: "value" })
-await store.apiDelete("/api/v1/endpoint/123")
-```
-
-These bypass the permission model. Prefer `callApi`.
+Existing plugins may contain low-level store helpers. Preserve their supported behavior when maintaining an existing plugin, but use declared `callApi` bindings for new platform access. Do not treat an authorization failure as permission to fall back to a raw endpoint. Discover the exact operation ID, parameter schema and required grants with the installed tools; older examples are not proof that an operation is available.
 
 ## Store Data Access
 

@@ -22,10 +22,19 @@ const { resolveAppUi } = require("../utils/app-ui")
 
 const STORYBOOK_PEERS = [
 	"storybook",
+	"vite",
 	"@storybook/vue3-vite",
 	"@storybook/addon-mcp",
 	"@storybook/addon-a11y",
 	"@storybook/addon-themes",
+	"@storybook/addon-docs",
+	"@tailwindcss/vite",
+	"tailwindcss",
+	"tw-animate-css",
+	"@tailwindcss/typography",
+	"@vitejs/plugin-vue",
+	"typescript",
+	"vue-component-meta",
 ]
 
 function isInstalled(pkgName, fromDir) {
@@ -131,4 +140,4 @@ async function storybookCommand(argv) {
 	}
 }
 
-module.exports = { storybookCommand }
+module.exports = { storybookCommand, findMissingPeers }

@@ -162,10 +162,11 @@ const gxpStore = useGxpStore()
 /* ─── Step 1: bridge gxpStore.callApi to app-ui's callApi shape ─────────────
  *
  * app-ui expects:   (endpoint, payload) => Promise<T>
- * gxpStore offers:  (operationId, permissionIdentifier, data) => Promise<T>
+ * gxpStore offers:  (operationId, dependencyIdentifier, data) => Promise<T>
  *
  * For the demo we mock the network so it works offline. In production replace
- * the mock with the real `gxpStore.callApi(endpoint, '', payload)` line below.
+ * the mock with the declared-dependency bridge below. Adapter endpoint defaults
+ * must map to actual manifest operation keys; missing/denied live bindings stay errors.
  */
 const MOCK_LATENCY_MS = 800
 
@@ -189,8 +190,9 @@ async function mockCallApi(endpoint, payload) {
 	return { data: { ok: true } }
 }
 
-// Real wiring would look like this:
-//   const callApi = (endpoint, payload) => gxpStore.callApi(endpoint, "", payload)
+// Real wiring: replace experience_api with your declared dependency identifier.
+// Map each used adapter endpoint to its actual manifest operation key.
+//   const callApi = (endpoint, payload) => gxpStore.callApi(endpoint, "experience_api", payload)
 const callApi = mockCallApi
 
 /* ─── Step 2: build the API adapter ────────────────────────────────────────

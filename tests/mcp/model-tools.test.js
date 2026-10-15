@@ -242,6 +242,20 @@ describe("handleModelToolCall", () => {
 })
 
 describe("describe_store_api", () => {
+	it("distinguishes project context, resource bindings and response filtering", async () => {
+		const { reference } = parseResult(
+			await handleModelToolCall("describe_store_api", {}),
+		)
+		expect(reference).toContain(
+			"findDependency does not select the project context",
+		)
+		expect(reference).toContain("hasPermission reads global UI flags")
+		expect(reference).toContain("Never gate callApi on that flag")
+		expect(reference).toContain("Empty visibleFields is not redaction")
+		expect(reference).toContain("nonempty per-model ceiling")
+		expect(reference).toContain("Do not render raw error.message")
+	})
+
 	it("returns ok with a non-empty reference string", async () => {
 		const res = await handleModelToolCall("describe_store_api", {})
 		expect(res.content[0].type).toBe("text")
