@@ -231,6 +231,11 @@ const result = await store.callApi(operationId, identifier, data)
 
 Returns parsed response data. Throws on HTTP errors with a numeric error.status (400–599), e.g. error.status === 403 for forbidden access. Transport failures have no status. The error does not expose the underlying request configuration or headers.
 
+hasPermission reads global UI flags; it does not inspect dependency/model grants.
+Never gate callApi on that flag: a granted API operation may work when the global
+flag is absent. Declare the supported dependency grant and let the server enforce
+it; show a safe denied state on 403/404 instead of treating a UI flag as authority.
+
 ## Project context, resource scope and response fields
 
 findDependency does not select the project context: it returns a configured resource
