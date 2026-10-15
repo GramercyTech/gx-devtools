@@ -231,6 +231,25 @@ const result = await store.callApi(operationId, identifier, data)
 
 Returns parsed response data. Throws on HTTP errors with a numeric error.status (400–599), e.g. error.status === 403 for forbidden access. Transport failures have no status. The error does not expose the underlying request configuration or headers.
 
+## Project context, resource scope and response fields
+
+findDependency does not select the project context: it returns a configured resource
+binding. callApi derives team/project context from runtime pluginVars.projectId.
+Match each binding to its declared model and parent scope. Do not override teamSlug
+or projectSlug to cross tenants or relabel an Attendee binding as a Project.
+
+Empty visibleFields is not redaction: missing/empty selections inherit available
+fields. Reading only meta.total or hiding data[] does not stop contact fields from
+crossing the network. The platform supports a nonempty per-model ceiling for page
+principals; verify the exact endpoint/principal response keys and existing dependency
+unions before claiming data minimization. A broader existing declaration may widen
+the effective ceiling. Do not assume development mocks prove production filtering.
+
+Do not render raw error.message or upstream response text. Show fixed safe user
+copy, clear stale results on binding/permission changes, and verify server denial.
+For count values require Number.isSafeInteger(total) && total >= 0; reject malformed,
+fractional, negative and non-finite results rather than displaying them as success.
+
 ## Low-Level HTTP (avoid unless necessary — bypasses permission model)
 
 \`\`\`javascript
