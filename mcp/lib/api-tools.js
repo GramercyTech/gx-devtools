@@ -161,7 +161,7 @@ const EXT_API_TOOLS = [
 	{
 		name: "api_find_events_for_operation",
 		description:
-			"Given an OpenAPI operationId, return every AsyncAPI message whose x-triggered-by matches. Use this after adding a callApi(operationId, ...) call to discover whether a socket event is fired server-side — subscribe to it with store.listen(eventName, permissionIdentifier, cb) instead of polling.",
+			"Given an OpenAPI operationId, return every AsyncAPI message whose x-triggered-by matches. Use this after adding a callApi(operationId, ...) call to discover whether a socket event is fired server-side — subscribe through the manifest-declared dependency event using store.sockets[identifier][eventKey].listen(callback). Verify the model binding/channel and declared event key; use describe_store_api for the deployed contract.",
 		inputSchema: {
 			type: "object",
 			properties: {
@@ -388,7 +388,7 @@ async function findEventsForOperation(operationId) {
 		note:
 			events.length === 0
 				? "No AsyncAPI messages declare x-triggered-by for this operationId. Either the operation does not fire a platform event, or the spec has not declared the trigger yet."
-				: "Subscribe with store.listen(eventName, permissionIdentifier, callback) to receive these events live.",
+				: "Subscribe through the manifest-declared dependency event using store.sockets[identifier][eventKey].listen(callback). Verify its model binding, channel and declared event key. The development-only event-first overload is not a portable platform API.",
 	}
 }
 

@@ -211,7 +211,7 @@ const API_TOOLS = [
 	{
 		name: "search_websocket_events",
 		description:
-			"Search AsyncAPI events matching a query. Searches components.messages (event name, summary, description, x-triggered-by) and channel definitions. The returned eventName is what you pass to store.listen(eventName, permissionIdentifier, callback).",
+			"Search AsyncAPI events matching a query. Searches components.messages (event name, summary, description, x-triggered-by) and channel definitions. Use returned metadata to declare the correct manifest dependency event, then subscribe with store.sockets[identifier][eventKey].listen(callback). Verify the binding/channel and declared event key against describe_store_api; do not rely on the development-only event-first overload.",
 		inputSchema: {
 			type: "object",
 			properties: {
