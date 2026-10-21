@@ -267,21 +267,45 @@ await store.apiDelete(endpoint)
 
 ## Real-Time Events
 
-### store.listen (polymorphic)
+### Named sockets — deployed platform contract
 
-Form 1 — named socket (e.g. primary peer channel):
 \`\`\`javascript
-const unsub = store.listen("primary", "cursor_moved", (data) => { ... })
-unsub() // unsubscribe
+const stop = store.listen(socketName, eventName, callback)
+if (typeof stop === "function") stop() // unsubscribe
 \`\`\`
 
-Form 2 — platform AsyncAPI event scoped to a permission identifier:
+socketName must identify an initialized socket. The platform exposes primary,
+project, portal and attendee sockets when their context is available. Use the
+catalog's matching channel and event contract; a permission identifier is not an
+arbitrary socket name. primary.listen is a legacy alias for peer whispers, not a
+general server-event subscription. Prefer the explicit peer API:
+
 \`\`\`javascript
-const unsub = store.listen("SomeEventName", "identifier", (data) => { ... })
-// identifier must be declared in app-manifest.json → dependencies, or "project"
+const stop = store.sockets.primary.listenForWhisper("cursor_moved", callback)
+stop()
 \`\`\`
 
-Returns an unsubscribe function. Logs a warning if the identifier is not bound in dependencyList.
+### Manifest-declared dependency server events
+
+Discover the event's model/channel metadata and declare its events map in the
+correct manifest dependency. Once that dependency is bound and its listener is
+initialized, use its declared event key:
+
+\`\`\`javascript
+const stop = store.sockets[identifier][eventKey].listen(callback)
+stop()
+\`\`\`
+
+eventKey is a key in that dependency's events map; the platform wrapper selects
+the bound model channel and server event. A missing binding/listener is an
+unresolved configuration, not permission to substitute the primary/project
+channel. Rebind and unsubscribe when context changes or the component unmounts.
+
+The development-only compatibility overload taking eventName followed by a
+permission identifier is not a portable platform API. Do not ship generated code
+that depends on that overload; use the deployed contracts above and verify the
+actual event on its authorized channel. A successful local mock is not deployed
+subscription acceptance.
 
 ### store.broadcast
 

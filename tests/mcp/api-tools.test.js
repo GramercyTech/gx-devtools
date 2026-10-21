@@ -259,6 +259,13 @@ describe("AsyncAPI event tools", () => {
 		expect(out.ok).toBe(true)
 		expect(out.events).toHaveLength(1)
 		expect(out.events[0].eventName).toBe("SocialStreamPostCreated")
+		expect(out.note).toContain(
+			"store.sockets[identifier][eventKey].listen(callback)",
+		)
+		expect(out.note).toContain("manifest")
+		expect(out.note).not.toContain(
+			"store.listen(eventName, permissionIdentifier",
+		)
 	})
 
 	it("api_find_events_for_operation returns empty + guidance when nothing matches", async () => {
@@ -463,5 +470,19 @@ describe("api_generate_dependency", () => {
 			"attendees.show",
 		])
 		fs.rmSync(tmp, { recursive: true, force: true })
+	})
+})
+
+describe("event subscription tool guidance", () => {
+	it("requires deployed dependency listeners for discovered server events", () => {
+		const tool = EXT_API_TOOLS.find(
+			(entry) => entry.name === "api_find_events_for_operation",
+		)
+		expect(tool.description).toContain(
+			"store.sockets[identifier][eventKey].listen(callback)",
+		)
+		expect(tool.description).not.toContain(
+			"store.listen(eventName, permissionIdentifier",
+		)
 	})
 })

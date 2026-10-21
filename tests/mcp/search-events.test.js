@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest"
 
 // eslint-disable-next-line no-undef
-const { searchEvents } = require("../../mcp/lib/server")
+const { searchEvents, TOOLS } = require("../../mcp/lib/server")
 // eslint-disable-next-line no-undef
 const { normalizeOperationId } = require("../../mcp/lib/api-tools")
 
@@ -67,5 +67,17 @@ describe("normalizeOperationId", () => {
 		expect(() => normalizeOperationId(arr)).not.toThrow()
 		expect(normalizeOperationId(arr)).toBe(arr)
 		expect(normalizeOperationId(null)).toBeNull()
+	})
+})
+
+describe("event-search tool guidance", () => {
+	it("directs server-event consumers to declared dependency sockets", () => {
+		const tool = TOOLS.find((entry) => entry.name === "search_websocket_events")
+		expect(tool.description).toContain(
+			"store.sockets[identifier][eventKey].listen(callback)",
+		)
+		expect(tool.description).not.toContain(
+			"store.listen(eventName, permissionIdentifier",
+		)
 	})
 })

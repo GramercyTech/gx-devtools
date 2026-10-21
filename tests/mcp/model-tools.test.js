@@ -275,3 +275,21 @@ describe("describe_store_api", () => {
 		expect(reference).toContain("triggerState")
 	})
 })
+
+describe("portable store event guidance", () => {
+	it("distinguishes named sockets, declared server events and the dev-only overload", async () => {
+		const { reference } = parseResult(
+			await handleModelToolCall("describe_store_api", {}),
+		)
+		expect(reference).toContain("store.listen(socketName, eventName, callback)")
+		expect(reference).toContain(
+			"store.sockets[identifier][eventKey].listen(callback)",
+		)
+		expect(reference).toContain("development-only compatibility overload")
+		expect(reference).toContain("not a portable platform API")
+		expect(reference).toContain("listenForWhisper")
+		expect(reference).not.toContain(
+			'store.listen("SomeEventName", "identifier"',
+		)
+	})
+})
