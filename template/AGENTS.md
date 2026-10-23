@@ -258,25 +258,30 @@ Every plugin has two streams of real-time events, both surfaced through the stor
 
 ```javascript
 // Listen for a custom event from other users of this plugin
-store.listen("primary", "cursor_moved", (data) => {
-	console.log("Peer moved:", data)
-})
+const stopPeer = store.sockets.primary.listenForWhisper(
+	"cursor_moved",
+	(data) => {
+		console.log("Peer moved:", data)
+	},
+)
 
 // Broadcast to everyone else on the primary channel
-store.broadcast("primary", "cursor_moved", { x: 42, y: 100 })
+store.sockets.primary.broadcast("cursor_moved", { x: 42, y: 100 })
 ```
 
 ### Platform API events
 
-Use the AsyncAPI form of `listen` — event name first, permission identifier second, callback third:
+Declare the event in the correct manifest dependency using its AsyncAPI model/channel metadata. Once the admin binds that dependency and its listener is initialized, subscribe through its exact declared event key:
 
 ```javascript
-store.listen("SocialStreamPostCreated", "social_stream_two", (post) => {
+const stopEvent = store.sockets[identifier][eventKey].listen((post) => {
 	console.log("New post on the destination stream:", post)
 })
 ```
 
-The permission identifier (`"social_stream_two"` above, or `"project"` for project-wide events) is the same identifier you pass to `callApi`. It scopes the subscription to the resource the admin bound for that identifier.
+`identifier` is the declared dependency identifier and `eventKey` is an exact key in that dependency’s `events` map. The wrapper selects the authorized bound model channel and server event. Missing bindings or listeners are unresolved configuration, not permission to use the primary/project channel instead. Call `stopPeer()` / `stopEvent()` when context changes or the component unmounts.
+
+For an initialized named socket use `store.listen(socketName, eventName, callback)` and its returned unsubscribe closure. A dependency identifier is not an arbitrary socket name. The event-first overload taking a permission identifier is development-only; do not ship code that depends on it. Discover the exact deployed contract with `describe_store_api`.
 
 ### Rule: whenever you add a `callApi`, check for a matching event
 
@@ -286,7 +291,7 @@ Before wiring polling or manual refresh after a mutation, ask: does this operati
 - `api_list_events` — list every event, optionally filtered by `triggeredBy`.
 - `search_websocket_events` — keyword search across events + channels.
 
-Example: you just added `store.callApi("posts.store", "social_stream_two", {...})`. Run `api_find_events_for_operation({ operationId: "posts.store" })`, see `SocialStreamPostCreated`, subscribe with `store.listen("SocialStreamPostCreated", "social_stream_two", cb)`. No polling.
+Example: you just added `store.callApi("posts.store", "social_stream_two", {...})`. Run `api_find_events_for_operation({ operationId: "posts.store" })`, see `SocialStreamPostCreated`, declare the returned event under the correct bound dependency, then use `store.sockets[identifier][eventKey].listen(cb)`. Verify its authorized channel; do not substitute the primary channel. No polling.
 
 ### Testing broadcasts locally
 

@@ -20,7 +20,12 @@
  * registered as `gxp-app-ui-storybook` in the plugin project's mcp.json.
  */
 
-const { fetchSpec, getEnvironment, getEnvUrls } = require("./specs")
+const {
+	fetchSpec,
+	getEnvironment,
+	getEnvUrls,
+	withSpecContext,
+} = require("./specs")
 const {
 	CONFIG_TOOLS,
 	handleConfigToolCall,
@@ -397,6 +402,7 @@ module.exports = {
 	SERVER_INFO,
 	SERVER_DESCRIPTION,
 	handleToolCall,
+	withSpecContext,
 	searchEndpoints,
 	searchEvents,
 	getEndpointDetails,

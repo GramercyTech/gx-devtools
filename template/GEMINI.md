@@ -186,22 +186,27 @@ Two streams, both through the store:
 ### `primary` channel
 
 ```javascript
-store.listen("primary", "custom_event", (data) => {
-	/* ... */
-})
-store.broadcast("primary", "custom_event", { hello: "world" })
+const stopPeer = store.sockets.primary.listenForWhisper(
+	"custom_event",
+	(data) => {
+		/* ... */
+	},
+)
+store.sockets.primary.broadcast("custom_event", { hello: "world" })
 ```
 
 ### Platform API events
 
 ```javascript
-// Event name first, permission identifier second, callback third
-store.listen("SocialStreamPostCreated", "social_stream_two", (post) => {
-	// fires whenever the admin-bound social_stream_two receives a new post
+// Use the exact event key declared in the bound manifest dependency.
+const stopEvent = store.sockets[identifier][eventKey].listen((post) => {
+	// The wrapper selects the authorized model channel and server event.
 })
 ```
 
-The permission identifier is the same one you use in `callApi` — it scopes the subscription to the admin-bound resource. Use `"project"` for project-wide events.
+`identifier` names the declared, admin-bound dependency; `eventKey` must exist in that dependency’s `events` map. A missing binding/listener is unresolved configuration, not permission to substitute another channel. Call `stopPeer()` / `stopEvent()` when context changes or the component unmounts.
+
+For an initialized named socket use `store.listen(socketName, eventName, callback)` and its returned unsubscribe closure. A dependency identifier is not an arbitrary socket name. The event-first overload taking a permission identifier is development-only and must not ship. Use `describe_store_api` to verify the deployed contract.
 
 ### Replace polling with events
 
