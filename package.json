@@ -1,6 +1,6 @@
 {
 	"name": "@gxp-dev/tools",
-	"version": "2.1.41",
+	"version": "2.1.42",
 	"description": "Dev tools to create platform plugins",
 	"type": "commonjs",
 	"publishConfig": {
@@ -111,6 +111,9 @@
 		"cheerio": {
 			"encoding-sniffer": "1.0.2"
 		},
-		"shell-quote": "1.12.0"
+		"shell-quote": "1.12.0",
+		"micromark-extension-math": {
+			"katex": "0.19.0"
+		}
 	}
 }
