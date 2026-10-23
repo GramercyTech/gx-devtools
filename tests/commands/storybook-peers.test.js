@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { createRequire } from "node:module"
+import { execFileSync, spawnSync } from "node:child_process"
+import { fileURLToPath } from "node:url"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
@@ -46,5 +48,81 @@ describe("installed AppUI Storybook tooling", () => {
 		expect(
 			findMissingPeers(fixture, { peerDependencies: { storybook: "^9" } }),
 		).toEqual(["storybook@^9"])
+	})
+})
+
+describe("project-local AppUI CLI resolution", () => {
+	const cli = fileURLToPath(
+		new URL("../../bin/gx-devtools.js", import.meta.url),
+	)
+	function project() {
+		fixture = fs.mkdtempSync(path.join(os.tmpdir(), "gxp-storybook-project-"))
+		const root = path.join(fixture, "project")
+		fs.mkdirSync(root)
+		fs.writeFileSync(
+			path.join(root, "package.json"),
+			JSON.stringify({ name: "synthetic-project", version: "1.0.0" }),
+		)
+		return root
+	}
+	function appUi(root) {
+		const library = path.join(root, "node_modules", "@gxp-dev", "app-ui")
+		fs.mkdirSync(path.join(library, ".storybook"), { recursive: true })
+		fs.writeFileSync(
+			path.join(library, "package.json"),
+			JSON.stringify({
+				name: "@gxp-dev/app-ui",
+				version: "0.1.7",
+				scripts: {
+					"storybook:build": `node -e "require('node:fs').writeFileSync('storybook-proof.json',JSON.stringify({cwd:process.cwd()}))"`,
+				},
+			}),
+		)
+		return library
+	}
+	it("runs the installed project's Storybook build without a toolkit AppUI dependency", () => {
+		const root = project()
+		const library = appUi(root)
+		execFileSync(process.execPath, [cli, "storybook", "--build"], {
+			cwd: root,
+			timeout: 8000,
+			stdio: "pipe",
+		})
+		expect(
+			JSON.parse(
+				fs.readFileSync(path.join(library, "storybook-proof.json"), "utf8"),
+			),
+		).toEqual({ cwd: library })
+	})
+	it("rejects a missing project library instead of falling back to globally resolvable AppUI", () => {
+		const root = project()
+		const globalRoot = path.join(fixture, "global")
+		const library = appUi(globalRoot)
+		const env = {
+			...process.env,
+			NODE_PATH: path.join(globalRoot, "node_modules"),
+		}
+		const resolved = execFileSync(
+			process.execPath,
+			[
+				"-e",
+				"process.stdout.write(require.resolve('@gxp-dev/app-ui/package.json'))",
+			],
+			{ cwd: root, env, encoding: "utf8" },
+		)
+		expect(resolved).toBe(path.join(library, "package.json"))
+		const result = spawnSync(process.execPath, [cli, "storybook", "--build"], {
+			cwd: root,
+			env,
+			encoding: "utf8",
+			timeout: 8000,
+		})
+		expect(result.status).toBe(1)
+		expect(result.stderr).toContain(
+			"Could not find @gxp-dev/app-ui in this project's node_modules",
+		)
+		expect(fs.existsSync(path.join(library, "storybook-proof.json"))).toBe(
+			false,
+		)
 	})
 })
