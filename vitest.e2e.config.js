@@ -20,10 +20,9 @@ export default defineConfig({
 		hookTimeout: 300_000,
 		// Tests share an installed fixture project — running them in parallel
 		// would race on the same node_modules, dist/, and dev-server port.
-		// `singleFork` is the vitest-4 replacement for the old
-		// `poolOptions.forks.singleFork` knob.
+		// Keep one worker with the current Vitest pool API.
 		fileParallelism: false,
 		pool: "forks",
-		singleFork: true,
+		maxWorkers: 1,
 	},
 })
