@@ -2,7 +2,8 @@
  * Shared OpenAPI / AsyncAPI / Webhook spec fetching with an in-memory cache.
  * Used by both the main MCP server and the extended api-tools module.
  *
- * Environment detection: reads VITE_API_ENV/API_ENV from the project's .env
+ * Trusted hosted calls use withSpecContext for an immutable per-request scope.
+ * Unscoped CLI environment detection reads VITE_API_ENV/API_ENV from the project's .env
  * file first, then falls back to process.env, then defaults to "develop".
  *
  * GXDEV_API_SPEC_BASE_URL optionally selects an operator-configured HTTPS origin.
@@ -11,6 +12,56 @@
 
 const fs = require("fs")
 const path = require("path")
+const { AsyncLocalStorage } = require("node:async_hooks")
+const specContext = new AsyncLocalStorage()
+
+/** Trusted host API: tool arguments never select this scope or its origin. */
+function withSpecContext(context, action) {
+	if (
+		!context ||
+		typeof context !== "object" ||
+		Array.isArray(context) ||
+		Object.keys(context).length !== 2 ||
+		!Object.hasOwn(context, "environment") ||
+		!Object.hasOwn(context, "specOrigin") ||
+		typeof action !== "function" ||
+		typeof context.environment !== "string" ||
+		!Object.hasOwn(ENVIRONMENT_URLS, context.environment) ||
+		typeof context.specOrigin !== "string"
+	)
+		throw new Error("Invalid trusted API specification context")
+	let origin
+	try {
+		const url = new URL(context.specOrigin)
+		if (
+			url.protocol !== "https:" ||
+			url.username ||
+			url.password ||
+			url.pathname !== "/" ||
+			url.search ||
+			url.hash ||
+			url.origin !== context.specOrigin
+		)
+			throw new Error("invalid origin")
+		origin = url.origin
+	} catch {
+		throw new Error("Invalid trusted API specification context")
+	}
+	const snapshot = Object.freeze({
+		environment: context.environment,
+		specOrigin: origin,
+	})
+	return specContext.run(snapshot, action)
+}
+
+function urlsForOrigin(origin) {
+	return {
+		apiBaseUrl: origin,
+		openApiSpec: `${origin}/api-specs/openapi.json`,
+		asyncApiSpec: `${origin}/api-specs/asyncapi.json`,
+		webhookSpec: `${origin}/api-specs/webhooks.json`,
+	}
+}
 
 const ENVIRONMENT_URLS = {
 	production: {
@@ -58,6 +109,8 @@ const CACHE_TTL = 5 * 60 * 1000
 const specCache = new Map()
 
 function getEnvironment() {
+	const context = specContext.getStore()
+	if (context) return context.environment
 	const envPath = path.join(process.cwd(), ".env")
 	if (fs.existsSync(envPath)) {
 		const envContent = fs.readFileSync(envPath, "utf-8")
@@ -70,6 +123,8 @@ function getEnvironment() {
 }
 
 function getEnvUrls() {
+	const context = specContext.getStore()
+	if (context) return urlsForOrigin(context.specOrigin)
 	const env = getEnvironment()
 	const defaults = ENVIRONMENT_URLS[env]
 	if (!defaults) throw new Error(`Unknown API environment: ${env}`)
@@ -154,6 +209,7 @@ function __setCacheForTest(overrides) {
 
 module.exports = {
 	ENVIRONMENT_URLS,
+	withSpecContext,
 	getEnvironment,
 	getEnvUrls,
 	fetchSpec,
