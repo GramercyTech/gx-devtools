@@ -1,23 +1,20 @@
 /**
  * End-to-end CLI smoke test for gxdev init / build / dev.
  *
- * Strategy:
- *   1. Pick a tmpdir.
- *   2. Run the local gxdev binary's `init <name> --yes` to scaffold a project
- *      (this also runs `npm install` to pull in vite, vue, etc. — the
- *      published @gxp-dev/tools tarball is fetched as well, but every gxdev
- *      invocation we make uses GXDEV_USE_GLOBAL=1 so the runtime/template
- *      files come from THIS checkout, not whatever's published).
- *   3. Run `gxdev build` and verify a `.gxpapp` lands in dist/.
- *   4. Boot `gxdev dev --no-https`, poll for HTTP 200 on the dev port, then
- *      SIGTERM and verify a clean shutdown.
+ * Strategy: pack this checkout and substitute its exact archive immediately
+ * before the real init npm install. Optional local AppUI archive substitution
+ * proves the unpublished AppUI candidate without changing production gxdev.
+ * Build/dev/test run the installed local toolkit with global fallback disabled.
+ * This proves local packed candidates, not unpublished registry selection.
  *
  * These tests are gated by RUN_CLI_E2E=1 so a casual `npm test` stays fast.
  * In CI they run via the `e2e` job in .github/workflows/ci.yml and as part of
  * release.yml's pre-publish verification.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { execSync, spawn, spawnSync } from "child_process"
+import { spawn, spawnSync } from "child_process"
+import { createRequire } from "node:module"
+import { createHash } from "node:crypto"
 import fs from "fs"
 import http from "http"
 import net from "net"
@@ -33,6 +30,42 @@ const PROJECT_NAME = "e2e-fixture-plugin"
 
 let fixtureDir = ""
 let projectDir = ""
+let localGxdev = ""
+let installReceipt = ""
+let candidateDigest = ""
+const require = createRequire(import.meta.url)
+const { npmInvocation } = require("../../bin/lib/utils/process")
+function localEnvironment() {
+	const env = {}
+	for (const key of [
+		"PATH",
+		"HOME",
+		"USER",
+		"LOGNAME",
+		"TMPDIR",
+		"TEMP",
+		"TMP",
+		"SystemRoot",
+		"CI",
+		"npm_config_cache",
+	])
+		if (process.env[key]) env[key] = process.env[key]
+	env.npm_config_registry = "https://registry.npmjs.org"
+	env.npm_config_userconfig = path.join(fixtureDir, "empty-user.npmrc")
+	env.npm_config_globalconfig = path.join(fixtureDir, "empty-global.npmrc")
+	return env
+}
+
+function npmResult(args, cwd = projectDir) {
+	const invocation = npmInvocation(args, localEnvironment())
+	return spawnSync(invocation.command, invocation.args, {
+		cwd,
+		env: localEnvironment(),
+		encoding: "utf8",
+		timeout: 300000,
+		maxBuffer: 4 * 1024 * 1024,
+	})
+}
 
 /** Pick a free TCP port for the dev server so we don't collide with anything. */
 function getFreePort() {
@@ -85,21 +118,66 @@ beforeAll(async () => {
 
 	fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "gxdev-e2e-"))
 	projectDir = path.join(fixtureDir, PROJECT_NAME)
+	fs.writeFileSync(path.join(fixtureDir, "empty-user.npmrc"), "")
+	fs.writeFileSync(path.join(fixtureDir, "empty-global.npmrc"), "")
 
-	// gxdev init expects to operate from the parent dir and create a
-	// subdirectory matching the project name. --yes skips prompts and skips
-	// launching a dev server, but DOES still run `npm install` internally.
-	// We forward GXDEV_USE_GLOBAL so the local toolkit (not whatever's on
-	// npm) drives every subsequent invocation.
+	const pack = npmResult(
+		["pack", "--ignore-scripts", "--json", "--pack-destination", fixtureDir],
+		TOOLKIT_ROOT,
+	)
+	if (pack.status !== 0) throw new Error("Exact local toolkit packing failed")
+	const packed = JSON.parse(pack.stdout)
+	const entry = Array.isArray(packed) ? packed[0] : packed["@gxp-dev/tools"]
+	if (
+		entry?.name !== "@gxp-dev/tools" ||
+		entry.version !== "2.1.43" ||
+		path.basename(entry.filename) !== entry.filename
+	)
+		throw new Error("Unexpected packed toolkit identity")
+	const archive = path.join(fixtureDir, entry.filename)
+	candidateDigest = createHash("sha256")
+		.update(fs.readFileSync(archive))
+		.digest("hex")
+	const archives = {
+		"@gxp-dev/tools": { path: archive, sha256: candidateDigest },
+	}
+	if (process.env.GXDEV_E2E_APPUI_TARBALL) {
+		const file = path.resolve(process.env.GXDEV_E2E_APPUI_TARBALL)
+		const digest = createHash("sha256")
+			.update(fs.readFileSync(file))
+			.digest("hex")
+		if (digest !== process.env.GXDEV_E2E_APPUI_SHA256)
+			throw new Error("AppUI candidate archive hash mismatch")
+		archives["@gxp-dev/app-ui"] = { path: file, sha256: digest }
+	}
+	installReceipt = path.join(fixtureDir, "install-receipt.json")
+	const config = path.join(fixtureDir, "install-config.json")
+	fs.writeFileSync(
+		config,
+		JSON.stringify({ project: projectDir, archives, receipt: installReceipt }),
+	)
 	const initResult = spawnSync(
 		process.execPath,
-		[GXDEV_BIN, "init", PROJECT_NAME, "--yes"],
+		[
+			"--require",
+			path.join(TOOLKIT_ROOT, "tests/e2e/candidate-install.cjs"),
+			GXDEV_BIN,
+			"init",
+			PROJECT_NAME,
+			"--yes",
+		],
 		{
 			cwd: fixtureDir,
-			env: { ...process.env, GXDEV_USE_GLOBAL: "true" },
+			env: { ...localEnvironment(), GXDEV_E2E_INSTALL_CONFIG: config },
 			stdio: "pipe",
-			encoding: "utf-8",
+			encoding: "utf8",
+			timeout: 600000,
+			maxBuffer: 4 * 1024 * 1024,
 		},
+	)
+	localGxdev = path.join(
+		projectDir,
+		"node_modules/@gxp-dev/tools/bin/gx-devtools.js",
 	)
 
 	if (initResult.status !== 0) {
@@ -115,8 +193,12 @@ beforeAll(async () => {
 
 afterAll(() => {
 	if (fixtureDir && fs.existsSync(fixtureDir)) {
+		if (process.env.GXDEV_E2E_RETAIN_FIXTURE === "1") {
+			fs.writeFileSync(process.env.GXDEV_E2E_FIXTURE_POINTER, fixtureDir)
+			return
+		}
 		try {
-			execSync(`rm -rf "${fixtureDir}"`, { stdio: "ignore" })
+			fs.rmSync(fixtureDir, { recursive: true, force: true })
 		} catch {
 			// Best-effort cleanup — don't fail the suite if the shell remove fails
 		}
@@ -173,8 +255,7 @@ describe.runIf(ENABLED)("gxdev e2e", () => {
 	})
 
 	it("runs a Vue component test with the shipped config after clean install", () => {
-		const env = { ...process.env }
-		delete env.NODE_PATH
+		const env = localEnvironment()
 		const npm = process.platform === "win32" ? "npm.cmd" : "npm"
 		const install = spawnSync(npm, ["ci", "--no-audit", "--no-fund"], {
 			cwd: projectDir,
@@ -222,11 +303,142 @@ it("compiles Vue and handles interaction", async () => {
 		}
 	}, 450_000)
 
+	it("uses the exact packed local toolkit and patched schema graph without global fallback", async () => {
+		const receipt = JSON.parse(fs.readFileSync(installReceipt, "utf8"))
+		expect(receipt.requested).toEqual({ appui: "^0.2.0", toolkit: "^2.1.43" })
+		expect(receipt.substituted).toContain("@gxp-dev/tools")
+		const installed = createRequire(path.join(projectDir, "package.json"))
+		const toolkitPackage = installed.resolve("@gxp-dev/tools/package.json")
+		expect(
+			toolkitPackage.startsWith(path.join(projectDir, "node_modules")),
+		).toBe(true)
+		expect(installed("@gxp-dev/tools/package.json").version).toBe("2.1.43")
+		expect(
+			JSON.parse(
+				fs.readFileSync(
+					path.join(projectDir, "node_modules/@gxp-dev/app-ui/package.json"),
+					"utf8",
+				),
+			).version,
+		).toMatch(/^0\.2\./)
+		const toolkit = createRequire(toolkitPackage)
+		const sdk = createRequire(
+			toolkit.resolve("@modelcontextprotocol/sdk/server/mcp.js"),
+		)
+		expect(sdk("zod/package.json").version).toMatch(/^4\./)
+		const sdkManifest = path.resolve(
+			path.dirname(toolkit.resolve("@modelcontextprotocol/sdk/server/mcp.js")),
+			"../../../package.json",
+		)
+		expect(JSON.parse(fs.readFileSync(sdkManifest, "utf8")).version).toMatch(
+			/^1\.32\./,
+		)
+		expect(
+			typeof toolkit(
+				path.join(path.dirname(toolkitPackage), "mcp/lib/server.js"),
+			).withSpecContext,
+		).toBe("function")
+		const lock = JSON.parse(
+			fs.readFileSync(path.join(projectDir, "package-lock.json"), "utf8"),
+		)
+		const versions = Object.entries(lock.packages)
+			.filter(([name]) => name.endsWith("/zod"))
+			.map(([, pkg]) => pkg.version)
+		expect(versions.length).toBeGreaterThan(0)
+		expect(versions.every((version) => /^4\./.test(version))).toBe(true)
+		expect(
+			lock.packages["node_modules/@gxp-dev/tools"].integrity ||
+				lock.packages["node_modules/@gxp-dev/tools"].resolved,
+		).toBeTruthy()
+		expect(candidateDigest).toMatch(/^[a-f0-9]{64}$/)
+		const api = toolkit(
+			path.join(path.dirname(toolkitPackage), "mcp/lib/server.js"),
+		)
+		const originalFetch = global.fetch
+		const targets = []
+		global.fetch = async (url) => {
+			targets.push(url)
+			return {
+				ok: true,
+				json: async () => ({
+					paths: { "/synthetic": { get: { operationId: url } } },
+				}),
+			}
+		}
+		try {
+			const results = await Promise.all(
+				["develop", "testing"].map((environment) =>
+					api.withSpecContext(
+						{
+							environment,
+							specOrigin: `https://${environment}.scaffold.example.test`,
+						},
+						async () =>
+							JSON.parse(
+								(await api.handleToolCall("api_list_operation_ids", {}))
+									.content[0].text,
+							),
+					),
+				),
+			)
+			expect(results.map((result) => result.operations[0].operationId)).toEqual(
+				[
+					"https://develop.scaffold.example.test/api-specs/openapi.json",
+					"https://testing.scaffold.example.test/api-specs/openapi.json",
+				],
+			)
+			expect(targets).toHaveLength(2)
+		} finally {
+			global.fetch = originalFetch
+		}
+		fs.writeFileSync(
+			path.join(fixtureDir, "resolved-candidate-receipt.json"),
+			JSON.stringify({
+				candidateDigest,
+				installedToolkit: installed("@gxp-dev/tools/package.json").version,
+				mcp: JSON.parse(fs.readFileSync(sdkManifest, "utf8")).version,
+				sdkZod: sdk("zod/package.json").version,
+				allZodVersions: versions,
+				lockSha256: createHash("sha256")
+					.update(fs.readFileSync(path.join(projectDir, "package-lock.json")))
+					.digest("hex"),
+				actualSpecTargets: targets,
+				globalFallback: false,
+			}),
+		)
+	})
+
+	it("audits both the full generated graph and production dependencies", () => {
+		const summaries = []
+		for (const omit of [[], ["--omit=dev"]]) {
+			const result = npmResult(["audit", "--json", ...omit])
+			const audit = JSON.parse(result.stdout)
+			fs.writeFileSync(
+				path.join(
+					fixtureDir,
+					omit.length ? "production-audit.json" : "full-audit.json",
+				),
+				result.stdout,
+			)
+			summaries.push({
+				scope: omit.length ? "production" : "full",
+				status: result.status,
+				counts: audit.metadata.vulnerabilities,
+			})
+		}
+		expect(
+			summaries.every(
+				(result) => result.status === 0 && result.counts.total === 0,
+			),
+			JSON.stringify(summaries),
+		).toBe(true)
+	}, 180000)
+
 	describe("gxdev build", () => {
 		it("produces a .gxpapp file in dist/", () => {
-			const buildResult = spawnSync(process.execPath, [GXDEV_BIN, "build"], {
+			const buildResult = spawnSync(process.execPath, [localGxdev, "build"], {
 				cwd: projectDir,
-				env: { ...process.env, GXDEV_USE_GLOBAL: "true" },
+				env: localEnvironment(),
 				stdio: "pipe",
 				encoding: "utf-8",
 				timeout: 240_000,
@@ -267,10 +479,17 @@ it("compiles Vue and handles interaction", async () => {
 
 			devProcess = spawn(
 				process.execPath,
-				[GXDEV_BIN, "dev", "--no-https", "--no-socket", "--port", String(port)],
+				[
+					localGxdev,
+					"dev",
+					"--no-https",
+					"--no-socket",
+					"--port",
+					String(port),
+				],
 				{
 					cwd: projectDir,
-					env: { ...process.env, GXDEV_USE_GLOBAL: "true" },
+					env: localEnvironment(),
 					stdio: "pipe",
 				},
 			)

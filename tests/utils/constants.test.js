@@ -41,7 +41,7 @@ describe("constants", () => {
 		})
 
 		it("should include @gxp-dev/app-ui (component library)", () => {
-			expect(REQUIRED_DEPENDENCIES).toHaveProperty("@gxp-dev/app-ui")
+			expect(REQUIRED_DEPENDENCIES["@gxp-dev/app-ui"]).toBe("^0.2.0")
 		})
 
 		it("should have version strings for all dependencies", () => {
@@ -53,6 +53,9 @@ describe("constants", () => {
 	})
 
 	describe("REQUIRED_DEV_DEPENDENCIES", () => {
+		it("requires the patched local toolkit rather than a fitting older latest tag", () => {
+			expect(REQUIRED_DEV_DEPENDENCIES["@gxp-dev/tools"]).toBe("^2.1.43")
+		})
 		it("should be an object", () => {
 			expect(typeof REQUIRED_DEV_DEPENDENCIES).toBe("object")
 			expect(REQUIRED_DEV_DEPENDENCIES).not.toBeNull()
@@ -69,7 +72,7 @@ describe("constants", () => {
 		})
 
 		it("should include the test harness (vitest + helpers)", () => {
-			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("vitest")
+			expect(REQUIRED_DEV_DEPENDENCIES.vitest).toBe("^4.1.12")
 			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("@vue/test-utils")
 			expect(REQUIRED_DEV_DEPENDENCIES).toHaveProperty("happy-dom")
 		})
