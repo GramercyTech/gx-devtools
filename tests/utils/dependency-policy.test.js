@@ -29,7 +29,7 @@ describe("published toolkit dependency security policy", () => {
 			fileURLToPath(new URL("bin/lib/constants.js", root)),
 		)
 		expect(REQUIRED_DEPENDENCIES["@gxp-dev/app-ui"]).toBe("^0.2.0")
-		expect(REQUIRED_DEV_DEPENDENCIES["@gxp-dev/tools"]).toBe("^2.1.43")
+		expect(REQUIRED_DEV_DEPENDENCIES["@gxp-dev/tools"]).toBe("^2.1.44")
 		expect(REQUIRED_DEV_DEPENDENCIES["happy-dom"]).toBe("^21.0.4")
 		expect(REQUIRED_DEV_DEPENDENCIES.vitest).toBe("^4.1.12")
 	})

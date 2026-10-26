@@ -23,7 +23,7 @@ function fixture(change = () => {}) {
 	fs.mkdirSync(project)
 	const manifest = {
 		dependencies: { "@gxp-dev/app-ui": "^0.2.0" },
-		devDependencies: { "@gxp-dev/tools": "^2.1.43" },
+		devDependencies: { "@gxp-dev/tools": "^2.1.44" },
 	}
 	const archive = path.join(folder, "candidate.tgz")
 	fs.writeFileSync(archive, "synthetic archive")
@@ -52,8 +52,10 @@ function fixture(change = () => {}) {
 		},
 	}
 	vm.runInNewContext(helper, {
-		require: (name) =>
-			name === "../../bin/lib/utils/process" ? commands : require(name),
+		module: {
+			require: (name) =>
+				name === "../../bin/lib/utils/process" ? commands : require(name),
+		},
 		process: { env: { GXDEV_E2E_INSTALL_CONFIG: configPath } },
 	})
 	return { project, commands, calls, config, manifest }
@@ -77,7 +79,7 @@ describe("test-only packed scaffold substitution", () => {
 			`file:${f.config.archives["@gxp-dev/tools"].path}`,
 		)
 		expect(JSON.parse(fs.readFileSync(f.config.receipt))).toEqual({
-			requested: { appui: "^0.2.0", toolkit: "^2.1.43" },
+			requested: { appui: "^0.2.0", toolkit: "^2.1.44" },
 			substituted: ["@gxp-dev/tools"],
 			realNpmInstall: true,
 			archiveSha256: {

@@ -11,19 +11,21 @@ import fs from "fs"
 import os from "os"
 import path from "path"
 
+import { createRequire } from "node:module"
+const loadModule = createRequire(import.meta.url)
 const {
 	safeCopyFile,
 	createPackageJson,
 	updateAppManifest,
 	ensureBaseFramework,
 	updateExistingProject,
-} = require("../../bin/lib/utils/files")
+} = loadModule("../../bin/lib/utils/files")
 const {
 	REQUIRED_DEPENDENCIES,
 	REQUIRED_DEV_DEPENDENCIES,
 	DEFAULT_SCRIPTS,
 	BASE_FRAMEWORK,
-} = require("../../bin/lib/constants")
+} = loadModule("../../bin/lib/constants")
 
 function makeTmpDir() {
 	return fs.mkdtempSync(path.join(os.tmpdir(), "gxdev-files-test-"))
@@ -265,7 +267,7 @@ describe("files.js (real fs)", () => {
 			expect(updateExistingProject(tmpDir)).toBe(true)
 			const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"))
 			expect(pkg.dependencies["@gxp-dev/app-ui"]).toBe("^0.2.0")
-			expect(pkg.devDependencies["@gxp-dev/tools"]).toBe("^2.1.43")
+			expect(pkg.devDependencies["@gxp-dev/tools"]).toBe("^2.1.44")
 			expect(pkg.devDependencies.vitest).toBe("^4.1.12")
 			expect(pkg.dependencies.custom).toBe("1.0.0")
 		})

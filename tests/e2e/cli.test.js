@@ -130,7 +130,7 @@ beforeAll(async () => {
 	const entry = Array.isArray(packed) ? packed[0] : packed["@gxp-dev/tools"]
 	if (
 		entry?.name !== "@gxp-dev/tools" ||
-		entry.version !== "2.1.43" ||
+		entry.version !== "2.1.44" ||
 		path.basename(entry.filename) !== entry.filename
 	)
 		throw new Error("Unexpected packed toolkit identity")
@@ -305,14 +305,14 @@ it("compiles Vue and handles interaction", async () => {
 
 	it("uses the exact packed local toolkit and patched schema graph without global fallback", async () => {
 		const receipt = JSON.parse(fs.readFileSync(installReceipt, "utf8"))
-		expect(receipt.requested).toEqual({ appui: "^0.2.0", toolkit: "^2.1.43" })
+		expect(receipt.requested).toEqual({ appui: "^0.2.0", toolkit: "^2.1.44" })
 		expect(receipt.substituted).toContain("@gxp-dev/tools")
 		const installed = createRequire(path.join(projectDir, "package.json"))
 		const toolkitPackage = installed.resolve("@gxp-dev/tools/package.json")
 		expect(
 			toolkitPackage.startsWith(path.join(projectDir, "node_modules")),
 		).toBe(true)
-		expect(installed("@gxp-dev/tools/package.json").version).toBe("2.1.43")
+		expect(installed("@gxp-dev/tools/package.json").version).toBe("2.1.44")
 		expect(
 			JSON.parse(
 				fs.readFileSync(
@@ -516,6 +516,7 @@ it("compiles Vue and handles interaction", async () => {
 					`${err.message}\n` +
 						`STDOUT:\n${stdoutBuf.slice(-4000)}\n` +
 						`STDERR:\n${stderrBuf.slice(-4000)}`,
+					{ cause: err },
 				)
 			}
 

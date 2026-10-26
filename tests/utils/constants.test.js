@@ -2,6 +2,8 @@
  * Tests for constants.js
  */
 import { describe, it, expect } from "vitest"
+import { createRequire } from "node:module"
+const loadModule = createRequire(import.meta.url)
 const {
 	isWin,
 	exportCmd,
@@ -13,7 +15,7 @@ const {
 	PACKAGE_NAME,
 	TAILWIND_VERSION,
 	BASE_FRAMEWORK,
-} = require("../../bin/lib/constants")
+} = loadModule("../../bin/lib/constants")
 
 describe("constants", () => {
 	describe("Platform detection", () => {
@@ -54,7 +56,7 @@ describe("constants", () => {
 
 	describe("REQUIRED_DEV_DEPENDENCIES", () => {
 		it("requires the patched local toolkit rather than a fitting older latest tag", () => {
-			expect(REQUIRED_DEV_DEPENDENCIES["@gxp-dev/tools"]).toBe("^2.1.43")
+			expect(REQUIRED_DEV_DEPENDENCIES["@gxp-dev/tools"]).toBe("^2.1.44")
 		})
 		it("should be an object", () => {
 			expect(typeof REQUIRED_DEV_DEPENDENCIES).toBe("object")

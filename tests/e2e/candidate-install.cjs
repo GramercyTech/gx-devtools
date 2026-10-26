@@ -1,10 +1,11 @@
 // Test-only preloader: replace unpublished candidates in this disposable fixture
 // immediately before the real CLI's first npm install. Never loaded by gxdev.
-const assert = require("node:assert/strict")
-const fs = require("node:fs")
-const path = require("node:path")
-const crypto = require("node:crypto")
-const commands = require("../../bin/lib/utils/process")
+const loadModule = module.require.bind(module)
+const assert = loadModule("node:assert/strict")
+const fs = loadModule("node:fs")
+const path = loadModule("node:path")
+const crypto = loadModule("node:crypto")
+const commands = loadModule("../../bin/lib/utils/process")
 const config = JSON.parse(
 	fs.readFileSync(process.env.GXDEV_E2E_INSTALL_CONFIG, "utf8"),
 )
@@ -16,7 +17,7 @@ commands.npm = (args, options = {}) => {
 		const manifestPath = path.join(config.project, "package.json")
 		const pkg = JSON.parse(fs.readFileSync(manifestPath, "utf8"))
 		assert.equal(pkg.dependencies["@gxp-dev/app-ui"], "^0.2.0")
-		assert.equal(pkg.devDependencies["@gxp-dev/tools"], "^2.1.43")
+		assert.equal(pkg.devDependencies["@gxp-dev/tools"], "^2.1.44")
 		const requested = {
 			appui: pkg.dependencies["@gxp-dev/app-ui"],
 			toolkit: pkg.devDependencies["@gxp-dev/tools"],
