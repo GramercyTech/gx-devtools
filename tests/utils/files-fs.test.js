@@ -11,19 +11,21 @@ import fs from "fs"
 import os from "os"
 import path from "path"
 
+import { createRequire } from "node:module"
+const loadModule = createRequire(import.meta.url)
 const {
 	safeCopyFile,
 	createPackageJson,
 	updateAppManifest,
 	ensureBaseFramework,
 	updateExistingProject,
-} = require("../../bin/lib/utils/files")
+} = loadModule("../../bin/lib/utils/files")
 const {
 	REQUIRED_DEPENDENCIES,
 	REQUIRED_DEV_DEPENDENCIES,
 	DEFAULT_SCRIPTS,
 	BASE_FRAMEWORK,
-} = require("../../bin/lib/constants")
+} = loadModule("../../bin/lib/constants")
 
 function makeTmpDir() {
 	return fs.mkdtempSync(path.join(os.tmpdir(), "gxdev-files-test-"))
@@ -92,7 +94,7 @@ describe("files.js (real fs)", () => {
 			expect(pkg.type).toBe("module")
 			expect(pkg.dependencies).toEqual(REQUIRED_DEPENDENCIES)
 			expect(pkg.devDependencies).toEqual(REQUIRED_DEV_DEPENDENCIES)
-			expect(pkg.devDependencies["happy-dom"]).toBe("^20.14.5")
+			expect(pkg.devDependencies["happy-dom"]).toBe("^21.0.4")
 			expect(pkg.devDependencies["@vitejs/plugin-vue"]).toBe("^6.0.6")
 			expect(pkg.overrides["shell-quote"]).toBe("1.12.0")
 			// DEFAULT_SCRIPTS should all be present (createPackageJson also adds
@@ -250,6 +252,24 @@ describe("files.js (real fs)", () => {
 
 			const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"))
 			expect(pkg.dependencies[firstDep]).toBe(REQUIRED_DEPENDENCIES[firstDep])
+		})
+
+		it("explicitly migrates old AppUI and toolkit ranges without changing custom dependencies", () => {
+			const pkgPath = path.join(tmpDir, "package.json")
+			fs.writeFileSync(
+				pkgPath,
+				JSON.stringify({
+					name: "existing",
+					dependencies: { "@gxp-dev/app-ui": "^0.1.6", custom: "1.0.0" },
+					devDependencies: { "@gxp-dev/tools": "^2.1.0", vitest: "^4.1.11" },
+				}),
+			)
+			expect(updateExistingProject(tmpDir)).toBe(true)
+			const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"))
+			expect(pkg.dependencies["@gxp-dev/app-ui"]).toBe("^0.2.0")
+			expect(pkg.devDependencies["@gxp-dev/tools"]).toBe("^2.1.44")
+			expect(pkg.devDependencies.vitest).toBe("^4.1.12")
+			expect(pkg.dependencies.custom).toBe("1.0.0")
 		})
 
 		it("preserves the project's chosen package type (does not flip commonjs to module)", () => {

@@ -17,19 +17,19 @@ const TAILWIND_VERSION = "^4.3.0"
 // Required dependencies for GxP projects
 const REQUIRED_DEPENDENCIES = {
 	dotenv: "^16.4.5",
-	"@gxp-dev/app-ui": "^0.1.6",
+	"@gxp-dev/app-ui": "^0.2.0",
 }
 
 const REQUIRED_DEV_DEPENDENCIES = {
-	"@gxp-dev/tools": "^2.1.0",
+	"@gxp-dev/tools": "^2.1.44",
 	eslint: "^10.2.1",
 	"eslint-plugin-vue": "^10.9.0",
 	globals: "^17.5.0",
 	prettier: "^3.8.3",
-	vitest: "^4.1.5",
+	vitest: "^4.1.12",
 	"@vitejs/plugin-vue": "^6.0.6",
 	"@vue/test-utils": "^2.4.6",
-	"happy-dom": "^20.14.5",
+	"happy-dom": "^21.0.4",
 	tailwindcss: TAILWIND_VERSION,
 	"@tailwindcss/vite": TAILWIND_VERSION,
 }
