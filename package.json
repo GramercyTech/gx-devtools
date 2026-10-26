@@ -1,6 +1,6 @@
 {
 	"name": "@gxp-dev/tools",
-	"version": "2.1.42",
+	"version": "2.1.43",
 	"description": "Dev tools to create platform plugins",
 	"type": "commonjs",
 	"publishConfig": {
@@ -61,8 +61,7 @@
 	"dependencies": {
 		"@faker-js/faker": "^10.6.0",
 		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
-		"@gxp-dev/app-ui": "^0.1.6",
-		"@modelcontextprotocol/sdk": "^1.29.0",
+		"@modelcontextprotocol/sdk": "^1.32.2",
 		"@vitejs/plugin-vue": "^6.0.6",
 		"@vue/test-utils": "^2.4.6",
 		"adm-zip": "^0.6.1",
@@ -93,7 +92,8 @@
 		"vite": "^8.3.5",
 		"vitest": "^5.0.5",
 		"vue": "^3.5.27",
-		"yargs": "^17.7.2"
+		"yargs": "^17.7.2",
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
 		"@eslint/css": "^1.1.0",

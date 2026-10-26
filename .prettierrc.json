@@ -3,5 +3,13 @@
 	"useTabs": true,
 	"semi": false,
 	"singleQuote": false,
-	"trailingComma": "all"
+	"trailingComma": "all",
+	"overrides": [
+		{
+			"files": ["package-lock.json", "npm-shrinkwrap.json"],
+			"options": {
+				"parser": "json-stringify"
+			}
+		}
+	]
 }

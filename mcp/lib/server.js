@@ -20,7 +20,12 @@
  * registered as `gxp-app-ui-storybook` in the plugin project's mcp.json.
  */
 
-const { fetchSpec, getEnvironment, getEnvUrls } = require("./specs")
+const {
+	fetchSpec,
+	getEnvironment,
+	getEnvUrls,
+	withSpecContext,
+} = require("./specs")
 const {
 	CONFIG_TOOLS,
 	handleConfigToolCall,
@@ -350,6 +355,8 @@ async function handleToolCall(name, args = {}) {
  * because @modelcontextprotocol/sdk is ESM-only and this package is CJS.
  */
 async function startServer() {
+	const { assertMcpValidationRuntime } = require("./mcp-runtime")
+	assertMcpValidationRuntime()
 	const sdkServer = await import("@modelcontextprotocol/sdk/server/index.js")
 	const sdkStdio = await import("@modelcontextprotocol/sdk/server/stdio.js")
 	const sdkTypes = await import("@modelcontextprotocol/sdk/types.js")
@@ -397,6 +404,7 @@ module.exports = {
 	SERVER_INFO,
 	SERVER_DESCRIPTION,
 	handleToolCall,
+	withSpecContext,
 	searchEndpoints,
 	searchEvents,
 	getEndpointDetails,
