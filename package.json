@@ -59,6 +59,7 @@
 	},
 	"homepage": "https://github.com/GramercyTech/gx-devtools#readme",
 	"dependencies": {
+		"@eslint/js": "^10.0.1",
 		"@faker-js/faker": "^10.6.0",
 		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
 		"@gxp-dev/app-ui": "^0.1.6",
@@ -97,7 +98,6 @@
 	},
 	"devDependencies": {
 		"@eslint/css": "^1.1.0",
-		"@eslint/js": "^10.0.1",
 		"@eslint/json": "^1.2.0",
 		"@eslint/markdown": "^8.0.1",
 		"@types/react": "^18.3.28",
