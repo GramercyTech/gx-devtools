@@ -10,7 +10,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import fs from "fs"
 import os from "os"
 import path from "path"
-
 import { createRequire } from "node:module"
 const loadModule = createRequire(import.meta.url)
 const {
@@ -104,6 +103,25 @@ describe("files.js (real fs)", () => {
 			}
 		})
 
+		it("declares the flat-config import after replacing an npm-init manifest", () => {
+			fs.writeFileSync(
+				path.join(tmpDir, "package.json"),
+				JSON.stringify({ name: "npm-init", scripts: {} }),
+			)
+			createPackageJson(tmpDir, "legacy-local-init")
+			const pkg = JSON.parse(
+				fs.readFileSync(path.join(tmpDir, "package.json"), "utf8"),
+			)
+			const toolkit = loadModule("../../package.json")
+			expect(pkg.devDependencies["@eslint/js"]).toBe(
+				toolkit.dependencies["@eslint/js"],
+			)
+			expect(pkg.dependencies["@gxp-dev/app-ui"]).toBe(
+				REQUIRED_DEPENDENCIES["@gxp-dev/app-ui"],
+			)
+			expect(toolkit.devDependencies).not.toHaveProperty("@eslint/js")
+		})
+
 		it("synthesizes a default description when none is supplied", () => {
 			createPackageJson(tmpDir, "my-plugin", "")
 
@@ -112,6 +130,20 @@ describe("files.js (real fs)", () => {
 			)
 			expect(pkg.description).toBe("GxP Plugin: my-plugin")
 		})
+	})
+
+	it("adds the missing flat-config dependency when updating an existing project", () => {
+		createPackageJson(tmpDir, "existing-project")
+		const manifestPath = path.join(tmpDir, "package.json")
+		const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"))
+		delete manifest.devDependencies["@eslint/js"]
+		manifest.custom = { preserve: true }
+		fs.writeFileSync(manifestPath, JSON.stringify(manifest))
+		expect(updateExistingProject(tmpDir)).toBe(true)
+		const updated = JSON.parse(fs.readFileSync(manifestPath, "utf8"))
+		expect(updated.devDependencies["@eslint/js"]).toBe("^10.0.1")
+		expect(updated.custom).toEqual({ preserve: true })
+		expect(updateExistingProject(tmpDir)).toBe(false)
 	})
 
 	it("updates security overrides while preserving unrelated overrides", () => {
