@@ -629,3 +629,92 @@ describe("lintData (parsed-value validator)", () => {
 		).toBe(true)
 	})
 })
+
+describe("lint app-manifest trigger state (EZ-3312)", () => {
+	const manifest = (extra) => ({
+		name: "x",
+		version: "1.0.0",
+		strings: { default: {} },
+		...extra,
+	})
+	const codes = (result) => result.errors.map((e) => e.code)
+
+	it("accepts triggerStateKeys, widgetStates and live quiz presets", () => {
+		const result = lintData(
+			manifest({
+				triggerState: { slide: 1 },
+				widgetStates: { jukebox: { id: 5, state: { now_playing: "Song" } } },
+				dependencies: [
+					{
+						identifier: "board",
+						model: "ProjectPage",
+						permissions: ["update_trigger_state"],
+						triggerStateKeys: ["slide", "*"],
+					},
+					{
+						identifier: "quiz",
+						model: "ProjectForm",
+						permissions: ["live_quiz_host", "view_live_quiz_state"],
+					},
+				],
+			}),
+			"/x/app-manifest.json",
+		)
+
+		expect(result.ok).toBe(true)
+	})
+
+	it("flags gxp_ keys in triggerState and triggerStateKeys", () => {
+		const result = lintData(
+			manifest({
+				triggerState: { gxp_mode: 1 },
+				dependencies: [
+					{
+						identifier: "board",
+						model: "ProjectPage",
+						triggerStateKeys: ["gxp_mode"],
+					},
+				],
+			}),
+			"/x/app-manifest.json",
+		)
+
+		expect(
+			codes(result).filter((c) => c === "reserved-trigger-state-key"),
+		).toHaveLength(2)
+	})
+
+	it("flags trigger state keys that aren't plain names", () => {
+		const result = lintData(
+			manifest({
+				dependencies: [
+					{
+						identifier: "board",
+						model: "ProjectPage",
+						triggerStateKeys: ["a.b"],
+					},
+				],
+			}),
+			"/x/app-manifest.json",
+		)
+
+		expect(codes(result)).toContain("invalid-trigger-state-key")
+	})
+
+	it("flags an unknown live quiz preset", () => {
+		const result = lintData(
+			manifest({
+				dependencies: [
+					{
+						identifier: "quiz",
+						model: "ProjectForm",
+						permissions: ["live_quiz_dj"],
+					},
+				],
+			}),
+			"/x/app-manifest.json",
+		)
+
+		expect(codes(result)).toContain("unknown-permission-preset")
+	})
+})

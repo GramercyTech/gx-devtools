@@ -73,6 +73,7 @@ const PLATFORM_STORE_API = {
 		"quizChannels",
 		"theme",
 		"triggerState",
+		"widgetStates",
 		"form",
 	],
 	methods: [
@@ -80,6 +81,7 @@ const PLATFORM_STORE_API = {
 		"apiGet",
 		"apiPost",
 		"apiPut",
+		"apiPatch",
 		"apiDelete",
 		"callApi",
 		"resolveDependency",
@@ -88,6 +90,7 @@ const PLATFORM_STORE_API = {
 		"getSetting",
 		"getAsset",
 		"getState",
+		"getWidgetState",
 		"hasPermission",
 		"findDependency",
 		"getGroups",
@@ -510,6 +513,26 @@ describe("sockets", () => {
 		wrapped({ changes: { step: 3 } })
 		expect(store.getState("step")).toBe(3)
 		expect(cb).toHaveBeenCalledWith({ changes: { step: 3 } })
+	})
+
+	it("reads bound widget state and merges a widget's own changes once listened for (EZ-3312)", async () => {
+		const store = await freshStore()
+		store.widgetStates = { jukebox: { id: 5, state: { now_playing: "Song" } } }
+		const cb = vi.fn()
+
+		store.sockets.widgets.listenForStateChange("jukebox", cb)
+		const [, wrapped] = socketMock.on.mock.calls.find(
+			([event]) => event === "widget-state-change",
+		)
+		wrapped({
+			project_portal_widget_id: 6,
+			changes: { now_playing: "Other widget" },
+		})
+		wrapped({ project_portal_widget_id: 5, changes: { now_playing: "Next" } })
+
+		expect(store.getWidgetState("jukebox", "now_playing")).toBe("Next")
+		expect(store.getWidgetState("unbound", "now_playing", "none")).toBe("none")
+		expect(cb).toHaveBeenCalledTimes(1)
 	})
 
 	it("store.listen/emitSocket/listenSocket/useSocketListener route to the named socket", async () => {

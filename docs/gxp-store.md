@@ -89,6 +89,14 @@ const step = store.getState("current_step", 1)
 const isActive = store.getState("is_active", false)
 ```
 
+### `getWidgetState(identifier, key, defaultValue)`
+
+Get a value from a portal widget the app binds, by the dependency identifier that binds it. The platform puts the state of each bound widget in the page's render payload (only the keys the app may read); in dev, mock it with `widgetStates` in the manifest.
+
+```javascript
+const nowPlaying = store.getWidgetState("jukebox_widget", "now_playing", "")
+```
+
 `getString`, `getSetting` and `getState` use nullish fallback: an explicit `false`, `0` or `""` is returned as-is; only a missing (`null`/`undefined`) key yields the default. `getAsset` is the exception — like the platform, it treats an empty asset URL as unconfigured and falls through.
 
 ### `hasPermission(permission)`
@@ -193,7 +201,7 @@ store.updateAsset("user_avatar", "https://example.com/avatar.jpg")
 
 ### `updateState(key, value)` **(dev-only)**
 
-Update trigger state (on the platform, write `store.triggerState[key] = value`):
+Update trigger state in this browser only. Writing `store.triggerState[key]` on the platform is local too: nobody else sees it and it's gone on reload. To change state for everyone, use the [Trigger State API](#trigger-state-api).
 
 ```javascript
 store.updateState("current_step", 2)
@@ -338,7 +346,17 @@ await store.apiPut("/api/v1/projects/acme/expo/attendees/456", {
 await store.apiDelete("/api/v1/projects/acme/expo/sessions/789")
 ```
 
-`apiPatch(endpoint, data)` also exists but is **dev-only** — the platform store does not provide it.
+### `apiPatch(endpoint, data)`
+
+```javascript
+await store.apiPatch("/api/v1/projects/acme/expo/trigger-state/self", {
+	state: { slide: 2 },
+})
+```
+
+### Trigger State API
+
+`GET` / `PATCH /api/v1/projects/{team}/{project}/trigger-state/{target}` reads and changes trigger state for everyone. `target` is `self` (the app's own page or form), `page:{id}`, `form:{slug|id}` or `widget:{id}`. A PATCH sends only the keys to change: `null` removes a key, any other value (objects included) replaces it whole. Keys starting with `gxp_` are reserved. Writing needs `update_own_trigger_state` (for `self`) or `update_trigger_state` on a dependency of the target's model, limited to its `triggerStateKeys`; reading another target needs `view_trigger_state`. Under `gxdev dev` with `API_ENV=mock`, the mock keeps state in memory and relays changes as `state-change` / `widget-state-change`, so `listenForStateChange` sees them.
 
 :::note Where requests go in dev
 `API_ENV=mock` → the local mock server; any other `API_ENV` under `gxdev dev` → the Vite proxy at `/api-proxy`, which forwards to that environment's host and injects `API_KEY`. In every case the request path is `/api/v1/...`, the same path the platform sends to the portal origin.
@@ -455,6 +473,7 @@ Every delivery is logged to the console and broadcast as a `gxp:form-submit` Cus
 | `sockets.project`      | portal context has a `project_slug` | `broadcast`, `listen`, `listenForWhisper`                                                                |
 | `sockets.portal`       | portal context has a `project_slug` | `broadcast`, `listen`, `listenForWhisper`                                                                |
 | `sockets.attendee`     | a user is logged in                 | `notification(cb)`, `listen(_event, cb)`                                                                 |
+| `sockets.widgets`      | always                              | `listenForStateChange(identifier, cb)` for a portal widget the app binds                                 |
 | `sockets.<identifier>` | dependency declares `events`        | `<eventType>.listen(cb)` per declared event                                                              |
 
 **Every `listen*` returns an unsubscribe function** — call it on unmount. There are no `stopListening*` methods.
@@ -463,8 +482,14 @@ Every delivery is logged to the console and broadcast as a `gxp:form-submit` Cus
 const off = store.sockets.primary.listen("checkin-complete", onCheckin)
 onUnmounted(off)
 
-// State changes: merges e.changes into triggerState, then calls back
+// State changes: merges e.changes into triggerState, then calls back.
+// State only stays live while something listens; nothing merges by itself.
 store.sockets.primary.listenForStateChange((e) => console.log(e.changes))
+
+// A bound portal widget's changes, merged into getWidgetState()
+store.sockets.widgets.listenForStateChange("jukebox_widget", (e) =>
+	console.log(e.changes),
+)
 
 // Dependency events (declared in the manifest / admin panel)
 const stop = store.sockets.ai_interface.completed.listen(onResult)
@@ -627,4 +652,4 @@ Anything beyond these keys is a plugin setting — read it with `store.getSettin
 3. **Use computed for derived state** - Don't duplicate logic
 4. **Clean up listeners** - Call the unsubscriber returned by `listen*` when components unmount
 5. **Avoid deep nesting** - Keep `triggerState` relatively flat for reactivity
-6. **Stay on the platform surface** - Anything marked **dev-only** above (`user`, `getUser*`, `apiPatch`, `updateSetting`, `updateState`, `manifestLoaded`, `loadManifest`) is not available once deployed; use `auth.user`, `triggerState`, and the platform methods instead
+6. **Stay on the platform surface** - Anything marked **dev-only** above (`user`, `getUser*`, `updateSetting`, `updateState`, `manifestLoaded`, `loadManifest`) is not available once deployed; use `auth.user`, `triggerState`, and the platform methods instead

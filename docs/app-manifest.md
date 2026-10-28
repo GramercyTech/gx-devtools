@@ -170,6 +170,20 @@ store.updateState("checked_in_count", store.triggerState.checked_in_count + 1)
 const step = store.getState("current_step", 1)
 ```
 
+`updateState` only changes this browser. To change state for everyone on the platform, PATCH the Trigger State API (see [GxP Store](./gxp-store.md#trigger-state-api)); its `self` target needs `update_own_trigger_state`, and may write the keys declared here. Keys starting with `gxp_` are reserved for the platform, and `gxdev lint` flags them.
+
+### Bound widget state (`widgetStates`)
+
+Dev-only mock of the portal widgets the app binds, keyed by dependency identifier, for `getWidgetState()` and `gxp-state="<identifier>"`. On the platform the page's render payload supplies it, limited to the keys the app may read.
+
+```json
+{
+	"widgetStates": {
+		"jukebox_widget": { "id": 12, "state": { "now_playing": "Song title" } }
+	}
+}
+```
+
 ### Form (`form`)
 
 For form-backed apps (registration forms, quizzes, surveys), declare a mock form so the dev store attaches a form store as `store.form` — the same interface plugins get on-platform when a page is backed by a ProjectForm:
@@ -257,18 +271,19 @@ Dependencies define external API services your plugin can interact with. Each de
 
 #### Dependency Fields
 
-| Field            | Type   | Description                                                                                                                          |
-| ---------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `identifier`     | string | Object-scope token for this dependency (used in `callApi`). See scope tokens below.                                                  |
-| `identifiers`    | array  | Multiple scope tokens, matched any-of. Use instead of `identifier`.                                                                  |
-| `model`          | string | The model/resource name from the API                                                                                                 |
-| `key`            | string | Model column the page's `dependency_list` binding values match (route key, default `id`)                                             |
-| `permissionKey`  | string | Stable address of this dependency — used by rule scopes and `@<permissionKey>` references. Defaults to the identifier.               |
-| `parentRelation` | string | Relation on this model pointing at a parent dependency's model, for `@<permissionKey>` scopes. Reflected by convention when omitted. |
-| `permissions`    | array  | List of permissions granted through this dependency                                                                                  |
-| `visibleFields`  | array  | Field ceiling for API responses of this model. Omitted = all fields.                                                                 |
-| `operations`     | object | Map of operationId to `method:path` (e.g., `"get:/v1/..."`)                                                                          |
-| `events`         | object | Map of socket event names this dependency can emit/receive                                                                           |
+| Field              | Type   | Description                                                                                                                                                                                                             |
+| ------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `identifier`       | string | Object-scope token for this dependency (used in `callApi`). See scope tokens below.                                                                                                                                     |
+| `identifiers`      | array  | Multiple scope tokens, matched any-of. Use instead of `identifier`.                                                                                                                                                     |
+| `model`            | string | The model/resource name from the API                                                                                                                                                                                    |
+| `key`              | string | Model column the page's `dependency_list` binding values match (route key, default `id`)                                                                                                                                |
+| `permissionKey`    | string | Stable address of this dependency — used by rule scopes and `@<permissionKey>` references. Defaults to the identifier.                                                                                                  |
+| `parentRelation`   | string | Relation on this model pointing at a parent dependency's model, for `@<permissionKey>` scopes. Reflected by convention when omitted.                                                                                    |
+| `permissions`      | array  | List of permissions granted through this dependency                                                                                                                                                                     |
+| `visibleFields`    | array  | Field ceiling for API responses of this model. Omitted = all fields.                                                                                                                                                    |
+| `triggerStateKeys` | array  | Trigger state keys the app may read or write on the bound page, form or portal widget (`ProjectPage`, `ProjectForm`, `ProjectPortalWidget`). `"*"` means every key except reserved ones; `gxp_` keys are never granted. |
+| `operations`       | object | Map of operationId to `method:path` (e.g., `"get:/v1/..."`)                                                                                                                                                             |
+| `events`           | object | Map of socket event names this dependency can emit/receive                                                                                                                                                              |
 
 #### Scope Tokens
 
@@ -525,15 +540,16 @@ These keys simulate what the platform injects around a page. All are optional; t
 
 ## Directive Reference
 
-| Directive    | Modifier       | Source         | Example                                                    |
-| ------------ | -------------- | -------------- | ---------------------------------------------------------- |
-| `gxp-string` | (none)         | `stringsList`  | `<h1 gxp-string="title">Default</h1>`                      |
-| `gxp-string` | `gxp-settings` | `pluginVars`   | `<span gxp-string="company" gxp-settings>Acme</span>`      |
-| `gxp-string` | `gxp-assets`   | `assetList`    | `<span gxp-string="logo_url" gxp-assets>/logo.png</span>`  |
-| `gxp-string` | `gxp-state`    | `triggerState` | `<span gxp-string="count" gxp-state>0</span>`              |
-| `gxp-src`    | (none)         | `assetList`    | `<img gxp-src="hero" src="/placeholder.jpg" />`            |
-| `gxp-src`    | `gxp-state`    | `triggerState` | `<img gxp-src="badge" gxp-state src="/placeholder.jpg" />` |
-| `gxp-track`  | (none)         | `track-events` | `<button gxp-track="cta.clicked">Go</button>`              |
+| Directive    | Modifier                   | Source                 | Example                                                              |
+| ------------ | -------------------------- | ---------------------- | -------------------------------------------------------------------- |
+| `gxp-string` | (none)                     | `stringsList`          | `<h1 gxp-string="title">Default</h1>`                                |
+| `gxp-string` | `gxp-settings`             | `pluginVars`           | `<span gxp-string="company" gxp-settings>Acme</span>`                |
+| `gxp-string` | `gxp-assets`               | `assetList`            | `<span gxp-string="logo_url" gxp-assets>/logo.png</span>`            |
+| `gxp-string` | `gxp-state`                | `triggerState`         | `<span gxp-string="count" gxp-state>0</span>`                        |
+| `gxp-src`    | (none)                     | `assetList`            | `<img gxp-src="hero" src="/placeholder.jpg" />`                      |
+| `gxp-src`    | `gxp-state`                | `triggerState`         | `<img gxp-src="badge" gxp-state src="/placeholder.jpg" />`           |
+| `gxp-string` | `gxp-state="<identifier>"` | a bound widget's state | `<span gxp-string="now_playing" gxp-state="jukebox_widget">-</span>` |
+| `gxp-track`  | (none)                     | `track-events`         | `<button gxp-track="cta.clicked">Go</button>`                        |
 
 ## Best Practices
 

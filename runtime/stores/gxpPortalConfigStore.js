@@ -273,6 +273,9 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 	const permissionFlags = ref([...defaultData.permissionFlags])
 	const navigationFlagsKeyed = ref({ ...defaultData.navigationFlagsKeyed })
 	const triggerState = ref({ ...defaultData.triggerState })
+	// State of the portal widgets this app binds, by dependency identifier:
+	// { [identifier]: { id, state } }. Mocked by the manifest's widgetStates.
+	const widgetStates = ref({})
 
 	// User session data (injected by platform in production)
 	const auth = ref(
@@ -757,6 +760,10 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 			triggerState.value = { ...manifest.triggerState }
 		}
 
+		if (manifest.widgetStates && typeof manifest.widgetStates === "object") {
+			widgetStates.value = { ...manifest.widgetStates }
+		}
+
 		// Session data. `user` is the ergonomic dev form; `auth` is the full
 		// platform object ({ user, ... }). Either may be `null` to simulate a
 		// guest. `auth` wins when both are present.
@@ -852,6 +859,7 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		applyApiPluginVars()
 		logout.value = initialData.logout ?? null
 		triggerState.value = initialData.triggerState ?? {}
+		widgetStates.value = initialData.widgetStates ?? {}
 
 		// Form-backed pages: expose the form store as gxpStore.form so
 		// plugin authors don't need to import another store.
@@ -999,6 +1007,37 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		sockets.primary = makeSocketFacade(primarySocket, {
 			stateChangeEvent: "state-change",
 		})
+
+		// --- Bound widget sockets (platform: portal.widgets.{id}) ---
+		// Opt-in like listenForStateChange: merges a bound widget's changes
+		// into getWidgetState(). The relay carries every widget's changes as
+		// "widget-state-change", so they're picked out by widget id.
+		sockets.widgets = {
+			listenForStateChange: function (identifier, callback) {
+				const widgetId = widgetStates.value[identifier]?.id
+				if (!widgetId) {
+					return () => {}
+				}
+				const wrapped = (e) => {
+					if (String(e?.project_portal_widget_id) !== String(widgetId)) {
+						return
+					}
+					widgetStates.value = {
+						...widgetStates.value,
+						[identifier]: {
+							id: widgetId,
+							state: {
+								...widgetStates.value[identifier]?.state,
+								...e.changes,
+							},
+						},
+					}
+					return callback?.(e)
+				}
+				primarySocket.on("widget-state-change", wrapped)
+				return () => primarySocket.off("widget-state-change", wrapped)
+			},
+		}
 
 		initializeContextSockets()
 		initializeDependencySockets()
@@ -1180,7 +1219,6 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		}
 	}
 
-	// Dev-only: the platform store does not expose apiPatch.
 	async function apiPatch(endpoint, data = {}) {
 		try {
 			const response = await apiClient.patch(endpoint, data)
@@ -1413,6 +1451,14 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 
 	function getState(key, fallback = null) {
 		return triggerState.value[key] ?? fallback
+	}
+
+	/**
+	 * A key of a bound portal widget's state, by the dependency identifier
+	 * that binds the widget.
+	 */
+	function getWidgetState(identifier, key, fallback = null) {
+		return widgetStates.value[identifier]?.state?.[key] ?? fallback
 	}
 
 	function hasPermission(flag) {
@@ -1778,6 +1824,7 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		quizChannels,
 		theme,
 		triggerState,
+		widgetStates,
 		form,
 		attachFormStore,
 
@@ -1791,19 +1838,19 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		apiGet,
 		apiPost,
 		apiPut,
+		apiPatch,
 		apiDelete,
 		callApi,
 		resolveDependency,
 		initializeApiOperations,
 		apiOperations,
-		// API methods (dev-only)
-		apiPatch,
 
 		// Utility methods (platform)
 		getString,
 		getSetting,
 		getAsset,
 		getState,
+		getWidgetState,
 		hasPermission,
 		findDependency,
 		getGroups,

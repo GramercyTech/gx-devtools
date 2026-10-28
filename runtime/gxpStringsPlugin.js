@@ -21,6 +21,9 @@
  * gxp-src + gxp-state - Replace src attribute with value from triggerState
  *   <img gxp-src="dynamic_image" gxp-state src="/dev-assets/placeholder.jpg" />
  *
+ * gxp-state="<identifier>" reads a bound portal widget's state instead
+ *   <span gxp-string="now_playing" gxp-state="jukebox_widget">-</span>
+ *
  * The directives will:
  * 1. Store the original value as default
  * 2. Look up the key in the appropriate store
@@ -194,7 +197,9 @@ export function createGxpStringsPlugin(store, options = {}) {
  * Vue's watch will trigger when either changes.
  */
 function getWatchSource(el, key, store) {
-	if (el.hasAttribute("gxp-state") && store.triggerState !== undefined) {
+	if (el.getAttribute("gxp-state")) {
+		return widgetStateWatchSource(el, key, store)
+	} else if (el.hasAttribute("gxp-state") && store.triggerState !== undefined) {
 		// Watch specific key AND entire object to catch both types of updates
 		return () => ({
 			value: store.triggerState?.[key],
@@ -231,7 +236,9 @@ function getWatchSource(el, key, store) {
  * We watch for both the specific key and the entire object.
  */
 function getSrcWatchSource(el, key, store) {
-	if (el.hasAttribute("gxp-state") && store.triggerState !== undefined) {
+	if (el.getAttribute("gxp-state")) {
+		return widgetStateWatchSource(el, key, store)
+	} else if (el.hasAttribute("gxp-state") && store.triggerState !== undefined) {
 		return () => ({
 			value: store.triggerState?.[key],
 			obj: store.triggerState,
@@ -248,6 +255,29 @@ function getSrcWatchSource(el, key, store) {
 }
 
 /**
+ * Watch a bound portal widget's state, named by gxp-state="<identifier>".
+ */
+function widgetStateWatchSource(el, key, store) {
+	const identifier = el.getAttribute("gxp-state")
+	return () => ({
+		value: store.widgetStates?.[identifier]?.state?.[key],
+		obj: store.widgetStates,
+		loaded: store.manifestLoaded,
+	})
+}
+
+/**
+ * The page's own state, or with gxp-state="<identifier>" a bound portal
+ * widget's.
+ */
+function stateValue(el, key, store) {
+	const identifier = el.getAttribute("gxp-state")
+	return identifier
+		? store.getWidgetState?.(identifier, key)
+		: store.getState?.(key)
+}
+
+/**
  * Update element text content based on store value
  */
 function updateElementText(el, key, defaultValue, store) {
@@ -257,7 +287,7 @@ function updateElementText(el, key, defaultValue, store) {
 
 	let translatedValue
 	if (el.hasAttribute("gxp-state")) {
-		translatedValue = store.getState?.(key)
+		translatedValue = stateValue(el, key, store)
 	} else if (el.hasAttribute("gxp-settings")) {
 		translatedValue = store.getSetting?.(key)
 	} else if (el.hasAttribute("gxp-assets")) {
@@ -298,7 +328,7 @@ function updateElementSrc(el, key, defaultSrc, store, devServerBaseUrl) {
 
 	let srcUrl
 	if (el.hasAttribute("gxp-state")) {
-		srcUrl = store.getState?.(key)
+		srcUrl = stateValue(el, key, store)
 	} else {
 		srcUrl = store.getAsset?.(key)
 	}
