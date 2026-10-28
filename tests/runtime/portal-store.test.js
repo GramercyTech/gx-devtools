@@ -100,6 +100,8 @@ const PLATFORM_STORE_API = {
 		"inAnyGroup",
 		"connectQuizChannel",
 		"leaveQuizChannel",
+		"connectLiveQuizChannel",
+		"leaveLiveQuizChannel",
 		"resyncQuizState",
 		"emitSocket",
 		"listenSocket",
@@ -513,6 +515,34 @@ describe("sockets", () => {
 		wrapped({ changes: { step: 3 } })
 		expect(store.getState("step")).toBe(3)
 		expect(cb).toHaveBeenCalledWith({ changes: { step: 3 } })
+	})
+
+	it("picks a quiz's live events off the relay by form_id (EZ-3311)", async () => {
+		const store = await freshStore()
+		const onState = vi.fn()
+
+		const live = store.connectLiveQuizChannel(7)
+		expect(store.connectLiveQuizChannel(7)).toBe(live)
+		const stop = live.onState(onState)
+		const [, wrapped] = socketMock.on.mock.calls.find(
+			([event]) => event === "trigger_state.changed",
+		)
+		wrapped({ form_id: 8, trigger_state: {} })
+		wrapped({ form_id: 7, trigger_state: { live_mode: "active" } })
+
+		expect(onState).toHaveBeenCalledTimes(1)
+		stop()
+		expect(socketMock.off).toHaveBeenCalledWith(
+			"trigger_state.changed",
+			wrapped,
+		)
+
+		live.onAnalytics(vi.fn())
+		store.leaveLiveQuizChannel(7)
+		expect(socketMock.off).toHaveBeenCalledWith(
+			"analytics.updated",
+			expect.any(Function),
+		)
 	})
 
 	it("reads bound widget state and merges a widget's own changes once listened for (EZ-3312)", async () => {

@@ -79,6 +79,15 @@
 			},
 			"additionalProperties": false
 		},
+		"liveQuiz": {
+			"type": "object",
+			"description": "Dev-only mock for the live quiz endpoints under gxdev dev with API_ENV=mock: the quiz's numeric form_id and the questions sends and answers use (id, label, quiz_question_type, options [{label, value, secondary}], max_selections). Unlisted question ids get placeholder options.",
+			"properties": {
+				"form_id": { "type": "integer" },
+				"questions": { "type": "array", "items": { "type": "object" } }
+			},
+			"additionalProperties": false
+		},
 		"widgetStates": {
 			"type": "object",
 			"description": "Dev-only mock of the portal widgets this app binds, keyed by dependency identifier, for getWidgetState() and gxp-state=\"<identifier>\". On the platform the page's render payload supplies it.",

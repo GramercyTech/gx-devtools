@@ -383,6 +383,8 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		typeof navigator !== "undefined" ? navigator.onLine : true,
 	)
 	const quizChannels = reactive({})
+	// Not reactive: entries hold socket listeners.
+	const liveQuizChannels = {}
 
 	// Internet connectivity listeners
 	const handleOnline = () => {
@@ -1687,6 +1689,60 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		}
 	}
 
+	/**
+	 * Live quiz controller channels (platform: portal.forms.{id}.live and
+	 * .live.analytics, joined with the page key). The relay carries every
+	 * quiz's events as "trigger_state.changed" and "analytics.updated", so
+	 * they're picked out by form_id. formId is the quiz's numeric id, which
+	 * the manage state endpoint returns as form_id.
+	 */
+	function connectLiveQuizChannel(formId) {
+		if (liveQuizChannels[formId]) {
+			return liveQuizChannels[formId]
+		}
+
+		const primarySocket = socketConnections.primary
+		if (!primarySocket) {
+			console.warn(
+				"[GxP Store] connectLiveQuizChannel(): primary socket not initialized",
+			)
+			return null
+		}
+
+		const registered = []
+		const listenFor = (event) => (callback) => {
+			const wrapped = (e) => {
+				if (String(e?.form_id) === String(formId)) {
+					callback(e)
+				}
+			}
+			primarySocket.on(event, wrapped)
+			registered.push([event, wrapped])
+			return () => {
+				primarySocket.off(event, wrapped)
+				const i = registered.findIndex(([, cb]) => cb === wrapped)
+				if (i !== -1) registered.splice(i, 1)
+			}
+		}
+
+		liveQuizChannels[formId] = {
+			onState: listenFor("trigger_state.changed"),
+			onAnalytics: listenFor("analytics.updated"),
+			leave: () => {
+				for (const [event, callback] of registered.splice(0)) {
+					primarySocket.off(event, callback)
+				}
+				delete liveQuizChannels[formId]
+			},
+		}
+
+		return liveQuizChannels[formId]
+	}
+
+	function leaveLiveQuizChannel(formId) {
+		liveQuizChannels[formId]?.leave()
+	}
+
 	async function resyncQuizState(formId) {
 		return await callApi("portal.v1.project.quiz.state", "form", {
 			form: formId,
@@ -1867,6 +1923,8 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		// Socket methods (platform)
 		connectQuizChannel,
 		leaveQuizChannel,
+		connectLiveQuizChannel,
+		leaveLiveQuizChannel,
 		resyncQuizState,
 		emitSocket,
 		listenSocket,

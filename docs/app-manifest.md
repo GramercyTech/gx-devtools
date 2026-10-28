@@ -172,6 +172,29 @@ const step = store.getState("current_step", 1)
 
 `updateState` only changes this browser. To change state for everyone on the platform, PATCH the Trigger State API (see [GxP Store](./gxp-store.md#trigger-state-api)); its `self` target needs `update_own_trigger_state`, and may write the keys declared here. Keys starting with `gxp_` are reserved for the platform, and `gxdev lint` flags them.
 
+### Live quiz mock (`liveQuiz`)
+
+Dev-only. Under `gxdev dev` with `API_ENV=mock`, the live quiz endpoints keep their state in memory. `form_id` is what `manage/state` returns, and `questions` are what sending a question puts live; an unlisted question id gets three placeholder options.
+
+```json
+{
+	"liveQuiz": {
+		"form_id": 7,
+		"questions": [
+			{
+				"id": 12,
+				"label": "Pick the next songs",
+				"quiz_question_type": "multiple_choice",
+				"options": [
+					{ "label": "Song A", "value": "101", "secondary": "Artist A" }
+				],
+				"max_selections": 2
+			}
+		]
+	}
+}
+```
+
 ### Bound widget state (`widgetStates`)
 
 Dev-only mock of the portal widgets the app binds, keyed by dependency identifier, for `getWidgetState()` and `gxp-state="<identifier>"`. On the platform the page's render payload supplies it, limited to the keys the app may read.

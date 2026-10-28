@@ -16,6 +16,7 @@ const { generateRoutes, getRouteStats } = require("./route-generator")
 const { parseSocketTriggers, getTriggerStats } = require("./socket-triggers")
 const { imageHandler } = require("./image-generator")
 const { createTriggerStateRouter } = require("./trigger-state")
+const { createLiveQuizRouter } = require("./live-quiz")
 
 // Store state for status endpoint
 let currentSpecs = null
@@ -46,6 +47,7 @@ async function createMockApiRouter(io, options = {}) {
 
 	// Hand-written stateful mocks go before the generated routes so they win.
 	router.use("/api", createTriggerStateRouter(io, { projectRoot }))
+	router.use("/api", createLiveQuizRouter(io, { projectRoot }))
 
 	// Generate routes from OpenAPI
 	if (specs.openApi) {

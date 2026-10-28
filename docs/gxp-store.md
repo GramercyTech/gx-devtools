@@ -519,6 +519,19 @@ store.leaveQuizChannel(formId)
 await store.resyncQuizState(formId) // callApi("portal.v1.project.quiz.state", "form", { form: formId })
 ```
 
+An app that runs a live quiz (bound to it with live quiz abilities) listens to its controller channels with `connectLiveQuizChannel`. `formId` is the quiz's numeric id, which `GET quiz/{form}/manage/state` returns as `form_id`. Each channel is joined on its first listener, so an app without `view_live_quiz_analytics` never asks for the analytics one.
+
+```javascript
+const live = store.connectLiveQuizChannel(formId)
+const stopState = live.onState((e) =>
+	console.log(e.event_type, e.trigger_state),
+) // portal.forms.{id}.live
+const stopTally = live.onAnalytics((e) => console.log(e.answer_distribution)) // portal.forms.{id}.live.analytics
+store.leaveLiveQuizChannel(formId)
+```
+
+Under `gxdev dev` with `API_ENV=mock`, the live quiz endpoints (`quiz/{form}/manage/*`, plus the attendee `state`, `start` and `answer`) are stateful mocks: questions come from the manifest's `liveQuiz` mock, votes are keyed by the `X-Mock-Attendee` header, and changes arrive on these listeners.
+
 `store.quizChannels[formId]` holds the open entries.
 
 ### Connection state
