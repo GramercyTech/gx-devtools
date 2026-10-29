@@ -214,6 +214,87 @@ function semanticManifestErrors(data) {
 		}
 	})
 
+	errors.push(...triggerStateErrors(data, deps))
+
+	return errors
+}
+
+/**
+ * Live quiz permission presets the platform expands on ProjectForm
+ * dependencies (EZ-3311). Mirrors api_routes.project_form.presets.
+ */
+const LIVE_QUIZ_PRESETS = [
+	"live_quiz_viewer",
+	"live_quiz_host",
+	"live_quiz_editor",
+	"live_quiz_admin",
+]
+
+const TRIGGER_STATE_KEY = /^[A-Za-z_][A-Za-z0-9_]*$/
+
+/**
+ * Trigger State API checks (EZ-3312): gxp_ keys are reserved for the
+ * platform in triggerState and triggerStateKeys, triggerStateKeys must be
+ * plain key names or "*", and live_quiz_* permission names must be known
+ * presets.
+ */
+function triggerStateErrors(data, deps) {
+	const errors = []
+	const state = data?.triggerState
+
+	if (state && typeof state === "object" && !Array.isArray(state)) {
+		for (const key of Object.keys(state)) {
+			if (key.startsWith("gxp_")) {
+				errors.push({
+					code: "reserved-trigger-state-key",
+					message: `/triggerState/${key} keys starting with gxp_ are reserved for the platform`,
+					instancePath: `/triggerState/${key}`,
+				})
+			}
+		}
+	}
+
+	deps.forEach((dep, i) => {
+		const keys = Array.isArray(dep?.triggerStateKeys)
+			? dep.triggerStateKeys
+			: []
+		keys.forEach((key, j) => {
+			const instancePath = `/dependencies/${i}/triggerStateKeys/${j}`
+			if (
+				typeof key !== "string" ||
+				(key !== "*" && !TRIGGER_STATE_KEY.test(key))
+			) {
+				errors.push({
+					code: "invalid-trigger-state-key",
+					message: `${instancePath} "${key}" must be "*" or letters, digits and underscores, not starting with a digit`,
+					instancePath,
+				})
+			} else if (key.startsWith("gxp_")) {
+				errors.push({
+					code: "reserved-trigger-state-key",
+					message: `${instancePath} "${key}" is reserved for the platform and is never granted`,
+					instancePath,
+				})
+			}
+		})
+
+		const permissions = Array.isArray(dep?.permissions) ? dep.permissions : []
+		permissions.forEach((permission, j) => {
+			if (
+				dep?.model === "ProjectForm" &&
+				typeof permission === "string" &&
+				permission.startsWith("live_quiz_") &&
+				!LIVE_QUIZ_PRESETS.includes(permission)
+			) {
+				errors.push({
+					code: "unknown-permission-preset",
+					message: `/dependencies/${i}/permissions/${j} "${permission}" is not a live quiz preset (${LIVE_QUIZ_PRESETS.join(", ")})`,
+					instancePath: `/dependencies/${i}/permissions/${j}`,
+				})
+			}
+		})
+	})
+
 	return errors
 }
 

@@ -73,6 +73,7 @@ const PLATFORM_STORE_API = {
 		"quizChannels",
 		"theme",
 		"triggerState",
+		"widgetStates",
 		"form",
 	],
 	methods: [
@@ -80,6 +81,7 @@ const PLATFORM_STORE_API = {
 		"apiGet",
 		"apiPost",
 		"apiPut",
+		"apiPatch",
 		"apiDelete",
 		"callApi",
 		"resolveDependency",
@@ -88,6 +90,7 @@ const PLATFORM_STORE_API = {
 		"getSetting",
 		"getAsset",
 		"getState",
+		"getWidgetState",
 		"hasPermission",
 		"findDependency",
 		"getGroups",
@@ -97,6 +100,8 @@ const PLATFORM_STORE_API = {
 		"inAnyGroup",
 		"connectQuizChannel",
 		"leaveQuizChannel",
+		"connectLiveQuizChannel",
+		"leaveLiveQuizChannel",
 		"resyncQuizState",
 		"emitSocket",
 		"listenSocket",
@@ -510,6 +515,54 @@ describe("sockets", () => {
 		wrapped({ changes: { step: 3 } })
 		expect(store.getState("step")).toBe(3)
 		expect(cb).toHaveBeenCalledWith({ changes: { step: 3 } })
+	})
+
+	it("picks a quiz's live events off the relay by form_id (EZ-3311)", async () => {
+		const store = await freshStore()
+		const onState = vi.fn()
+
+		const live = store.connectLiveQuizChannel(7)
+		expect(store.connectLiveQuizChannel(7)).toBe(live)
+		const stop = live.onState(onState)
+		const [, wrapped] = socketMock.on.mock.calls.find(
+			([event]) => event === "trigger_state.changed",
+		)
+		wrapped({ form_id: 8, trigger_state: {} })
+		wrapped({ form_id: 7, trigger_state: { live_mode: "active" } })
+
+		expect(onState).toHaveBeenCalledTimes(1)
+		stop()
+		expect(socketMock.off).toHaveBeenCalledWith(
+			"trigger_state.changed",
+			wrapped,
+		)
+
+		live.onAnalytics(vi.fn())
+		store.leaveLiveQuizChannel(7)
+		expect(socketMock.off).toHaveBeenCalledWith(
+			"analytics.updated",
+			expect.any(Function),
+		)
+	})
+
+	it("reads bound widget state and merges a widget's own changes once listened for (EZ-3312)", async () => {
+		const store = await freshStore()
+		store.widgetStates = { jukebox: { id: 5, state: { now_playing: "Song" } } }
+		const cb = vi.fn()
+
+		store.sockets.widgets.listenForStateChange("jukebox", cb)
+		const [, wrapped] = socketMock.on.mock.calls.find(
+			([event]) => event === "widget-state-change",
+		)
+		wrapped({
+			project_portal_widget_id: 6,
+			changes: { now_playing: "Other widget" },
+		})
+		wrapped({ project_portal_widget_id: 5, changes: { now_playing: "Next" } })
+
+		expect(store.getWidgetState("jukebox", "now_playing")).toBe("Next")
+		expect(store.getWidgetState("unbound", "now_playing", "none")).toBe("none")
+		expect(cb).toHaveBeenCalledTimes(1)
 	})
 
 	it("store.listen/emitSocket/listenSocket/useSocketListener route to the named socket", async () => {

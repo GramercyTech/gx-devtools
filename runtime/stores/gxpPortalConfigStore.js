@@ -273,6 +273,9 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 	const permissionFlags = ref([...defaultData.permissionFlags])
 	const navigationFlagsKeyed = ref({ ...defaultData.navigationFlagsKeyed })
 	const triggerState = ref({ ...defaultData.triggerState })
+	// State of the portal widgets this app binds, by dependency identifier:
+	// { [identifier]: { id, state } }. Mocked by the manifest's widgetStates.
+	const widgetStates = ref({})
 
 	// User session data (injected by platform in production)
 	const auth = ref(
@@ -380,6 +383,8 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		typeof navigator !== "undefined" ? navigator.onLine : true,
 	)
 	const quizChannels = reactive({})
+	// Not reactive: entries hold socket listeners.
+	const liveQuizChannels = {}
 
 	// Internet connectivity listeners
 	const handleOnline = () => {
@@ -757,6 +762,10 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 			triggerState.value = { ...manifest.triggerState }
 		}
 
+		if (manifest.widgetStates && typeof manifest.widgetStates === "object") {
+			widgetStates.value = { ...manifest.widgetStates }
+		}
+
 		// Session data. `user` is the ergonomic dev form; `auth` is the full
 		// platform object ({ user, ... }). Either may be `null` to simulate a
 		// guest. `auth` wins when both are present.
@@ -852,6 +861,7 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		applyApiPluginVars()
 		logout.value = initialData.logout ?? null
 		triggerState.value = initialData.triggerState ?? {}
+		widgetStates.value = initialData.widgetStates ?? {}
 
 		// Form-backed pages: expose the form store as gxpStore.form so
 		// plugin authors don't need to import another store.
@@ -999,6 +1009,37 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		sockets.primary = makeSocketFacade(primarySocket, {
 			stateChangeEvent: "state-change",
 		})
+
+		// --- Bound widget sockets (platform: portal.widgets.{id}) ---
+		// Opt-in like listenForStateChange: merges a bound widget's changes
+		// into getWidgetState(). The relay carries every widget's changes as
+		// "widget-state-change", so they're picked out by widget id.
+		sockets.widgets = {
+			listenForStateChange: function (identifier, callback) {
+				const widgetId = widgetStates.value[identifier]?.id
+				if (!widgetId) {
+					return () => {}
+				}
+				const wrapped = (e) => {
+					if (String(e?.project_portal_widget_id) !== String(widgetId)) {
+						return
+					}
+					widgetStates.value = {
+						...widgetStates.value,
+						[identifier]: {
+							id: widgetId,
+							state: {
+								...widgetStates.value[identifier]?.state,
+								...e.changes,
+							},
+						},
+					}
+					return callback?.(e)
+				}
+				primarySocket.on("widget-state-change", wrapped)
+				return () => primarySocket.off("widget-state-change", wrapped)
+			},
+		}
 
 		initializeContextSockets()
 		initializeDependencySockets()
@@ -1180,7 +1221,6 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		}
 	}
 
-	// Dev-only: the platform store does not expose apiPatch.
 	async function apiPatch(endpoint, data = {}) {
 		try {
 			const response = await apiClient.patch(endpoint, data)
@@ -1415,6 +1455,14 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		return triggerState.value[key] ?? fallback
 	}
 
+	/**
+	 * A key of a bound portal widget's state, by the dependency identifier
+	 * that binds the widget.
+	 */
+	function getWidgetState(identifier, key, fallback = null) {
+		return widgetStates.value[identifier]?.state?.[key] ?? fallback
+	}
+
 	function hasPermission(flag) {
 		return permissionFlags.value.includes(flag)
 	}
@@ -1641,6 +1689,60 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		}
 	}
 
+	/**
+	 * Live quiz controller channels (platform: portal.forms.{id}.live and
+	 * .live.analytics, joined with the page key). The relay carries every
+	 * quiz's events as "trigger_state.changed" and "analytics.updated", so
+	 * they're picked out by form_id. formId is the quiz's numeric id, which
+	 * the manage state endpoint returns as form_id.
+	 */
+	function connectLiveQuizChannel(formId) {
+		if (liveQuizChannels[formId]) {
+			return liveQuizChannels[formId]
+		}
+
+		const primarySocket = socketConnections.primary
+		if (!primarySocket) {
+			console.warn(
+				"[GxP Store] connectLiveQuizChannel(): primary socket not initialized",
+			)
+			return null
+		}
+
+		const registered = []
+		const listenFor = (event) => (callback) => {
+			const wrapped = (e) => {
+				if (String(e?.form_id) === String(formId)) {
+					callback(e)
+				}
+			}
+			primarySocket.on(event, wrapped)
+			registered.push([event, wrapped])
+			return () => {
+				primarySocket.off(event, wrapped)
+				const i = registered.findIndex(([, cb]) => cb === wrapped)
+				if (i !== -1) registered.splice(i, 1)
+			}
+		}
+
+		liveQuizChannels[formId] = {
+			onState: listenFor("trigger_state.changed"),
+			onAnalytics: listenFor("analytics.updated"),
+			leave: () => {
+				for (const [event, callback] of registered.splice(0)) {
+					primarySocket.off(event, callback)
+				}
+				delete liveQuizChannels[formId]
+			},
+		}
+
+		return liveQuizChannels[formId]
+	}
+
+	function leaveLiveQuizChannel(formId) {
+		liveQuizChannels[formId]?.leave()
+	}
+
 	async function resyncQuizState(formId) {
 		return await callApi("portal.v1.project.quiz.state", "form", {
 			form: formId,
@@ -1778,6 +1880,7 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		quizChannels,
 		theme,
 		triggerState,
+		widgetStates,
 		form,
 		attachFormStore,
 
@@ -1791,19 +1894,19 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		apiGet,
 		apiPost,
 		apiPut,
+		apiPatch,
 		apiDelete,
 		callApi,
 		resolveDependency,
 		initializeApiOperations,
 		apiOperations,
-		// API methods (dev-only)
-		apiPatch,
 
 		// Utility methods (platform)
 		getString,
 		getSetting,
 		getAsset,
 		getState,
+		getWidgetState,
 		hasPermission,
 		findDependency,
 		getGroups,
@@ -1820,6 +1923,8 @@ const useGxpStoreDefinition = defineStore("gxp-portal-app", () => {
 		// Socket methods (platform)
 		connectQuizChannel,
 		leaveQuizChannel,
+		connectLiveQuizChannel,
+		leaveLiveQuizChannel,
 		resyncQuizState,
 		emitSocket,
 		listenSocket,

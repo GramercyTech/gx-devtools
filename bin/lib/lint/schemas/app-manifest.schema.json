@@ -79,9 +79,31 @@
 			},
 			"additionalProperties": false
 		},
+		"liveQuiz": {
+			"type": "object",
+			"description": "Dev-only mock for the live quiz endpoints under gxdev dev with API_ENV=mock: the quiz's numeric form_id and the questions sends and answers use (id, label, quiz_question_type, options [{label, value, secondary}], max_selections). Unlisted question ids get placeholder options.",
+			"properties": {
+				"form_id": { "type": "integer" },
+				"questions": { "type": "array", "items": { "type": "object" } }
+			},
+			"additionalProperties": false
+		},
+		"widgetStates": {
+			"type": "object",
+			"description": "Dev-only mock of the portal widgets this app binds, keyed by dependency identifier, for getWidgetState() and gxp-state=\"<identifier>\". On the platform the page's render payload supplies it.",
+			"additionalProperties": {
+				"type": "object",
+				"required": ["id"],
+				"properties": {
+					"id": { "type": ["integer", "string"] },
+					"state": { "type": "object" }
+				},
+				"additionalProperties": false
+			}
+		},
 		"triggerState": {
 			"type": "object",
-			"description": "Default values for dynamic state updated by sockets/CLI.",
+			"description": "Default values for dynamic state updated by sockets/CLI. Keys starting with gxp_ are reserved for the platform.",
 			"patternProperties": {
 				"^[A-Za-z_][A-Za-z0-9_]*$": {
 					"type": ["string", "number", "boolean", "null"]
@@ -231,7 +253,14 @@
 					},
 					"permissions": {
 						"type": "array",
-						"items": { "type": "string", "minLength": 1 }
+						"items": { "type": "string", "minLength": 1 },
+						"description": "Abilities on the dependency's model. A preset name (e.g. live_quiz_host on ProjectForm) is expanded by the platform into the abilities it stands for when the app is saved."
+					},
+					"triggerStateKeys": {
+						"type": "array",
+						"uniqueItems": true,
+						"items": { "type": "string", "minLength": 1 },
+						"description": "Trigger state keys this app may read or write on the page, form or portal widget the dependency binds (Trigger State API). \"*\" allows every key except reserved ones; keys starting with gxp_ are reserved and never granted."
 					},
 					"visibleFields": {
 						"type": "array",
