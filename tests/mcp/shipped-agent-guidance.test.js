@@ -57,3 +57,54 @@ test.each(["AGENTS.md", "GEMINI.md"])(
 		assert.doesNotMatch(guide, /`apiPatch` is development-only/)
 	},
 )
+
+test.each(["AGENTS.md", "GEMINI.md"])(
+	"shipped %s permits required plugin artifacts while protecting the runtime",
+	(file) => {
+		const guide = readFileSync(
+			new URL(`../../template/${file}`, import.meta.url),
+			"utf8",
+		)
+		assert.match(
+			guide,
+			/You may also edit plugin-owned `app-manifest.json`, `configuration.json`, assets, tests, test fixtures, and the operator-instructions source declared by the manifest when the task requires them/,
+		)
+		assert.match(guide, /Do not edit the runtime container/)
+		assert.doesNotMatch(
+			guide,
+			/(?:ONLY modify files|Only edit files)(?: under| in)? (?:the )?`src\//,
+		)
+	},
+)
+
+test.each(["AGENTS.md", "GEMINI.md"])(
+	"shipped %s distinguishes manifest buckets from installed field bindings",
+	(file) => {
+		const guide = readFileSync(
+			new URL(`../../template/${file}`, import.meta.url),
+			"utf8",
+		)
+		for (const [manifest, field] of [
+			["strings.default.<key>", "language_overrides.<key>"],
+			["settings.<key>", "custom_settings.<key>"],
+			["assets.<key>", "asset_list.<key>"],
+			["dependencies[]", "dependency_list.<identifier>"],
+		]) {
+			assert.equal(
+				guide
+					.split("\n")
+					.some(
+						(line) =>
+							line.startsWith(`- \`${manifest}\``) &&
+							line.includes(`\`${field}\``),
+					),
+				true,
+			)
+		}
+		assert.match(
+			guide,
+			/Set each field's `default` to the shipped manifest value/,
+		)
+		assert.doesNotMatch(guide, /name[^\n]*exactly match the manifest key/)
+	},
+)
