@@ -37,7 +37,8 @@
 		},
 		"colorHex": {
 			"type": "string",
-			"pattern": "^#(?:[0-9a-fA-F]{3}){1,2}$"
+			"description": "CSS hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA",
+			"pattern": "^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
 		},
 		"urlOrPath": {
 			"type": "string",

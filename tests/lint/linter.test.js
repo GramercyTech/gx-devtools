@@ -342,6 +342,37 @@ describe("lint configuration.json — platform templating sync", () => {
 		)
 		expect(result.ok).toBe(true)
 	})
+
+	const colorPickerForm = (defaultValue) => ({
+		additionalTabs: [
+			{
+				type: "fields_list",
+				fieldsList: [
+					{ type: "colorPicker", name: "card_color", default: defaultValue },
+				],
+			},
+		],
+	})
+
+	it("accepts colorPicker defaults in every CSS hex form, including alpha", () => {
+		for (const value of ["#FFF", "#FFF8", "#000466", "#FFFFFF30", null]) {
+			const result = lintData(colorPickerForm(value), "configuration.json")
+			expect(result.ok, `default ${value}`).toBe(true)
+		}
+	})
+
+	it("rejects malformed colorPicker defaults", () => {
+		for (const value of [
+			"#FFFFF",
+			"#FFFFFFF",
+			"#FFFFFFFFF",
+			"FFFFFF",
+			"white",
+		]) {
+			const result = lintData(colorPickerForm(value), "configuration.json")
+			expect(result.ok, `default ${value}`).toBe(false)
+		}
+	})
 })
 
 describe("lint app-manifest.json", () => {
