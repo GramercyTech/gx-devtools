@@ -25,6 +25,9 @@ const ENABLED =
 	process.env.RUN_CLI_E2E === "1" || process.env.RUN_CLI_E2E === "true"
 
 const TOOLKIT_ROOT = path.resolve(__dirname, "..", "..")
+const TOOLKIT_VERSION = JSON.parse(
+	fs.readFileSync(path.join(TOOLKIT_ROOT, "package.json"), "utf8"),
+).version
 const GXDEV_BIN = path.join(TOOLKIT_ROOT, "bin", "gx-devtools.js")
 const PROJECT_NAME = "e2e-fixture-plugin"
 
@@ -116,7 +119,9 @@ beforeAll(async () => {
 		return
 	}
 
-	fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "gxdev-e2e-"))
+	fixtureDir = fs.realpathSync(
+		fs.mkdtempSync(path.join(os.tmpdir(), "gxdev-e2e-")),
+	)
 	projectDir = path.join(fixtureDir, PROJECT_NAME)
 	fs.writeFileSync(path.join(fixtureDir, "empty-user.npmrc"), "")
 	fs.writeFileSync(path.join(fixtureDir, "empty-global.npmrc"), "")
@@ -130,7 +135,7 @@ beforeAll(async () => {
 	const entry = Array.isArray(packed) ? packed[0] : packed["@gxp-dev/tools"]
 	if (
 		entry?.name !== "@gxp-dev/tools" ||
-		entry.version !== "2.1.44" ||
+		entry.version !== TOOLKIT_VERSION ||
 		path.basename(entry.filename) !== entry.filename
 	)
 		throw new Error("Unexpected packed toolkit identity")
@@ -312,7 +317,9 @@ it("compiles Vue and handles interaction", async () => {
 		expect(
 			toolkitPackage.startsWith(path.join(projectDir, "node_modules")),
 		).toBe(true)
-		expect(installed("@gxp-dev/tools/package.json").version).toBe("2.1.44")
+		expect(installed("@gxp-dev/tools/package.json").version).toBe(
+			TOOLKIT_VERSION,
+		)
 		expect(
 			JSON.parse(
 				fs.readFileSync(
