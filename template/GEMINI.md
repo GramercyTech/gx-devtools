@@ -151,7 +151,7 @@ await store.callApi("posts.store", "project", {
 
 ### Low-level methods
 
-Use declared `callApi` bindings for generated platform access. Do not replace a missing or denied binding with a raw endpoint helper. Existing legacy helpers do not grant permissions or bypass server authorization; preserve supported legacy behavior when maintaining existing code. `apiPatch` is development-only and is not part of the production store contract. Never use axios or fetch directly.
+Use declared `callApi` bindings for generated platform access. Do not replace a missing or denied binding with a raw endpoint helper. Existing legacy helpers do not grant permissions or bypass server authorization; preserve supported legacy behavior when maintaining existing code. `apiPatch(endpoint, data)` is a supported legacy platform helper. Preserve existing authorized uses, but use declared `callApi` bindings for new generated platform calls. Never use axios or fetch directly.
 
 ## Store Data Access
 

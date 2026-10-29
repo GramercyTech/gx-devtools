@@ -35,3 +35,25 @@ test("Claude wrapper still includes the corrected shared instructions", () => {
 		/^@AGENTS\.md$/m,
 	)
 })
+
+test.each(["AGENTS.md", "GEMINI.md"])(
+	"shipped %s preserves the platform PATCH helper without bypassing bindings",
+	async (file) => {
+		const guide = readFileSync(
+			new URL(`../../template/${file}`, import.meta.url),
+			"utf8",
+		)
+		const result = await handleToolCall("describe_store_api", {})
+		const contract = result.content.map((block) => block.text || "").join("\n")
+		assert.match(contract, /apiPatch\(endpoint, data = \{\}\)/)
+		assert.match(
+			guide,
+			/`apiPatch\(endpoint, data\)` is a supported legacy platform helper/,
+		)
+		assert.match(
+			guide,
+			/use declared `callApi` bindings for new generated platform calls/,
+		)
+		assert.doesNotMatch(guide, /`apiPatch` is development-only/)
+	},
+)

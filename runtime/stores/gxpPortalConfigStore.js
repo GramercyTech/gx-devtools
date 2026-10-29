@@ -16,7 +16,7 @@ import { useGxpFormStore, disposeGxpFormStore } from "./gxpFormStore.js"
  * the platform store gains a member, add it here (and to
  * tests/runtime/portal-store.test.js, which asserts the surface).
  *
- * Dev-only extras (`user`, `getUser*`, `manifest*`, `apiPatch`,
+ * Dev-only extras (`user`, `getUser*`, `manifest*`,
  * `updateSetting`, `updateState`) are kept for the DevTools UI and existing
  * templates; they are NOT available on the platform.
  */
