@@ -1,12 +1,12 @@
 {
 	"name": "@gxp-dev/tools",
-	"version": "2.1.46",
+	"version": "2.1.47",
 	"lockfileVersion": 3,
 	"requires": true,
 	"packages": {
 		"": {
 			"name": "@gxp-dev/tools",
-			"version": "2.1.46",
+			"version": "2.1.47",
 			"license": "ISC",
 			"dependencies": {
 				"@eslint/js": "^10.0.1",
