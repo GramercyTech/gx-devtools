@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: read
+      contents: write # required to create the GitHub release
       id-token: write # required for npm provenance
 
     env:
@@ -114,6 +114,25 @@ jobs:
         run: npm publish --access public --tag "$NPM_DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_DEPLOY_TOKEN }}
+
+      # Mirror each tag-triggered npm publish as a GitHub release, with notes
+      # generated from the PRs merged since the previous tag. Skipped when a
+      # release for the tag already exists (e.g. one created by hand).
+      - name: Create GitHub release
+        if: ${{ !inputs.dry-run && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists; skipping"
+            exit 0
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            --notes "Published to npm: [@gxp-dev/tools@$VERSION](https://www.npmjs.com/package/@gxp-dev/tools/v/$VERSION) (\`$NPM_DIST_TAG\`)"
 
       - name: Publish summary
         if: ${{ !inputs.dry-run }}
