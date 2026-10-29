@@ -56,7 +56,9 @@ describe("project-local AppUI CLI resolution", () => {
 		new URL("../../bin/gx-devtools.js", import.meta.url),
 	)
 	function project() {
-		fixture = fs.mkdtempSync(path.join(os.tmpdir(), "gxp-storybook-project-"))
+		fixture = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), "gxp-storybook-project-")),
+		)
 		const root = path.join(fixture, "project")
 		fs.mkdirSync(root)
 		fs.writeFileSync(
