@@ -207,13 +207,14 @@ store.findDependency(identifier)        // returns the bound resource ID for an 
 ## User / Auth Getters
 
 \`\`\`javascript
-store.getUser()                    // user object or null
-store.getUserName(fallback = null) // display name: user.name → first_name+last_name → fallback
-store.getUserEmail(fallback = null)// user.email or fallback
-store.isAuthenticated()            // boolean
+const user = store.auth?.user      // authenticated attendee or null; guard before dereferencing
+store.getGroupSlugs()              // portal-visible group slugs
+store.inGroup("vip")              // group membership
+// DEV-ONLY — not exported by the platform; do not ship calls to these helpers:
+// store.user, store.getUser(), store.getUserName(), store.getUserEmail(), store.isAuthenticated()
 \`\`\`
 
-user is null when not authenticated — always guard before dereferencing. In gxdev dev a dummy user is provided; in production the platform injects the real authenticated user.
+store.auth?.user is null when not authenticated — always guard before dereferencing. In gxdev dev a dummy attendee may be provided; production supplies the authenticated attendee.
 
 ## Platform API — store.callApi
 

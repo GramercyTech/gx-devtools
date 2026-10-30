@@ -48,7 +48,7 @@ Confirm a plan before implementing. It must include:
 - All data goes through the GxP store — `store.callApi(operationId, identifier, data)` for platform APIs, plus sockets, strings, assets, settings, state. No direct `axios`/`fetch`.
 - Every permission identifier used by `callApi` must be declared in `app-manifest.json` → `dependencies` + `permissions`. Use `"project"` for project-wide / top-level operations.
 - Wire **every string literal a user will see** with `gxp-string` — button labels, headings, paragraph copy, tab names, empty-state messages, placeholder text, error messages, tooltip text. The only exceptions are text rendered directly from an API response and internal/debug strings. If you're typing a visible string into a template, it needs `gxp-string`. Wire every image with `gxp-src`.
-- Only edit files under `src/`; the runtime container is off-limits.
+- Keep application components under `src/`. You may also edit plugin-owned `app-manifest.json`, `configuration.json`, assets, tests, test fixtures, and the operator-instructions source declared by the manifest when the task requires them. Do not edit the runtime container (layouts, routing, dev tools, or store initialization).
 
 ### 5. Sync the manifest and build the admin form
 
@@ -61,8 +61,17 @@ Whenever you add or change a `store.callApi`, `store.listen`, `gxp-string`, or `
    - Each declared dependency identifier → `asyncSelect` bound to the matching resource list endpoint so the admin picks a real record
    - Color settings → `colorPicker`; numeric thresholds → `number`; feature toggles → `boolean`
    - Anything else → enumerate with `config_list_field_types` / `config_get_field_schema`
-     Each field's `name` must exactly match the manifest key it controls.
+     Use the bucket-prefixed field names below, not bare manifest keys.
 3. **Lint** — `gxdev lint --all`. Fix every error before moving on.
+
+Configuration field bindings (manifest keys remain in their original buckets):
+
+- `strings.default.<key>` → `language_overrides.<key>`
+- `settings.<key>` → `custom_settings.<key>`
+- `assets.<key>` → `asset_list.<key>`
+- `dependencies[]` identifier → `dependency_list.<identifier>`
+
+Set each field's `default` to the shipped manifest value when one exists.
 
 ### 6. Test broadcasts
 
@@ -81,7 +90,7 @@ Run again after testing and fix every error before declaring done.
 
 ## Architecture
 
-The plugin runs inside a container provided by the `gxdev` server. Only edit files in `src/`:
+The plugin runs inside a container provided by the `gxdev` server. Application source follows this layout; the plugin-owned file scope above also applies:
 
 - `src/Plugin.vue` - Main entry point
 - `src/components/` - Reusable components
@@ -151,7 +160,7 @@ await store.callApi("posts.store", "project", {
 
 ### Low-level methods
 
-Use declared `callApi` bindings for generated platform access. Do not replace a missing or denied binding with a raw endpoint helper. Existing legacy helpers do not grant permissions or bypass server authorization; preserve supported legacy behavior when maintaining existing code. `apiPatch` is development-only and is not part of the production store contract. Never use axios or fetch directly.
+Use declared `callApi` bindings for generated platform access. Do not replace a missing or denied binding with a raw endpoint helper. Existing legacy helpers do not grant permissions or bypass server authorization; preserve supported legacy behavior when maintaining existing code. `apiPatch(endpoint, data)` is a supported legacy platform helper. Preserve existing authorized uses, but use declared `callApi` bindings for new generated platform calls. Never use axios or fetch directly.
 
 ## Store Data Access
 
