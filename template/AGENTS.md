@@ -61,7 +61,7 @@ Build against the plan:
 - Declare every permission identifier used by `callApi` in `app-manifest.json` → `dependencies` + `permissions`. Use `"project"` for project-wide / top-level operations and pass any required IDs in `data`.
 - Wire **every string literal a user will see** with `gxp-string` — button labels, headings, paragraph text, tab names, empty-state messages, placeholder text, error messages, tooltip copy. The only exceptions are text rendered directly from an API response and purely internal/debug strings. If you're typing a visible string into a template, it needs `gxp-string`. Wire every image with `gxp-src`.
 - Add `gxp-track` to **meaningful user interactions** — primary CTAs, form submissions, navigation choices, feature entry points. Use namespaced `feature.action` event names (e.g. `checkin.submit`) and put record IDs in `gxp-track-props`, never in the event name. Use `window.gxp.track()` / `inject("gxpTrack")` for non-click milestones (e.g. a flow completing).
-- Keep components under `src/`. The runtime container (layouts, routing, dev tools) is not yours to edit.
+- Keep application components under `src/`. You may also edit plugin-owned `app-manifest.json`, `configuration.json`, assets, tests, test fixtures, and the operator-instructions source declared by the manifest when the task requires them. Do not edit the runtime container (layouts, routing, dev tools, or store initialization).
 
 ### 5. Sync the manifest and build the admin form
 
@@ -109,7 +109,7 @@ Fix every error. Do not mark work complete with a failing lint.
 
 ## Project Architecture
 
-This plugin runs inside a container environment provided by the `gxdev` development server. You should ONLY modify files in the `src/` directory. The runtime container (PortalContainer.vue) handles layouts, dev tools, routing, and store initialization.
+This plugin runs inside a container environment provided by the `gxdev` development server. Follow the plugin-owned file scope above; PortalContainer.vue and the provided runtime remain off-limits.
 
 ```
 src/
@@ -145,7 +145,7 @@ await store.callApi(operationId, identifier, data)
 | `identifier`  | A **permission identifier** declared in `app-manifest.json` → `dependencies` / `permissions`. Determines which resource's permissions the call runs under, and supplies the parent object ID that gets substituted into the path. |
 | `data`        | Additional params — body fields, query params, or path params not covered by the identifier. Pass `"pluginVars.someKey"` as a value to pull from settings at call time.                                                           |
 
-Generated platform calls must use declared `callApi` operation bindings. Do not replace a missing or denied binding with `apiGet`/`apiPost`/`apiPut`/`apiDelete`, and never use axios/fetch directly. Legacy helpers do not grant permissions or bypass server-side authorization. `apiPatch` is development-only and is not part of the production store contract.
+Generated platform calls must use declared `callApi` operation bindings. Do not replace a missing or denied binding with `apiGet`/`apiPost`/`apiPut`/`apiDelete`, and never use axios/fetch directly. Legacy helpers do not grant permissions or bypass server-side authorization. `apiPatch(endpoint, data)` is a supported legacy platform helper. Preserve existing authorized uses, but use declared `callApi` bindings for new generated platform calls.
 
 ### Permission identifiers
 
@@ -241,11 +241,7 @@ store.inGroup("vip") / store.inAnyGroup(["staff", "speakers"]) // boolean
 // store.user, store.getUser(), store.getUserName(), store.getUserEmail(), store.isAuthenticated()
 ```
 
-`store.user` is **`null` when no user is authenticated** — always guard
-before dereferencing. Shape: `{ id, first_name, last_name, name, email,
-avatar, roles[] }`. In `gxdev dev` a dummy authenticated user is injected
-so the happy path renders without a backend; in production the platform
-injects the real user.
+`store.auth?.user` is null when no attendee is authenticated; always guard before dereferencing. In `gxdev dev` a dummy authenticated attendee may be provided; production supplies the authenticated attendee.
 
 ## Real-Time Events
 
@@ -384,7 +380,16 @@ The full workflow — run it whenever you've added/changed a `callApi`, `listen`
 | `settings.<key>` representing a feature toggle   | `boolean`                                                                                   |
 | Any other setting discussed with the client      | Pick via `config_list_field_types` / `config_get_field_schema`                              |
 
-Group related fields into `fields_list` cards (`config_add_card` then `config_add_field`). Use the `name` of each field to exactly match the manifest key it controls — that's the contract the directives and store getters rely on.
+Group related fields into `fields_list` cards (`config_add_card` then `config_add_field`). Use the bucket-prefixed field names below, not bare manifest keys.
+
+Configuration field bindings (manifest keys remain in their original buckets):
+
+- `strings.default.<key>` → `language_overrides.<key>`
+- `settings.<key>` → `custom_settings.<key>`
+- `assets.<key>` → `asset_list.<key>`
+- `dependencies[]` identifier → `dependency_list.<identifier>`
+
+Set each field's `default` to the shipped manifest value when one exists.
 
 ### Relevant tools
 
