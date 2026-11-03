@@ -36,78 +36,87 @@ test("context API is host-only module API, not a model-advertised tool", async (
 		server.TOOLS.some((t) => /spec.?context/i.test(t.name)),
 		false,
 	)
-	const observed = server.withSpecContext(context("testing", "tools"), () =>
+	const observed = server.withSpecContext(context("ez2140-d2", "tools"), () =>
 		server.handleToolCall("get_api_environment", {
 			environment: "develop",
 			specOrigin: "https://model-selected.invalid",
 		}),
 	)
 	const result = JSON.parse((await observed).content[0].text)
-	assert.equal(result.environment, "testing")
+	assert.equal(result.environment, "ez2140-d2")
 	assert.equal(JSON.stringify(result).includes("model-selected"), false)
 	assert.equal(
 		JSON.stringify(result).includes("https://tools.catalog.example.test"),
 		true,
 	)
 })
-test("interleaved async tool requests retain independent environment and URL caches", async () => {
-	const requests = [],
-		first = deferred(),
-		second = deferred()
-	const a = context("develop", "interleaved-primary"),
-		b = context("testing", "interleaved-secondary")
-	global.fetch = async (url, options) => {
-		requests.push(url)
-		assert.equal(options.redirect, "error")
-		assert.ok(options.signal instanceof AbortSignal)
-		if (url.startsWith(a.specOrigin)) await first.promise
-		else await second.promise
-		return {
-			ok: true,
-			json: async () => ({ paths: { [url]: { get: { operationId: url } } } }),
+test.each([
+	["develop", "testing"],
+	["ez2140-d2", "tenant-qa-2"],
+])(
+	"interleaved async %s/%s tool requests retain independent environment and URL caches",
+	async (primaryEnv, secondaryEnv) => {
+		const requests = [],
+			first = deferred(),
+			second = deferred()
+		const a = context(primaryEnv, "interleaved-" + primaryEnv),
+			b = context(secondaryEnv, "interleaved-" + secondaryEnv)
+		global.fetch = async (url, options) => {
+			requests.push(url)
+			assert.equal(options.redirect, "error")
+			assert.ok(options.signal instanceof AbortSignal)
+			if (url.startsWith(a.specOrigin)) await first.promise
+			else await second.promise
+			return {
+				ok: true,
+				json: async () => ({ paths: { [url]: { get: { operationId: url } } } }),
+			}
 		}
-	}
-	const envDigest = () =>
-		createHash("sha256")
-			.update(
-				JSON.stringify(
-					Object.entries(process.env).sort(([a], [b]) =>
-						a < b ? -1 : a > b ? 1 : 0,
+		const envDigest = () =>
+			createHash("sha256")
+				.update(
+					JSON.stringify(
+						Object.entries(process.env).sort(([a], [b]) =>
+							a < b ? -1 : a > b ? 1 : 0,
+						),
 					),
-				),
-			)
-			.digest("hex")
-	const envBefore = envDigest()
-	const run = (c) =>
-		server.withSpecContext(c, async () => {
-			await Promise.resolve()
-			const result = await server.handleToolCall("api_list_operation_ids", {})
-			assert.equal(specs.getEnvironment(), c.environment)
-			assert.equal(specs.getEnvUrls().apiBaseUrl, c.specOrigin)
-			return JSON.parse(result.content[0].text)
-		})
-	const one = run(a),
-		two = run(b)
-	second.resolve()
-	const secondary = await two
-	first.resolve()
-	const primary = await one
-	assert.equal(
-		secondary.operations[0].operationId.startsWith(b.specOrigin),
-		true,
-	)
-	assert.equal(primary.operations[0].operationId.startsWith(a.specOrigin), true)
-	assert.equal(
-		(await run(a)).operations[0].operationId,
-		primary.operations[0].operationId,
-	)
-	assert.equal(
-		(await run(b)).operations[0].operationId,
-		secondary.operations[0].operationId,
-	)
-	assert.equal(requests.length, 2)
-	assert.equal(envDigest(), envBefore)
-})
+				)
+				.digest("hex")
+		const envBefore = envDigest()
+		const run = (c) =>
+			server.withSpecContext(c, async () => {
+				await Promise.resolve()
+				const result = await server.handleToolCall("api_list_operation_ids", {})
+				assert.equal(specs.getEnvironment(), c.environment)
+				assert.equal(specs.getEnvUrls().apiBaseUrl, c.specOrigin)
+				return JSON.parse(result.content[0].text)
+			})
+		const one = run(a),
+			two = run(b)
+		second.resolve()
+		const secondary = await two
+		first.resolve()
+		const primary = await one
+		assert.equal(
+			secondary.operations[0].operationId.startsWith(b.specOrigin),
+			true,
+		)
+		assert.equal(
+			primary.operations[0].operationId.startsWith(a.specOrigin),
+			true,
+		)
+		assert.equal(
+			(await run(a)).operations[0].operationId,
+			primary.operations[0].operationId,
+		)
+		assert.equal(
+			(await run(b)).operations[0].operationId,
+			secondary.operations[0].operationId,
+		)
+		assert.equal(requests.length, 2)
+		assert.equal(envDigest(), envBefore)
+	},
+)
 test("context snapshot cannot be retargeted by mutations during an await", async () => {
 	const original = context("testing", "immutable"),
 		gate = deferred()
@@ -244,7 +253,26 @@ test.each([
 	{},
 	{ environment: "testing" },
 	{ specOrigin: "https://valid.example.test" },
-	{ environment: "unknown", specOrigin: "https://valid.example.test" },
+	...[
+		"",
+		"a".repeat(64),
+		"../develop",
+		"dev/test",
+		"DEVELOP",
+		"dev_test",
+		"dev.test",
+		"-develop",
+		"develop-",
+		"dev--test",
+		"develop\n",
+		" develop",
+		"dev test",
+		1,
+		null,
+	].map((environment) => ({
+		environment,
+		specOrigin: "https://valid.example.test",
+	})),
 	{
 		environment: "testing",
 		specOrigin: "https://valid.example.test",
@@ -277,3 +305,30 @@ test.each([
 		assert.equal(called, false)
 	},
 )
+
+test("custom trusted names do not add unscoped CLI environment defaults", async () => {
+	const previous = process.cwd(),
+		directory = mkdtempSync(join(tmpdir(), "gxdev-custom-cli-"))
+	try {
+		process.chdir(directory)
+		delete process.env.VITE_API_ENV
+		process.env.API_ENV = "ez2140-d2"
+		process.env.GXDEV_API_SPEC_BASE_URL = "https://ambient.example.test"
+		assert.throws(() => specs.getEnvUrls(), /Unknown API environment/)
+		await specs.withSpecContext(
+			context("ez2140-d2", "custom-cli"),
+			async () => {
+				assert.equal(specs.getEnvironment(), "ez2140-d2")
+				assert.equal(
+					specs.getEnvUrls().apiBaseUrl,
+					"https://custom-cli.catalog.example.test",
+				)
+			},
+		)
+		assert.throws(() => specs.getEnvUrls(), /Unknown API environment/)
+		assert.equal(Object.hasOwn(specs.ENVIRONMENT_URLS, "ez2140-d2"), false)
+	} finally {
+		process.chdir(previous)
+		rmSync(directory, { recursive: true, force: true })
+	}
+})

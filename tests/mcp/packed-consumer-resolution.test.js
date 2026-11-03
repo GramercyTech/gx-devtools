@@ -8,133 +8,144 @@ const root = process.env.GXDEV_PACKED_CONSUMER_ROOT
 
 describe.skipIf(!root)("actual npm12 packed-consumer MCP resolution", () => {
 	for (const mode of ["fresh", "legacy"]) {
-		it(`serializes schemas and preserves concurrent trusted target scopes in ${mode}`, async () => {
-			const consumer = createRequire(path.join(root, mode, "package.json"))
-			const packagePath = consumer.resolve("@gxp-dev/tools/package.json")
-			const toolkit = createRequire(packagePath)
-			const mcpPath = toolkit.resolve("@modelcontextprotocol/sdk/server/mcp.js")
-			const sdk = createRequire(mcpPath)
-			const resolvedZod = sdk.resolve("zod/package.json")
-			const version = JSON.parse(fs.readFileSync(resolvedZod, "utf8")).version
-			const toolkitZod = JSON.parse(
-				fs.readFileSync(toolkit.resolve("zod/package.json"), "utf8"),
-			).version
-			expect(toolkitZod).toBe("4.6.7")
-			if (mode === "fresh") expect(version).toBe("4.6.7")
-			else expect(consumer("zod/package.json").version).toBe("3.25.76")
-			const { z } = sdk("zod")
-			const { McpServer } = toolkit("@modelcontextprotocol/sdk/server/mcp.js")
-			const { Client } = toolkit("@modelcontextprotocol/sdk/client/index.js")
-			const { InMemoryTransport } = toolkit(
-				"@modelcontextprotocol/sdk/inMemory.js",
-			)
-			const api = toolkit(
-				path.join(path.dirname(packagePath), "mcp/lib/server.js"),
-			)
-			const server = new McpServer({
-				name: "synthetic-target-server",
-				version: "1.0.0",
-			})
-			const client = new Client({
-				name: "synthetic-target-client",
-				version: "1.0.0",
-			})
-			const requests = []
-			const originalFetch = global.fetch
-			global.fetch = async (url) => {
-				expect([
-					"https://primary.catalog.example.test/api-specs/openapi.json",
-					"https://secondary.catalog.example.test/api-specs/openapi.json",
-				]).toContain(url)
-				requests.push(url)
-				await Promise.resolve()
-				return {
-					ok: true,
-					json: async () => ({
-						paths: { "/example": { get: { operationId: url } } },
-					}),
-				}
-			}
-			for (const [name, environment, origin] of [
-				["primary", "develop", "primary"],
-				["secondary", "testing", "secondary"],
-			]) {
-				server.registerTool(
-					name,
-					{ inputSchema: { value: z.string().min(1) } },
-					async ({ value }) =>
-						api.withSpecContext(
-							{
-								environment,
-								specOrigin: `https://${origin}.catalog.example.test`,
-							},
-							async () => {
-								const response = await api.handleToolCall(
-									"api_list_operation_ids",
-									{},
-								)
-								const env = await api.handleToolCall("get_api_environment", {})
-								return {
-									content: [
-										{
-											type: "text",
-											text: JSON.stringify({
-												value,
-												environment: JSON.parse(env.content[0].text)
-													.environment,
-												operations: JSON.parse(response.content[0].text)
-													.operations,
-											}),
-										},
-									],
-								}
-							},
-						),
+		it.each([
+			["develop", "testing"],
+			["ez2140-d2", "tenant-qa-2"],
+		])(
+			`serializes schemas and preserves concurrent %s/%s trusted target scopes in ${mode}`,
+			async (primaryEnv, secondaryEnv) => {
+				const consumer = createRequire(path.join(root, mode, "package.json"))
+				const packagePath = consumer.resolve("@gxp-dev/tools/package.json")
+				const toolkit = createRequire(packagePath)
+				const mcpPath = toolkit.resolve(
+					"@modelcontextprotocol/sdk/server/mcp.js",
 				)
-			}
-			const [a, b] = InMemoryTransport.createLinkedPair()
-			try {
-				await server.connect(a)
-				await client.connect(b)
-				const responses = await Promise.all([
-					client.callTool({ name: "primary", arguments: { value: "one" } }),
-					client.callTool({ name: "secondary", arguments: { value: "two" } }),
-				])
-				const results = responses.map((response) =>
-					JSON.parse(response.content[0].text),
+				const sdk = createRequire(mcpPath)
+				const resolvedZod = sdk.resolve("zod/package.json")
+				const version = JSON.parse(fs.readFileSync(resolvedZod, "utf8")).version
+				const toolkitZod = JSON.parse(
+					fs.readFileSync(toolkit.resolve("zod/package.json"), "utf8"),
+				).version
+				expect(toolkitZod).toBe("4.6.7")
+				if (mode === "fresh") expect(version).toBe("4.6.7")
+				else expect(consumer("zod/package.json").version).toBe("3.25.76")
+				const { z } = sdk("zod")
+				const { McpServer } = toolkit("@modelcontextprotocol/sdk/server/mcp.js")
+				const { Client } = toolkit("@modelcontextprotocol/sdk/client/index.js")
+				const { InMemoryTransport } = toolkit(
+					"@modelcontextprotocol/sdk/inMemory.js",
 				)
-				expect(results.map((r) => r.environment)).toEqual([
-					"develop",
-					"testing",
-				])
-				expect(results.map((r) => r.value)).toEqual(["one", "two"])
-				expect(results[0].operations[0].operationId).toContain(
-					"primary.catalog.example.test",
+				const api = toolkit(
+					path.join(path.dirname(packagePath), "mcp/lib/server.js"),
 				)
-				expect(results[1].operations[0].operationId).toContain(
-					"secondary.catalog.example.test",
-				)
-				expect(requests).toHaveLength(2)
-				const invalid = await client.callTool({
-					name: "primary",
-					arguments: { value: 42 },
+				const server = new McpServer({
+					name: "synthetic-target-server",
+					version: "1.0.0",
 				})
-				expect(invalid.isError).toBe(true)
-				console.log(
-					JSON.stringify({
-						consumer: mode,
-						sdkZodVersion: version,
-						toolkitZodVersion: toolkitZod,
-						concurrentTargetScopeVerified: true,
-						schemaValidationVerified: true,
-					}),
-				)
-			} finally {
-				global.fetch = originalFetch
-				await client.close()
-				await server.close()
-			}
-		})
+				const client = new Client({
+					name: "synthetic-target-client",
+					version: "1.0.0",
+				})
+				const requests = []
+				const originalFetch = global.fetch
+				global.fetch = async (url) => {
+					expect([
+						`https://primary-${primaryEnv}.catalog.example.test/api-specs/openapi.json`,
+						`https://secondary-${secondaryEnv}.catalog.example.test/api-specs/openapi.json`,
+					]).toContain(url)
+					requests.push(url)
+					await Promise.resolve()
+					return {
+						ok: true,
+						json: async () => ({
+							paths: { "/example": { get: { operationId: url } } },
+						}),
+					}
+				}
+				for (const [name, environment, origin] of [
+					["primary", primaryEnv, `primary-${primaryEnv}`],
+					["secondary", secondaryEnv, `secondary-${secondaryEnv}`],
+				]) {
+					server.registerTool(
+						name,
+						{ inputSchema: { value: z.string().min(1) } },
+						async ({ value }) =>
+							api.withSpecContext(
+								{
+									environment,
+									specOrigin: `https://${origin}.catalog.example.test`,
+								},
+								async () => {
+									const response = await api.handleToolCall(
+										"api_list_operation_ids",
+										{},
+									)
+									const env = await api.handleToolCall(
+										"get_api_environment",
+										{},
+									)
+									return {
+										content: [
+											{
+												type: "text",
+												text: JSON.stringify({
+													value,
+													environment: JSON.parse(env.content[0].text)
+														.environment,
+													operations: JSON.parse(response.content[0].text)
+														.operations,
+												}),
+											},
+										],
+									}
+								},
+							),
+					)
+				}
+				const [a, b] = InMemoryTransport.createLinkedPair()
+				try {
+					await server.connect(a)
+					await client.connect(b)
+					const responses = await Promise.all([
+						client.callTool({ name: "primary", arguments: { value: "one" } }),
+						client.callTool({ name: "secondary", arguments: { value: "two" } }),
+					])
+					const results = responses.map((response) =>
+						JSON.parse(response.content[0].text),
+					)
+					expect(results.map((r) => r.environment)).toEqual([
+						primaryEnv,
+						secondaryEnv,
+					])
+					expect(results.map((r) => r.value)).toEqual(["one", "two"])
+					expect(results[0].operations[0].operationId).toContain(
+						`primary-${primaryEnv}.catalog.example.test`,
+					)
+					expect(results[1].operations[0].operationId).toContain(
+						`secondary-${secondaryEnv}.catalog.example.test`,
+					)
+					expect(requests).toHaveLength(2)
+					const invalid = await client.callTool({
+						name: "primary",
+						arguments: { value: 42 },
+					})
+					expect(invalid.isError).toBe(true)
+					console.log(
+						JSON.stringify({
+							consumer: mode,
+							sdkZodVersion: version,
+							toolkitZodVersion: toolkitZod,
+							concurrentTargetScopeVerified: true,
+							schemaValidationVerified: true,
+						}),
+					)
+				} finally {
+					global.fetch = originalFetch
+					await client.close()
+					await server.close()
+				}
+			},
+		)
 		it(`enforces the validation runtime before actual stdio handshake in ${mode}`, async () => {
 			const consumer = createRequire(path.join(root, mode, "package.json"))
 			const packagePath = consumer.resolve("@gxp-dev/tools/package.json")

@@ -15,7 +15,10 @@ const path = require("path")
 const { AsyncLocalStorage } = require("node:async_hooks")
 const specContext = new AsyncLocalStorage()
 
-/** Trusted host API: tool arguments never select this scope or its origin. */
+/**
+ * Trusted host API: tool arguments never select this scope or its origin.
+ * Logical hosted environments need not have a default CLI endpoint mapping.
+ */
 function withSpecContext(context, action) {
 	if (
 		!context ||
@@ -26,7 +29,9 @@ function withSpecContext(context, action) {
 		!Object.hasOwn(context, "specOrigin") ||
 		typeof action !== "function" ||
 		typeof context.environment !== "string" ||
-		!Object.hasOwn(ENVIRONMENT_URLS, context.environment) ||
+		context.environment.length > 63 ||
+		context.environment !== context.environment.trim() ||
+		!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(context.environment) ||
 		typeof context.specOrigin !== "string"
 	)
 		throw new Error("Invalid trusted API specification context")

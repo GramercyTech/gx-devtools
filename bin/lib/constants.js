@@ -36,6 +36,8 @@ const REQUIRED_DEV_DEPENDENCIES = {
 }
 
 const REQUIRED_OVERRIDES = {
+	minimatch: "11.0.1",
+	glob: "14.0.2",
 	"shell-quote": "1.12.0",
 }
 
