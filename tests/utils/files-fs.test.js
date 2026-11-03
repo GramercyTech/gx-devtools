@@ -96,6 +96,8 @@ describe("files.js (real fs)", () => {
 			expect(pkg.devDependencies["happy-dom"]).toBe("^21.0.4")
 			expect(pkg.devDependencies["@vitejs/plugin-vue"]).toBe("^6.0.6")
 			expect(pkg.overrides["shell-quote"]).toBe("1.12.0")
+			expect(pkg.overrides.minimatch).toBe("11.0.1")
+			expect(pkg.overrides.glob).toBe("14.0.2")
 			// DEFAULT_SCRIPTS should all be present (createPackageJson also adds
 			// a "placeholder" override on top of them).
 			for (const key of Object.keys(DEFAULT_SCRIPTS)) {
@@ -151,6 +153,8 @@ describe("files.js (real fs)", () => {
 		const manifestPath = path.join(tmpDir, "package.json")
 		const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
 		manifest.overrides = {
+			minimatch: "10.2.6",
+			glob: "13.0.6",
 			"shell-quote": "1.9.0",
 			cheerio: { "encoding-sniffer": "1.0.2" },
 		}
@@ -159,6 +163,8 @@ describe("files.js (real fs)", () => {
 		expect(updateExistingProject(tmpDir)).toBe(true)
 		const updated = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
 		expect(updated.overrides).toEqual({
+			minimatch: "11.0.1",
+			glob: "14.0.2",
 			"shell-quote": "1.12.0",
 			cheerio: { "encoding-sniffer": "1.0.2" },
 		})
