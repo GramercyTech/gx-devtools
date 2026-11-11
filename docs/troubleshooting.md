@@ -113,8 +113,8 @@ npm run dev-http
 
 Node's HTTP client doesn't use your operating system's trust store, so it rejects the mkcert certificate that your browser accepts.
 
-- **Current toolkit:** `gxdev socket send` picks HTTP or HTTPS the same way the Socket.IO server does (HTTPS only when `.certs/` holds a localhost certificate and key), and it trusts mkcert's root CA from `mkcert -CAROOT` automatically. If it still fails, run `mkcert -install` and retry.
-- **Older toolkit versions** always used HTTPS and didn't load the mkcert CA. Point Node at the CA for the command:
+- **Toolkit after 2.1.47** (check with `gxdev --version`): `gxdev socket send` picks HTTP or HTTPS the same way the Socket.IO server does. It uses HTTPS only when `.certs/` holds a localhost certificate and key, whatever flags `gxdev dev` was started with. It trusts mkcert's root CA from `mkcert -CAROOT` automatically. If it still fails, run `mkcert -install` and retry.
+- **Toolkit 2.1.47 and earlier** always used HTTPS and didn't load the mkcert CA, so it failed against both an HTTPS server and a plain HTTP one. Point Node at the CA for the command:
 
 ```bash
 NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" gxdev socket send --event <EventName>

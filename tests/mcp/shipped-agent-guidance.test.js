@@ -159,29 +159,6 @@ test("subagent wrappers delegate to the shared skill", () => {
 	assert.match(codex, /gxp-plugin/)
 })
 
-test("skill documents codec-safe media uploads", () => {
-	const guide = readShipped("skills/gxp-plugin/references/media-uploads.md")
-	assert.match(guide, /Content-Type: video\/webm;codecs=vp8,opus/)
-	assert.match(guide, /\[`attachment\.\$\{ext\}`\]: file/)
-	assert.match(guide, /Never strip codec parameters from the Content-Type/)
-	assert.doesNotMatch(guide, /type: "video\/webm" \}\)|mime: "video\/webm" \}/)
-})
-
-test("skill documents the 20 MB large_upload presigned flow", () => {
-	const guide = readShipped("skills/gxp-plugin/references/media-uploads.md")
-	assert.match(guide, /LARGE_UPLOAD_THRESHOLD_BYTES = 20 \* 1024 \* 1024/)
-	assert.match(guide, /large_upload: true/)
-	assert.match(guide, /upload_urls\?\.\[filename\]/)
-	assert.match(
-		guide,
-		/PUT `Content-Type` must exactly equal the `type` sent in step 1/,
-	)
-	assert.match(
-		readShipped("AGENTS.md"),
-		/single exception is PUTting file bytes to a presigned storage URL/,
-	)
-})
-
 test("skill requires patching WebM duration before upload", () => {
 	const guide = readShipped("skills/gxp-plugin/references/media-uploads.md")
 	assert.match(
@@ -269,4 +246,61 @@ test("skill's hand-written social stream dependency avoids the malformed like pa
 		Object.keys(entry.operations).some((id) => id.includes("likes")),
 		false,
 	)
+})
+
+test("skill's uploadMedia module routes by size and keeps the full type", async () => {
+	const guide = readShipped("skills/gxp-plugin/references/media-uploads.md")
+	assert.doesNotMatch(guide, /silently dropped|must stay inline/)
+	assert.match(guide, /Content-Type must exactly equal the `type` you declared/)
+	assert.match(
+		readShipped("AGENTS.md"),
+		/single exception is PUTting file bytes to a presigned storage URL/,
+	)
+	const code = guide
+		.match(
+			/## Upload with `uploadMedia`[\s\S]*?```javascript\n([\s\S]*?)```/,
+		)[1]
+		.replace(/^export /gm, "")
+	const mod = new Function(
+		"File",
+		`${code}; return { uploadMedia, uploadFormat, UploadError, LARGE_UPLOAD_THRESHOLD_BYTES }`,
+	)(
+		class {
+			constructor(parts, name, options) {
+				Object.assign(this, { parts, name, type: options.type })
+			}
+		},
+	)
+	assert.equal(mod.LARGE_UPLOAD_THRESHOLD_BYTES, 20 * 1024 * 1024)
+	assert.throws(() => mod.uploadFormat("video/x-matroska"), /Unsupported/)
+	const calls = []
+	const store = {
+		userSession: "s1",
+		callApi: async (op, id, data) => {
+			calls.push(data)
+			return {
+				data: { id: 1, upload_urls: { "attachment.webm": "https://put" } },
+			}
+		},
+	}
+	const type = "video/webm;codecs=vp8,opus"
+	await mod.uploadMedia(store, {
+		operationId: "op",
+		identifier: "id",
+		blob: { size: 10, type },
+		withUserSession: true,
+		data: { user_session: "forged" },
+	})
+	assert.equal(calls[0]["attachment.webm"].type, type)
+	assert.equal(calls[0].user_session, "s1")
+	const puts = []
+	await mod.uploadMedia(store, {
+		operationId: "op",
+		identifier: "id",
+		blob: { size: 30 * 1024 * 1024, type },
+		put: async (...args) => puts.push(args),
+	})
+	assert.equal(calls[1].attachment.large_upload, true)
+	assert.equal(calls[1].attachment.type, type)
+	assert.deepEqual([puts[0][0], puts[0][2]], ["https://put", type])
 })

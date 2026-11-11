@@ -46,104 +46,194 @@ Content-Type: video/webm;codecs=vp8,opus
 - **Filename:** a plain extension (`.webm`, `.mp4`). Codec parameters in the filename break server transcoding.
 - **Content-Type:** the recorder's **full** MIME type, codecs included. Do not strip it. The server needs it.
 
-## The `callApi` filename gotcha
+## Upload with `uploadMedia`
 
-`store.callApi` uploads `Blob`/`File` values as multipart. On current platform builds it **ignores the `File`'s own name** and names the part `file.<ext>`, where `<ext>` is everything after the `/` in the MIME type. A Firefox recording (`video/webm;codecs=vp8,opus`) therefore uploads as `file.webm;codecs=vp8,opus` and transcoding fails.
-
-**Set the extension through the data key**: `attachment.webm` sends field `attachment` with filename `file.webm`. This works on every platform version, including after the store fix, so always use it for media:
+Copy this module into the plugin (e.g. `src/utils/mediaUpload.mjs`). It's the docs site's tested example ("Uploading Recorded Video, Audio and Large Files", `/examples/media-uploads/mediaUpload.mjs`). Don't hand-roll a different version.
 
 ```javascript
 /**
- * MediaRecorder reports types with codec params ("video/webm;codecs=vp8,opus").
- * Plain extension for the filename; full type kept for Content-Type.
+ * Upload a recorded or picked media Blob through `store.callApi`.
+ *
+ * - Under the threshold, the bytes go inline as multipart. The extension goes
+ *   in the data key (`attachment.webm`) because the platform store names the
+ *   part from it; the File keeps the recorder's full MIME type.
+ * - At or above it, the create call sends the file details instead of bytes
+ *   (as JSON, since no Blob is present), and the bytes are PUT to the signed
+ *   storage URL the platform returns in `data.upload_urls[filename]`.
  */
-function uploadFormat(type) {
-	const raw = String(type || "").trim()
-	const base = raw.split(";")[0].trim().toLowerCase()
-	const ext = base === "video/mp4" ? "mp4" : "webm"
-	return { ext, mime: raw || `video/${ext}` }
+
+export const LARGE_UPLOAD_THRESHOLD_BYTES = 20 * 1024 * 1024
+
+const EXTENSIONS = {
+	"video/webm": "webm",
+	"video/mp4": "mp4",
+	"video/quicktime": "mov",
+	"audio/webm": "webm",
+	"audio/mp4": "m4a",
+	"audio/ogg": "ogg",
+	"audio/mpeg": "mp3",
+	"audio/wav": "wav",
 }
 
-const { ext, mime } = uploadFormat(recorder.mimeType || blob.type)
-const file = new File([blob], `video-${Date.now()}.${ext}`, { type: mime })
-// The `.ext` suffix on the key sets the filename; the field name stays "attachment".
-await store.callApi(operationId, identifier, { [`attachment.${ext}`]: file })
-```
+export class UploadError extends Error {
+	/**
+	 * @param {string} message
+	 * @param {{ record?: any, cause?: unknown }} [details]
+	 */
+	constructor(message, { record = null, cause } = {}) {
+		super(message, { cause })
+		this.name = "UploadError"
+		// The created record, when the create call succeeded but the bytes did not
+		// arrive. It stays "waiting for upload"; delete it or show it as failed.
+		this.record = record
+	}
+}
 
-Rules:
+/**
+ * Plain extension for the filename; the full type (codecs included) is kept.
+ * @param {string} type
+ * @returns {{ ext: string, mime: string }}
+ */
+export function uploadFormat(type) {
+	const mime = String(type || "").trim()
+	const ext = EXTENSIONS[mime.split(";")[0].trim().toLowerCase()]
+	if (!ext) {
+		throw new UploadError(`Unsupported media type: ${mime || "(empty)"}`)
+	}
+	return { ext, mime }
+}
 
-- Never strip codec parameters from the Content-Type, and never put them in the filename.
-- Never derive the extension by slicing the raw MIME type (`type.split("/")[1]` gives `webm;codecs=vp8,opus`).
-- Always pass the extension in the data key (`<field>.<ext>`). Don't rely on the `File` name surviving `callApi`.
-- Browsers differ: Firefox records WebM; Safari typically records MP4. Map both explicitly rather than assuming one.
-- Discover the upload operation and its file field name with the MCP (`api_find_endpoints_by_schema`, `api_get_operation_parameters`). `attachment` above is an example.
-- Test in at least Firefox and one Chromium browser, and inspect the outgoing request's multipart headers, before declaring a recording feature done.
+/**
+ * PUT bytes to a signed storage URL. Uses a bare XMLHttpRequest so no shared
+ * HTTP-client defaults or interceptors can attach GxP credentials, and so
+ * upload progress is available.
+ * @param {string} url
+ * @param {Blob} blob
+ * @param {string} type
+ * @param {(event: ProgressEvent) => void} [onProgress]
+ * @returns {Promise<void>}
+ */
+export function putToSignedUrl(url, blob, type, onProgress) {
+	return new Promise((resolve, reject) => {
+		const xhr = new globalThis.XMLHttpRequest()
+		xhr.open("PUT", url)
+		xhr.setRequestHeader("Content-Type", type)
+		if (onProgress) {
+			xhr.upload.onprogress = onProgress
+		}
+		xhr.onload = () => {
+			if (xhr.status >= 200 && xhr.status < 300) {
+				resolve()
+			} else {
+				reject(new Error(`Storage upload failed (HTTP ${xhr.status})`))
+			}
+		}
+		xhr.onerror = () =>
+			reject(new Error("Storage upload failed (network error)"))
+		xhr.send(blob)
+	})
+}
 
-## Files of 20 MB or more: the `large_upload` flow
+/**
+ * @param {{ callApi: Function, userSession?: string | null }} store
+ * @param {object} options
+ * @param {string} options.operationId create/update operation, e.g. 'social-streams.posts.store'
+ * @param {string} options.identifier declared dependency identifier
+ * @param {Blob} options.blob the media; patch WebM recordings with fixWebmDuration first
+ * @param {string} [options.field] the operation's file field (check the spec)
+ * @param {object} [options.data] other body fields
+ * @param {boolean} [options.withUserSession] add `user_session` (social stream posts); throws if there is no session
+ * @param {(event: ProgressEvent) => void} [options.onProgress] large uploads only
+ * @param {number} [options.threshold]
+ * @param {typeof putToSignedUrl} [options.put]
+ * @returns {Promise<any>} the create/update response (`{ data: record }`)
+ */
+export async function uploadMedia(store, options) {
+	const {
+		operationId,
+		identifier,
+		blob,
+		field = "attachment",
+		data = {},
+		withUserSession = false,
+		onProgress,
+		threshold = LARGE_UPLOAD_THRESHOLD_BYTES,
+		put = putToSignedUrl,
+	} = options
+	const { ext, mime } = uploadFormat(blob?.type)
+	if (withUserSession && !store.userSession) {
+		throw new UploadError(
+			"No attendee session: the post would not be credited to anyone",
+		)
+	}
+	// Spread last so caller data can't override the attendee's session.
+	const session = withUserSession ? { user_session: store.userSession } : {}
 
-The platform does not accept file bytes inline at or above `filesystems.large_upload_threshold` (default **20 MB**; configurable per environment; maximum 10 GB). Those uploads take two steps:
-
-1. **Create/update with metadata instead of bytes.** Send the file field as an object. `callApi` flattens it to `attachment[filename]`, `attachment[size]`, etc. for multipart, and it also works as JSON:
-
-   ```javascript
-   { attachment: { filename: `post.${ext}`, size: blob.size, type: blob.type, last_modified: Date.now(), large_upload: true } }
-   ```
-
-2. **PUT the bytes to the presigned URL** in the response's `upload_urls`, keyed by the `filename` you sent. That URL points at object storage (S3/GCS), not a platform endpoint, so this is the **one place a raw `axios.put` is correct**. It isn't a `callApi` operation, and you must not send GxP auth headers to it.
-
-```javascript
-import axios from "axios"
-
-const LARGE_UPLOAD_THRESHOLD_BYTES = 20 * 1024 * 1024
-
-async function uploadMedia(
-	operationId,
-	identifier,
-	blob,
-	extraData = {},
-	onUploadProgress,
-) {
-	const raw = String(blob.type || "").trim()
-	const ext = raw.split(";")[0].trim().toLowerCase().split("/")[1] || "bin"
-
-	if (blob.size < LARGE_UPLOAD_THRESHOLD_BYTES) {
+	if (blob.size < threshold) {
+		const file = new File([blob], `${field}.${ext}`, { type: mime })
 		return store.callApi(operationId, identifier, {
-			...extraData,
-			[`attachment.${ext}`]: blob,
+			...data,
+			[`${field}.${ext}`]: file,
+			...session,
 		})
 	}
 
-	const filename = `post.${ext}`
+	const filename = `${field}.${ext}`
 	const response = await store.callApi(operationId, identifier, {
-		...extraData,
-		attachment: {
+		...data,
+		[field]: {
 			filename,
 			size: blob.size,
-			type: raw,
+			type: mime,
 			last_modified: Date.now(),
 			large_upload: true,
 		},
+		...session,
 	})
-	const uploadUrl =
-		response?.upload_urls?.[filename] ?? response?.data?.upload_urls?.[filename]
+	const record = response?.data ?? null
+	const uploadUrl = record?.upload_urls?.[filename]
 	if (!uploadUrl) {
-		throw new Error(`No presigned upload URL returned for ${filename}`)
+		throw new UploadError(`No signed upload URL returned for ${filename}`, {
+			record,
+		})
 	}
-	await axios.put(uploadUrl, blob, {
-		headers: { "Content-Type": raw || "application/octet-stream" },
-		onUploadProgress,
-	})
+	try {
+		await put(uploadUrl, blob, mime, onProgress)
+	} catch (cause) {
+		throw new UploadError(cause?.message || "Storage upload failed", {
+			record,
+			cause,
+		})
+	}
 	return response
 }
 ```
 
-Large-upload rules:
+Usage, from the recorder's `onstop` after `fixWebmDuration`:
 
-- **Route on size, and use one threshold for every media type.** For files under the threshold the server returns an empty `upload_urls`. If you force the large flow on a small file, its bytes are silently dropped.
-- **The PUT `Content-Type` must exactly equal the `type` sent in step 1.** The URL is signed for that type, so any difference (including stripped codecs) makes storage reject the PUT.
-- The presigned URL expires after **10 minutes**. PUT immediately after step 1, and don't cache the URL.
-- A missing `upload_urls[filename]` is a failure. Surface it to the user. Don't report success.
-- The record exists after step 1 but stays `waiting_for_upload` until the PUT lands and processing runs. Show progress (`onUploadProgress`), and don't treat step 1 alone as done.
-- **Social stream posts:** send `user_session: store.userSession` with the create call so the post is credited to the attendee. It's optional (the server copies it into post metadata), but posts without it are anonymous. Spread it after caller data so a payload can't override it.
+```javascript
+const response = await uploadMedia(store, {
+	operationId: "social-streams.posts.store",
+	identifier: "social_stream",
+	blob,
+	data: { body: caption.value },
+	withUserSession: true,
+	onProgress: (e) => {
+		progress.value = e.lengthComputable
+			? Math.round((e.loaded / e.total) * 100)
+			: null
+	},
+})
+```
+
+## Rules
+
+- **Filename vs Content-Type.** On the current platform, `callApi` names a part `file.` plus everything after "/" in the MIME type and ignores the File's name (EZ-3408). So always put the extension in the data key (`attachment.webm`), and keep the full MIME type, codecs included, on the File. Never strip codecs from the type, and never build the extension by slicing it.
+- **Files of 20 MB or more** use the two-step flow: details object (sent as JSON), then a PUT to `response.data.upload_urls[filename]`. This PUT to platform-returned storage is the one allowed raw request. Use a bare XHR or `fetch`, never a shared axios instance whose defaults or interceptors might attach GxP credentials. The PUT's Content-Type must exactly equal the `type` you declared, and the URL expires after 10 minutes.
+- **Threshold.** The platform default is 20 MB (`filesystems.large_upload_threshold`), and plugins can't read it from the store. The social stream create endpoint accepts large-upload details for any size, so a lower threshold is safe. Never send 20 MB or more inline.
+- **Failure.** If no upload URL comes back or the PUT fails, the post already exists in `waiting_for_upload`. `uploadMedia` throws `UploadError` with `.record`. Calling it again creates a second post. Delete the orphan if the plugin has delete permission, otherwise show it as failed. Never report success.
+- **Social stream posts:** `withUserSession: true` adds `user_session: store.userSession` after caller data, and throws before sending if there's no session. It's optional for the API, but posts without it aren't credited to the attendee.
+- `onProgress` only fires for the large-upload PUT. Inline uploads report no progress.
+- **Types.** Only types the module maps (`webm`, `mp4`, `mov`, `m4a`, `ogg`, `mp3`, `wav`) are accepted. With `MediaRecorder.isTypeSupported()`, check `video/mp4` first on iOS/Safari, and WebM first elsewhere. `audio/webm` recordings need the same duration patch.
 - Field names (`attachment`, `upload`, …) differ per endpoint. Confirm with `api_get_operation_parameters`.
-- The local mock API does not return presigned URLs, so test this path against a real environment (`VITE_API_ENV=develop`).
+- The local mock API returns no signed upload URLs. Test large uploads against a real environment (`VITE_API_ENV=develop`), in Firefox and a Chromium browser, and inspect the multipart headers and the PUT status.
