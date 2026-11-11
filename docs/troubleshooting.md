@@ -107,6 +107,21 @@ gxdev dev --no-https
 npm run dev-http
 ```
 
+### `gxdev socket send` fails with a certificate error
+
+**Error:** `Error sending event: unable to verify the first certificate` / `self-signed certificate in certificate chain`, or `UNABLE_TO_VERIFY_LEAF_SIGNATURE`.
+
+Node's HTTP client doesn't use your operating system's trust store, so it rejects the mkcert certificate that your browser accepts.
+
+- **Current toolkit:** `gxdev socket send` picks HTTP or HTTPS the same way the Socket.IO server does (HTTPS only when `.certs/` holds a localhost certificate and key), and it trusts mkcert's root CA from `mkcert -CAROOT` automatically. If it still fails, run `mkcert -install` and retry.
+- **Older toolkit versions** always used HTTPS and didn't load the mkcert CA. Point Node at the CA for the command:
+
+```bash
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" gxdev socket send --event <EventName>
+```
+
+On Node 22.15+ and 23.8+, `NODE_OPTIONS=--use-system-ca` also works once the mkcert CA is installed in the system store. Don't disable certificate verification (`NODE_TLS_REJECT_UNAUTHORIZED=0`).
+
 ### Port already in use
 
 **Error:**

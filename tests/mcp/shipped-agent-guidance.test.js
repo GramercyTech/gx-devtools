@@ -194,3 +194,79 @@ test("skill requires patching WebM duration before upload", () => {
 	)
 	assert.match(readShipped("skills/gxp-plugin/SKILL.md"), /fixWebmDuration/)
 })
+
+test("skill's signed-manifest filter is scoped to the signed folder", async () => {
+	const guide = readShipped("skills/gxp-plugin/references/video-playback.md")
+	const code = guide
+		.match(/```javascript\n([\s\S]*?)```/)[1]
+		.split("// usage")[0]
+		.replace(/^export /gm, "")
+	const { parseSignedManifest, signUri, registerSignedRequests } = new Function(
+		`${code}; return { parseSignedManifest, signUri, registerSignedRequests }`,
+	)()
+	const dir =
+		"https://cdn.example.test/uploads/social-posts/12/file_path/transcoded/"
+	const query = "URLPrefix=abc&Expires=1&KeyName=k&Signature=s"
+	const signed = parseSignedManifest(`${dir}manifest.m3u8?${query}`)
+	assert.deepEqual(signed, { query, prefix: dir })
+	assert.equal(
+		signUri(`${dir}hd/seg-1.ts`, signed),
+		`${dir}hd/seg-1.ts?${query}`,
+	)
+	for (const uri of [
+		"https://other.example.test/uploads/social-posts/12/file_path/transcoded/a.ts",
+		"https://cdn.example.test/uploads/social-posts/13/file_path/transcoded/a.ts",
+		`${dir}a.ts?token=1`,
+	]) {
+		assert.equal(signUri(uri, signed), uri)
+	}
+	const filters = []
+	const engine = {
+		registerRequestFilter: (f) => filters.push(f),
+		unregisterRequestFilter: (f) => filters.splice(filters.indexOf(f), 1),
+	}
+	const stop = registerSignedRequests(
+		{ getNetworkingEngine: () => engine },
+		`${dir}manifest.m3u8?${query}`,
+	)
+	assert.equal(filters.length, 1)
+	stop()
+	assert.equal(filters.length, 0)
+	assert.match(
+		readShipped("skills/gxp-plugin/SKILL.md"),
+		/references\/video-playback\.md/,
+	)
+	assert.match(guide, /only detect `gxp-track` attributes/)
+})
+
+test("describe_store_api documents uploads and userSession for the deployed platform", async () => {
+	const result = await handleToolCall("describe_store_api", {})
+	const { reference: contract } = JSON.parse(
+		result.content.map((block) => block.text || "").join(""),
+	)
+	assert.match(contract, /`store\.userSession`/)
+	assert.match(contract, /\{ "attachment\.webm": file \}/)
+	assert.match(contract, /large_upload: true/)
+	assert.match(contract, /fixWebmDuration/)
+	assert.match(contract, /user_session: store\.userSession/)
+})
+
+test("skill's hand-written social stream dependency avoids the malformed like path", () => {
+	const guide = readShipped("skills/gxp-plugin/references/api-calls.md")
+	const entry = JSON.parse(
+		guide.match(
+			/```json\n(\{\n\s*"identifier": "social_stream"[\s\S]*?)```/,
+		)[1],
+	)
+	assert.equal(entry.permissionKey, "social_stream")
+	for (const op of Object.values(entry.operations)) {
+		assert.match(
+			op,
+			/^(get|post):\/v1\/projects\/\{teamSlug\}\/\{projectSlug\}\//,
+		)
+	}
+	assert.equal(
+		Object.keys(entry.operations).some((id) => id.includes("likes")),
+		false,
+	)
+})

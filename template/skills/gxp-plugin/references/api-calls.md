@@ -80,3 +80,47 @@ Rule of thumb:
 ## Legacy endpoint helpers
 
 Existing plugins may contain low-level store helpers. Preserve their supported behavior when maintaining an existing plugin, but use declared `callApi` bindings for new platform access. Do not treat an authorization failure as permission to fall back to a raw endpoint. Discover the exact operation ID, parameter schema and required grants with the installed tools; older examples are not proof that an operation is available.
+
+## When `api_generate_dependency` refuses
+
+`api_generate_dependency` deliberately refuses when the platform's OpenAPI spec lacks complete `x-permission` / `x-relation` metadata. It won't guess a permission binding. Don't work around that by inventing paths. Build the entry by hand from facts you've confirmed with `get_endpoint_details`:
+
+- Bind the **parent** resource the admin picks (e.g. `SocialStream`), with `permissionKey` set to that parent's key.
+- List every permission the operations need in `permissions`.
+- Copy each operation's `method:path` exactly from the spec.
+- Add an `asyncSelect` field for `dependency_list.<identifier>`, using the parent's dashboard index route as its picker.
+
+Known gaps today: all `SocialStreamPost`, post asset, scoped-post and like operations are refused. The like toggle/index paths are also malformed in the spec (`/v1/projects/{social_stream}/{post}/…`, EZ-3407), so don't ship them. A working social stream entry:
+
+```json
+{
+	"identifier": "social_stream",
+	"model": "SocialStream",
+	"permissionKey": "social_stream",
+	"permissions": [
+		"view_social_streams",
+		"view_social_stream_posts",
+		"create_social_stream_posts"
+	],
+	"operations": {
+		"social-streams.show": "get:/v1/projects/{teamSlug}/{projectSlug}/social-streams/{social_stream}",
+		"social-streams.posts.index": "get:/v1/projects/{teamSlug}/{projectSlug}/social-streams/{social_stream}/posts",
+		"social-streams.posts.show": "get:/v1/projects/{teamSlug}/{projectSlug}/social-streams/{social_stream}/posts/{post}",
+		"social-streams.posts.store": "post:/v1/projects/{teamSlug}/{projectSlug}/social-streams/{social_stream}/posts"
+	}
+}
+```
+
+```json
+{
+	"type": "asyncSelect",
+	"name": "dependency_list.social_stream",
+	"label": "Social stream",
+	"route": "dashboard.project.social-streams.index",
+	"valueField": "id",
+	"labelField": "name",
+	"required": true
+}
+```
+
+Run `gxdev lint --all` after adding them.

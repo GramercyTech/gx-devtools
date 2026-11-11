@@ -60,6 +60,8 @@ Rules:
 - Every tracked event must be declared in `app-manifest.json` → `track-events` (the platform uses it for reporting). The extractor in Step 5 seeds it; refine prop types to allowed-value lists or `{ type, value }` relationship objects where applicable.
 - Don't build your own analytics transport (`fetch`, `axios`, custom endpoints). The directive handles delivery — in production it reports to the platform tracking endpoint; on the dev server events are broadcast on `window` as `gxp:track` CustomEvents and logged to the console as JSON, so you can verify payloads without touching production analytics.
 
+**Extraction limit:** `config_extract_strings` only detects `gxp-track` attributes and `gxp.track("literal")` / `gxpTrack("literal")` calls. Events sent through a wrapper (`emit(name)`, `send(name, props)`, a player tracker) are not extracted. Declare those in `track-events` by hand. See `video-playback.md`.
+
 ## Component kit
 
 Use `@gxp-dev/app-ui` for all UI components. Run `gxdev storybook` to browse available components and their stories at `http://localhost:6006`. When storybook is running, the `gxp-app-ui-storybook` MCP server (registered in `.mcp.json`) provides tools to inspect stories, documentation, and run story tests directly from your AI assistant.

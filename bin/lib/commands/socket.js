@@ -6,7 +6,84 @@
 
 const path = require("path")
 const fs = require("fs")
+const { spawnSync } = require("child_process")
 const { findProjectRoot, resolveGxPaths } = require("../utils")
+
+const CERT_ERROR_CODES = new Set([
+	"UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+	"UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+	"SELF_SIGNED_CERT_IN_CHAIN",
+	"DEPTH_ZERO_SELF_SIGNED_CERT",
+	"CERT_HAS_EXPIRED",
+	"ERR_TLS_CERT_ALTNAME_INVALID",
+])
+
+/**
+ * Mirrors runtime/server.cjs: the Socket.IO server uses HTTPS only when
+ * `.certs/` holds a localhost certificate and key pair, otherwise plain HTTP.
+ * @param {string} projectPath
+ * @returns {boolean}
+ */
+function socketServerUsesHttps(projectPath) {
+	const certsDir = path.join(projectPath, ".certs")
+	if (!fs.existsSync(certsDir)) {
+		return false
+	}
+	const files = fs.readdirSync(certsDir)
+	const hasCert = files.some(
+		(f) =>
+			f.startsWith("localhost") && f.endsWith(".pem") && !f.includes("-key"),
+	)
+	const hasKey = files.some(
+		(f) => f.startsWith("localhost") && f.endsWith("-key.pem"),
+	)
+	return hasCert && hasKey
+}
+
+/**
+ * Locate mkcert's root CA so Node trusts the dev server certificate without
+ * disabling verification or requiring NODE_OPTIONS=--use-system-ca.
+ * @param {typeof spawnSync} run
+ * @returns {string|null}
+ */
+function mkcertRootCaPath(run = spawnSync) {
+	try {
+		const result = run("mkcert", ["-CAROOT"], { encoding: "utf8" })
+		if (result.status !== 0 || !result.stdout) {
+			return null
+		}
+		const caPath = path.join(result.stdout.trim(), "rootCA.pem")
+		return fs.existsSync(caPath) ? caPath : null
+	} catch (_e) {
+		return null
+	}
+}
+
+/**
+ * Base URL and HTTPS agent for posting to the local Socket.IO server.
+ * @param {string} projectPath
+ * @param {number|string} port
+ * @param {{ caPath?: string|null }} [options]
+ * @returns {{ url: string, httpsAgent?: import("https").Agent }}
+ */
+function socketRequestTarget(projectPath, port, options = {}) {
+	if (!socketServerUsesHttps(projectPath)) {
+		return { url: `http://localhost:${port}` }
+	}
+	const caPath =
+		options.caPath !== undefined ? options.caPath : mkcertRootCaPath()
+	if (!caPath) {
+		return { url: `https://localhost:${port}` }
+	}
+	const https = require("https")
+	const tls = require("tls")
+	return {
+		url: `https://localhost:${port}`,
+		httpsAgent: new https.Agent({
+			ca: [...tls.rootCertificates, fs.readFileSync(caPath, "utf8")],
+		}),
+	}
+}
 
 /**
  * Socket simulation command - sends JSON events to the Socket.IO server
@@ -115,8 +192,10 @@ async function sendSocketEvent(eventName, identifier) {
 			}
 		}
 
-		// Send the event via HTTP to the Socket.IO server
-		const socketUrl = `https://localhost:${socketIoPort}`
+		const { url: socketUrl, httpsAgent } = socketRequestTarget(
+			projectPath,
+			socketIoPort,
+		)
 
 		console.log(`📡 Sending socket event: ${eventData.event}`)
 		console.log(`📺 Channel: ${eventData.channel}`)
@@ -126,11 +205,15 @@ async function sendSocketEvent(eventName, identifier) {
 		const axios = require("axios")
 
 		try {
-			await axios.post(`${socketUrl}/emit`, {
-				event: eventData.event,
-				channel: eventData.channel,
-				data: eventData.data,
-			})
+			await axios.post(
+				`${socketUrl}/emit`,
+				{
+					event: eventData.event,
+					channel: eventData.channel,
+					data: eventData.data,
+				},
+				httpsAgent ? { httpsAgent } : {},
+			)
 
 			console.log("✅ Socket event sent successfully!")
 			console.log(
@@ -143,6 +226,15 @@ async function sendSocketEvent(eventName, identifier) {
 				console.log("   npm run dev")
 				console.log("   or")
 				console.log("   node --watch server.js")
+			} else if (CERT_ERROR_CODES.has(error.code)) {
+				console.error(
+					`❌ The dev server's HTTPS certificate isn't trusted (${error.code})`,
+				)
+				console.log("💡 Install the mkcert root CA and retry:")
+				console.log("   mkcert -install")
+				console.log(
+					'   or: NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" gxdev socket send ...',
+				)
 			} else {
 				console.error(`❌ Error sending event: ${error.message}`)
 			}
@@ -155,4 +247,7 @@ async function sendSocketEvent(eventName, identifier) {
 
 module.exports = {
 	socketCommand,
+	socketServerUsesHttps,
+	mkcertRootCaPath,
+	socketRequestTarget,
 }

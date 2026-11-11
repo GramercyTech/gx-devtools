@@ -191,6 +191,7 @@ const store = useGxpStore()
 | \`store.theme\` | Object | Computed theme from pluginVars: \`{ background_color, text_color, primary_color, start_background_color, start_text_color, final_background_color, final_text_color }\` |
 | \`store.manifestLoaded\` | boolean | true once app-manifest.json has been processed |
 | \`store.portal\` | Object\|null | Platform portal context (injected by platform) |
+| \`store.userSession\` | string\|null | The attendee's portal session identifier (platform-injected; \`"dev-session"\` in gxdev dev). Send it as \`user_session\` when creating social stream posts so the post is credited to the attendee. |
 | \`store.form\` | Store\|null | Form store for form-backed apps (see "Form Store" below). Attached when \`app-manifest.json → form\` (or \`settings.formId\`) exists; on-platform the page's ProjectForm attaches it automatically. |
 
 ## Data Getters
@@ -236,6 +237,18 @@ hasPermission reads global UI flags; it does not inspect dependency/model grants
 Never gate callApi on that flag: a granted API operation may work when the global
 flag is absent. Declare the supported dependency grant and let the server enforce
 it; show a safe denied state on 403/404 instead of treating a UI flag as authority.
+
+### File uploads
+
+Put a Blob/File in \`data\` (or pass a FormData) and callApi sends multipart/form-data automatically.
+
+- **Filename:** each part is named \`file.<ext>\`. On the deployed platform, \`<ext>\` is everything after "/" in the MIME type, and the File's own name is ignored (EZ-3408). A recorder type such as \`video/webm;codecs=vp8,opus\` becomes \`file.webm;codecs=vp8,opus\` and breaks transcoding. Always set the extension in the key: \`{ "attachment.webm": file }\` sends field \`attachment\` with filename \`file.webm\`.
+- **Content-Type:** keep the full MIME type, codecs included, on the File. The server expects it.
+- **20 MB or more** (\`filesystems.large_upload_threshold\`): callApi does not handle this. Send \`{ attachment: { filename, size, type, last_modified, large_upload: true } }\` instead of bytes, then PUT the bytes to \`response.upload_urls[filename]\` with \`Content-Type\` exactly equal to \`type\`. The signed URL expires in 10 minutes. Files under the threshold must stay inline: the server returns no upload URL for them.
+- **Recorded WebM** (MediaRecorder) has no duration header and fails transcoding. Patch it with \`fixWebmDuration\` from \`@fix-webm-duration/fix\` before uploading.
+- **Social stream posts:** include \`user_session: store.userSession\`.
+
+Full recipe: the gxp-plugin skill's \`references/media-uploads.md\`.
 
 ## Project context, resource scope and response fields
 

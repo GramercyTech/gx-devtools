@@ -8,6 +8,8 @@ Run the MCP tool `config_extract_strings` with `writeTo: "app-manifest.json"`. I
 
 Analytics events land under `track-events`, with every `gxp-track-props` key seeded as `"string"`. After extraction, refine the prop types by hand where you know more: an array of allowed values when the prop is an enum (`"variant": ["primary", "secondary"]`), or a relationship object when it carries a platform record reference (`"attendee_id": { "type": "attendee", "value": "id" }`). Re-extraction never overwrites these refinements.
 
+**Extraction limit:** `config_extract_strings` only detects `gxp-track` attributes and `gxp.track("literal")` / `gxpTrack("literal")` calls. Events sent through a wrapper (`emit(name)`, `send(name, props)`, a player tracker) are not extracted. Declare those in `track-events` by hand. See `video-playback.md`.
+
 ## Build `configuration.json`
 
 `configuration.json` defines the form admins use to customize the plugin after it ships. Every string, asset, dependency, color, and setting your plugin exposes must have a matching field here.
