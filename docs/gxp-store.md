@@ -283,6 +283,8 @@ await store.callApi("photos.store", null, {
 })
 ```
 
+**Upload filenames:** each `Blob`/`File` part is sent with the filename `file.<ext>`. To choose the extension, put it in the key: `{ "attachment.webm": file }` sends field `attachment` with filename `file.webm`. Without it, the dev store uses the `File`'s own name, or else the MIME subtype with parameters stripped. The platform store currently uses everything after the `/` in the MIME type, so a recorder type like `video/webm;codecs=vp8,opus` becomes `file.webm;codecs=vp8,opus` and breaks transcoding. For recorded media, always use the key extension, and keep the full MIME type (codecs included) on the `File`. The server expects it.
+
 **How it works:**
 
 1. Looks up the dependency by `identifier` in `dependencyList`

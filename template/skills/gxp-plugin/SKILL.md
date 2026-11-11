@@ -1,6 +1,6 @@
 ---
 name: gxp-plugin
-description: Build or change a GxP platform plugin (Vue 3 + GxP store). Use for any feature work in a GxP plugin project — new screens or components, platform API calls (store.callApi), real-time socket events, gxp-string/gxp-src/gxp-track directives, app-manifest.json, configuration.json admin forms, and form/quiz/survey apps (formTemplate). Explains the 7-step workflow and where to find the authoritative API, store, and docs information.
+description: Build or change a GxP platform plugin (Vue 3 + GxP store). Use for any feature work in a GxP plugin project — new screens or components, platform API calls (store.callApi), real-time socket events, gxp-string/gxp-src/gxp-track directives, app-manifest.json, configuration.json admin forms, form/quiz/survey apps (formTemplate), and recording or uploading video, audio or large files. Explains the 7-step workflow and where to find the authoritative API, store, and docs information.
 ---
 
 # Building a GxP plugin
@@ -40,5 +40,6 @@ First call `api_list_tags` to confirm the MCP is live. If the `api_*` / `config_
 - `references/ui-strings-and-tracking.md`: `gxp-string`, `gxp-src`, `gxp-track` / `gxp.track()`, the component kit.
 - `references/admin-config.md`: manifest extraction, `configuration.json` field mapping and bindings, `config_*` tools.
 - `references/form-apps.md`: form/quiz/survey apps — manifest `formTemplate: true` vs. configuration `formTemplate: [...]`.
+- `references/media-uploads.md`: uploading recorded video/audio and any file that can reach 20 MB. Keep the full codec MIME type and set a plain extension via the data key (`attachment.webm`). Files of 20 MB or more use the two-step `large_upload` + presigned-PUT flow. **Read this before any file upload.**
 - `references/store-reference.md`: getters, `triggerState`, logged-in user, dev-only helpers.
 - `references/testing-and-environments.md`: socket/mock-API testing, lint commands, `VITE_API_ENV`, spec URLs.

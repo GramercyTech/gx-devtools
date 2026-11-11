@@ -29,7 +29,7 @@ Keep application components under `src/`. You may also edit plugin-owned `app-ma
 
 ## Platform access and authorization
 
-All platform data goes through the store: `store.callApi(operationId, identifier, data)`, where `identifier` is a permission identifier declared in `app-manifest.json` → `dependencies` + `permissions` (or the reserved `"project"`). Never use `axios` or `fetch` directly.
+All platform data goes through the store: `store.callApi(operationId, identifier, data)`, where `identifier` is a permission identifier declared in `app-manifest.json` → `dependencies` + `permissions` (or the reserved `"project"`). Never use `axios` or `fetch` directly. The single exception is PUTting file bytes to a presigned storage URL the platform returned in `upload_urls` (the 20 MB+ `large_upload` flow); see the skill's `references/media-uploads.md`.
 
 Generated platform calls must use declared `callApi` operation bindings. Do not replace a missing or denied binding with `apiGet`/`apiPost`/`apiPut`/`apiDelete`, and never use axios/fetch directly. Legacy helpers do not grant permissions or bypass server-side authorization. `apiPatch(endpoint, data)` is a supported legacy platform helper. Preserve existing authorized uses, but use declared `callApi` bindings for new generated platform calls.
 
