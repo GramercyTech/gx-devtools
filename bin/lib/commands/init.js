@@ -93,6 +93,38 @@ function copyTemplateFiles(projectPath, paths, overwrite = false) {
 	})
 }
 
+/** Each tool scans its own skills directory: Claude Code reads `.claude/skills`, Codex and Antigravity read `.agents/skills`. */
+const SKILL_DESTINATIONS = [".claude/skills", ".agents/skills"]
+
+/**
+ * Expand every file under template/skills/ into copy entries for each tool's skills directory.
+ * @param {string} templateDir - Toolkit template directory
+ * @returns {{src: string, dest: string, desc: string}[]}
+ */
+function skillFiles(templateDir) {
+	const skillsRoot = path.join(templateDir, "skills")
+	if (!fs.existsSync(skillsRoot)) {
+		return []
+	}
+	const relativeFiles = fs
+		.readdirSync(skillsRoot, { recursive: true, withFileTypes: true })
+		.filter((entry) => entry.isFile())
+		.map((entry) =>
+			path.relative(
+				skillsRoot,
+				path.join(entry.parentPath ?? entry.path, entry.name),
+			),
+		)
+		.sort()
+	return SKILL_DESTINATIONS.flatMap((destRoot) =>
+		relativeFiles.map((rel) => ({
+			src: path.join("skills", rel),
+			dest: path.join(destRoot, rel),
+			desc: `Agent skill: ${path.join(destRoot, rel)}`,
+		})),
+	)
+}
+
 function copyBundleFiles(projectPath, paths, overwrite = false) {
 	const filesToCopy = [
 		{
@@ -170,9 +202,9 @@ function copyBundleFiles(projectPath, paths, overwrite = false) {
 			desc: "AGENTS.md (Codex/AI agent instructions)",
 		},
 		{
-			src: "GEMINI.md",
+			src: "AGENTS.md",
 			dest: "GEMINI.md",
-			desc: "GEMINI.md (Gemini Code Assist instructions)",
+			desc: "GEMINI.md (Gemini/Antigravity instructions, copy of AGENTS.md)",
 		},
 		{
 			src: "CLAUDE.md",
@@ -183,6 +215,11 @@ function copyBundleFiles(projectPath, paths, overwrite = false) {
 			src: ".claude/agents/gxp-developer.md",
 			dest: ".claude/agents/gxp-developer.md",
 			desc: "Claude Code subagent (GxP developer)",
+		},
+		{
+			src: "codex/agents/gxp-developer.toml",
+			dest: ".codex/agents/gxp-developer.toml",
+			desc: "Codex custom agent (GxP developer)",
 		},
 		{
 			src: ".claude/settings.json",
@@ -205,6 +242,8 @@ function copyBundleFiles(projectPath, paths, overwrite = false) {
 			desc: ".gemini/settings.json (Gemini CLI project-scoped MCP config)",
 		},
 	]
+
+	filesToCopy.push(...skillFiles(paths.templateDir))
 
 	// Copy template files
 	filesToCopy.forEach((file) => {
@@ -810,4 +849,6 @@ async function initCommand(argv) {
 
 module.exports = {
 	initCommand,
+	copyBundleFiles,
+	skillFiles,
 }

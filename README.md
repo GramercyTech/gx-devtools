@@ -25,6 +25,18 @@ npm update @gxp-dev/tools           # project-level
 
 After updating, run `gxdev init` in existing projects to sync required dependencies, scripts, and config files.
 
+#### Refreshing AI agent guidance
+
+`gxdev init` only creates files that are missing. It never replaces agent guidance you already have. To pick up the latest guidance (the `gxp-plugin` skill, the slimmer `AGENTS.md`, and the Claude/Codex subagents), delete the old copies and re-run it:
+
+```bash
+rm -rf AGENTS.md GEMINI.md .claude/agents/gxp-developer.md \
+  .codex/agents/gxp-developer.toml .claude/skills/gxp-plugin .agents/skills/gxp-plugin
+gxdev init
+```
+
+Commit or back up any edits you've made to those files first. Don't use `gxdev init --local --yes` for this. It also overwrites `package.json`, `src/Plugin.vue`, `theme-layouts/`, `app-manifest.json` and `configuration.json`.
+
 ## Quick Start
 
 ### New project

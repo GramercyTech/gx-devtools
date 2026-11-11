@@ -1,555 +1,64 @@
 # GxP Plugin Development Guidelines
 
-This is a GxP plugin project for the GxP kiosk platform. Follow these guidelines when working with this codebase.
+This is a GxP plugin project for the GxP kiosk platform. These rules always apply. For the step-by-step build workflow and detailed references, load the **`gxp-plugin` skill** (`.claude/skills/gxp-plugin/` for Claude Code, `.agents/skills/gxp-plugin/` for Codex and Antigravity) before doing any feature work.
 
 ## Platform vs. plugin — who owns what
 
 **The GxP platform itself owns all admin configuration.** Plugins are consumers, not configurators:
 
-- **Forms, quizzes, and surveys (including the quiz builder)** are built by admins in the platform UI. The plugin never defines fields, questions, scoring rules, leaderboards, or response schemas. At runtime the plugin reads the admin-built form/quiz/survey — and its questions — through `store.callApi`. Relevant operations: `forms.show`, `forms.fields.index`, `forms.responses.store/show/update`, `quiz.state`, `quiz.start`, `quiz.questions`, `quiz.answer`, `quiz.complete`, `quiz.leaderboard`, `survey.metrics`, `survey.live-results`. Discover the full set with `api_list_operation_ids` filtered by the `forms`/`quiz`/`survey` tags.
-- **Project settings, assets, strings, dependencies, permissions, and the logged-in user** are injected into the GxP store at boot — plugins read them, they don't create them.
-- The plugin's own `app-manifest.json` + `configuration.json` describe **what the admin must configure for THIS plugin instance** (text, images, colors, which form/quiz to bind to, etc.). Everything else lives upstream.
+- **Forms, quizzes, and surveys (including the quiz builder)** are built by admins in the platform UI. The plugin never defines fields, questions, scoring rules, leaderboards, or response schemas. At runtime it reads them through `store.callApi`. Discover the operations with `api_list_operation_ids` filtered by the `forms`/`quiz`/`survey` tags.
+- **Project settings, assets, strings, dependencies, permissions, and the logged-in user** are injected into the GxP store at boot. Plugins read them; they don't create them.
+- The plugin's own `app-manifest.json` + `configuration.json` describe **what the admin must configure for THIS plugin instance** (text, images, colors, which form/quiz to bind to). Everything else lives upstream.
 
 When in doubt, search for the operation via `search_api_endpoints` / `api_list_tags` before inventing local state.
 
-## Development Workflow
+## Discover, never invent
 
-Every task starts with understanding and ends with a validated, linted build. Do not skip steps.
+Ground every endpoint, event, and store call in the `gxp-api` MCP server (defined in `.mcp.json`, served by the `mcp-serve` binary from `@gxp-dev/tools`). Verify it's live with `api_list_tags` before planning. If the `api_*` / `config_*` / `docs_*` tools aren't available, tell the user to run `claude mcp add gxp-api mcp-serve` (or `codex mcp add …` / add it to `~/.gemini/settings.json`) and restart the session. Do not proceed without the MCP.
 
-### 1. Understand what the client is building
-
-Before touching code, get specific about the feature:
-
-- What is the user-facing outcome? Who uses it (attendee, staff, admin)?
-- Which real-world data does it read or write?
-- What events does it react to in real time?
-- What needs to be configurable by an admin (text, assets, colors, thresholds, feature flags)?
-
-Ask clarifying questions instead of guessing. A 30-second question beats a 30-minute rewrite.
-
-### 2. Discover the right data sources via MCP
-
-Use the `gxp-api` MCP server to ground the implementation in the real platform — never invent endpoints or event names.
-
-**Verify the MCP is live before planning anything** by calling `api_list_tags`. The server is defined in `.mcp.json` at the project root and provided by the `mcp-serve` binary that ships with `@gxp-dev/tools` (on PATH — check with `which mcp-serve`). If the `api_*` / `config_*` / `docs_*` tools aren't available, tell the user to run `claude mcp add gxp-api mcp-serve` (or `codex mcp add …` / add it to `~/.gemini/settings.json`) and restart the session. Do not proceed without the MCP.
-
-- **Find endpoints** — `api_list_tags`, `api_list_operation_ids` (optionally scoped by tag), `search_api_endpoints` (keyword).
-- **Inspect a specific endpoint** — `api_get_operation_parameters`, `get_endpoint_details`.
-- **Find endpoints by payload shape** — `api_find_endpoints_by_schema` (search by request/response field names).
-- **Find WebSocket events** — `api_find_events_for_operation` (given an operationId, returns events via `x-triggered-by`), `api_list_events`, `search_websocket_events`, `get_asyncapi_spec`. Run `api_find_events_for_operation` for every operationId you plan to call so you subscribe instead of polling.
-- **Generate dependency JSON** — `api_generate_dependency` produces the canonical entry for `app-manifest.json` → `dependencies`. Alternatively, `gxdev add-dependency` runs an interactive CLI wizard that searches endpoints and writes the entry directly to `app-manifest.json`.
-- **Read the docs** — `docs_list_pages`, `docs_search`, `docs_get_page` (full-text search across docs.gxp.dev).
-
-Output of this step: a short list of the operationIds, WebSocket events, and dependencies the plugin will use.
-
-### 3. Plan with the client, including the admin config form
-
-Before writing code, produce a plan and confirm it with the client. The plan must include:
-
-- **Screens/components** — what's rendered and in which layout (Public/Private/System).
-- **Data flow** — which store getters read which sections, which API calls populate them, which socket events mutate state.
-- **Admin configuration form** — every piece of customizable content belongs in `configuration.json` as a card/field so admins can edit it without a code change. Cover text (strings), images (assets), colors/thresholds (settings), and feature toggles.
-- **Strings and assets inventory** — the exact keys that will appear in `app-manifest.json`.
-
-Do not proceed to implementation until the client has reviewed the plan.
-
-### 4. Implement
-
-Build against the plan:
-
-- Use the GxP store for **all** data access — `store.callApi(operationId, identifier, data)` for platform API calls, plus sockets, strings, assets, settings, state. Never use `axios` or `fetch` directly.
-- Declare every permission identifier used by `callApi` in `app-manifest.json` → `dependencies` + `permissions`. Use `"project"` for project-wide / top-level operations and pass any required IDs in `data`.
-- Wire **every string literal a user will see** with `gxp-string` — button labels, headings, paragraph text, tab names, empty-state messages, placeholder text, error messages, tooltip copy. The only exceptions are text rendered directly from an API response and purely internal/debug strings. If you're typing a visible string into a template, it needs `gxp-string`. Wire every image with `gxp-src`.
-- Add `gxp-track` to **meaningful user interactions** — primary CTAs, form submissions, navigation choices, feature entry points. Use namespaced `feature.action` event names (e.g. `checkin.submit`) and put record IDs in `gxp-track-props`, never in the event name. Use `window.gxp.track()` / `inject("gxpTrack")` for non-click milestones (e.g. a flow completing).
-- Keep application components under `src/`. You may also edit plugin-owned `app-manifest.json`, `configuration.json`, assets, tests, test fixtures, and the operator-instructions source declared by the manifest when the task requires them. Do not edit the runtime container (layouts, routing, dev tools, or store initialization).
-
-### 5. Sync the manifest and build the admin form
-
-As soon as you've added a new `store.callApi`, `store.listen`, `gxp-string`, `gxp-src`, or `gxp-track` — and before you move on to testing — close the loop on the admin-editable surface:
-
-1. **Extract the configurable surface into `app-manifest.json`.** Run the MCP tool `config_extract_strings` with `writeTo: "app-manifest.json"`. It scans `src/` for every `gxp-string`, `gxp-src`, `gxp-track`, `store.getString/getSetting/getAsset/getState`, `gxp.track`/`gxpTrack`, and `store.callApi` identifier and merges the new keys into the manifest (linter-guarded; falls back to `gxdev extract-config` on the CLI if you need it). Do this every time you touch the plugin's public surface so the manifest never drifts from the code.
-
-   Analytics events land under `track-events`, with every `gxp-track-props` key seeded as `"string"`. After extraction, refine the prop types by hand where you know more: an array of allowed values when the prop is an enum (`"variant": ["primary", "secondary"]`), or a relationship object when it carries a platform record reference (`"attendee_id": { "type": "attendee", "value": "id" }`). Re-extraction never overwrites these refinements.
-
-2. **Build `configuration.json` from what's in the manifest.** For every entry in the manifest, add a matching field in the admin form using the MCP `config_*` tools — they validate each write against the schema. Default mappings:
-
-   | Manifest entry                                   | `configuration.json` field type                                                                  |
-   | ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-   | `strings.default.*`                              | `text` (or `textarea` for long copy)                                                             |
-   | `assets.*` (driven by `gxp-src`)                 | `selectAsset`                                                                                    |
-   | `dependencies[]` — each identifier               | `asyncSelect` wired to the matching resource list endpoint (so the admin binds to a real record) |
-   | `settings.*` that represent colors               | `colorPicker`                                                                                    |
-   | `settings.*` that represent thresholds / numbers | `number`                                                                                         |
-   | `settings.*` that represent feature toggles      | `boolean`                                                                                        |
-   | Anything else discussed with the client          | Pick with `config_list_field_types` / `config_get_field_schema`                                  |
-
-   Group related fields into `fields_list` cards (`config_add_card` + `config_add_field`). If you're unsure what field types exist, call `config_list_field_types` / `config_list_card_types` first. If a mutation is refused, read the validation error and fix the input — do not set `force: true`.
-
-3. **Lint.** Run `gxdev lint --all` and fix every error before moving on.
-
-### 6. Test with real broadcasts
-
-Before declaring done, exercise the plugin against real event shapes:
-
-- List available events — `gxdev socket list`.
-- Send one — `gxdev socket send --event <EventName>` (edit or add payloads under `socket-events/`). Use `--identifier <id>` to override which channel the event fires on.
-- Hit endpoints against the local mock API via the `test_api_route` MCP tool.
-- Scaffold unit tests with `test_scaffold_component_test` for any non-trivial component.
-
-### 7. Final lint
-
-Step 5 already runs `gxdev lint --all`, but run it one more time after Step 6's test pass — test changes (adding mock payloads, tweaking identifiers) can re-introduce schema drift.
-
-```bash
-gxdev lint           # validate default targets
-gxdev lint --all     # validate everything
-```
-
-Fix every error. Do not mark work complete with a failing lint.
-
-## Project Architecture
-
-This plugin runs inside a container environment provided by the `gxdev` development server. Follow the plugin-owned file scope above; PortalContainer.vue and the provided runtime remain off-limits.
-
-```
-src/
-├── Plugin.vue          # MAIN ENTRY POINT - Your app starts here
-├── components/         # Reusable Vue components
-├── views/              # Page-level components
-├── stores/index.js     # Re-exports useGxpStore
-└── assets/             # Static assets
-```
-
-## Core Principle: Use the GxP Store for Everything
-
-The `gxpPortalConfigStore` is the central hub for every piece of data — API, sockets, strings, assets, settings, state. It is a **platform-provided runtime interface** — `src/stores/gxpPortalConfigStore.js` does NOT exist in the project. Never try to read that path. Call the MCP tool `describe_store_api` for the complete API reference.
-
-Import it in any component:
+The GxP store (`gxpPortalConfigStore`) is a **platform-provided runtime interface**. `src/stores/gxpPortalConfigStore.js` does NOT exist in the project, so never try to read that path. Call the MCP tool `describe_store_api` for the deployed contract.
 
 ```javascript
 import { useGxpStore } from "@/stores/gxpPortalConfigStore"
 const store = useGxpStore()
 ```
 
-## API Calls — Use `store.callApi` with an Operation ID + Permission Identifier
+## File scope
 
-**Every call to the GxP platform goes through `store.callApi`.** It handles authorization, URL resolution, team/project scoping, and path-parameter substitution. You only provide three things:
+Keep application components under `src/`. You may also edit plugin-owned `app-manifest.json`, `configuration.json`, assets, tests, test fixtures, and the operator-instructions source declared by the manifest when the task requires them. Do not edit the runtime container (layouts, routing, dev tools, or store initialization).
 
-```javascript
-await store.callApi(operationId, identifier, data)
-```
+## Platform access and authorization
 
-| Argument      | Purpose                                                                                                                                                                                                                           |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `operationId` | The OpenAPI operationId for the call. Look it up with `api_list_operation_ids` or `search_api_endpoints` (MCP). Never invent one.                                                                                                 |
-| `identifier`  | A **permission identifier** declared in `app-manifest.json` → `dependencies` / `permissions`. Determines which resource's permissions the call runs under, and supplies the parent object ID that gets substituted into the path. |
-| `data`        | Additional params — body fields, query params, or path params not covered by the identifier. Pass `"pluginVars.someKey"` as a value to pull from settings at call time.                                                           |
+All platform data goes through the store: `store.callApi(operationId, identifier, data)`, where `identifier` is a permission identifier declared in `app-manifest.json` → `dependencies` + `permissions` (or the reserved `"project"`). Never use `axios` or `fetch` directly.
 
 Generated platform calls must use declared `callApi` operation bindings. Do not replace a missing or denied binding with `apiGet`/`apiPost`/`apiPut`/`apiDelete`, and never use axios/fetch directly. Legacy helpers do not grant permissions or bypass server-side authorization. `apiPatch(endpoint, data)` is a supported legacy platform helper. Preserve existing authorized uses, but use declared `callApi` bindings for new generated platform calls.
 
-### Permission identifiers
+The `"project"` identifier selects project context; it does not grant project-wide permission. Do not treat an authorization failure as permission to fall back to a raw endpoint.
 
-Each identifier is declared in `app-manifest.json` and later bound by an admin to a specific resource + permission scope (read, create, update, delete). Pick identifiers that describe the **role the resource plays in the plugin**, not its name.
+Write only to `store.triggerState`. `pluginVars`, `stringsList`, and `assetList` are platform-managed. `store.auth?.user` is `null` when logged out, so always guard it. `store.user`, `store.getUser*()` and `store.isAuthenticated()` are dev-only; do not ship code that calls them.
 
-Example — a plugin that reads posts from one social stream and creates posts on another:
+## Real-time events
 
-```json
-// app-manifest.json
-{
-	"dependencies": [
-		{ "identifier": "social_stream_one", "model": "SocialStream" },
-		{ "identifier": "social_stream_two", "model": "SocialStream" }
-	],
-	"permissions": [
-		{
-			"identifier": "social_stream_one",
-			"description": "Source stream — read posts"
-		},
-		{
-			"identifier": "social_stream_two",
-			"description": "Destination stream — create posts"
-		}
-	]
-}
-```
+- Peer events on the plugin's own channel: `store.sockets.primary.listenForWhisper(eventName, cb)` and `store.sockets.primary.broadcast(eventName, data)`.
+- Platform API events: declare the event under the correct bound dependency, then `store.sockets[identifier][eventKey].listen(cb)`. Missing bindings or listeners are unresolved configuration, not permission to use the primary/project channel instead.
+- For an initialized named socket use `store.listen(socketName, eventName, callback)` and its returned unsubscribe closure. A dependency identifier is not an arbitrary socket name. The event-first overload taking a permission identifier is development-only; do not ship code that depends on it.
+- Every listener returns an unsubscribe function. Call it when context changes or the component unmounts.
+- After adding a `callApi`, run `api_find_events_for_operation` and subscribe instead of polling.
 
-```javascript
-// Read posts from the source stream
-const posts = await store.callApi("posts.index", "social_stream_one")
+## Content must be admin-editable
 
-// Create a post on the destination stream
-await store.callApi("posts.store", "social_stream_two", {
-	body: "Hello world",
-	image_url: imageUrl,
-})
-```
-
-The admin assigns `social_stream_one` read-only access to stream A and `social_stream_two` create access to stream B. The plugin code never hard-codes IDs.
-
-### The `project` identifier — project-wide, top-level operations
-
-When you need to create the parent resource itself (e.g. the social stream), or hit any endpoint scoped at the project level rather than to a specific dependency, use the reserved identifier `"project"`. The identifier selects project context; it does not grant project-wide permission. Declare the required operation binding and permissions, confirm the current caller is authorized, and pass any path params the endpoint needs in `data`.
-
-```javascript
-// Create a new social stream under the project
-const stream = await store.callApi("social_streams.store", "project", {
-	name: "New Stream",
-})
-
-// Create a post directly against a known socialStreamId (no dependency binding)
-await store.callApi("posts.store", "project", {
-	socialStreamId: stream.id,
-	body: "First post",
-})
-```
-
-Rule of thumb:
-
-- Operating on a resource the admin will bind later → declare a dependency identifier and pass it.
-- Creating the parent resource itself, or acting across the whole project → use `"project"` and pass the relevant IDs in `data`.
-
-### Legacy endpoint helpers
-
-Existing plugins may contain low-level store helpers. Preserve their supported behavior when maintaining an existing plugin, but use declared `callApi` bindings for new platform access. Do not treat an authorization failure as permission to fall back to a raw endpoint. Discover the exact operation ID, parameter schema and required grants with the installed tools; older examples are not proof that an operation is available.
-
-## Store Data Access
-
-For the complete store API call `describe_store_api` (MCP tool). Quick reference:
-
-```javascript
-// Getters
-store.getString("key", "default") // stringsList[key] or default
-store.getSetting("key", "default") // pluginVars[key] or default
-store.getAsset("key", "/fallback.jpg") // assetList[key] or default
-store.getState("key", null) // triggerState[key] or default
-store.hasPermission("flag") // boolean
-store.findDependency("identifier") // bound resource ID for an identifier
-
-// Write to triggerState (the only section plugins should write to)
-store.triggerState["my_key"] = "value"
-// Do NOT write to pluginVars, stringsList, or assetList — platform-managed
-```
-
-### Logged-in user
-
-```javascript
-const user = store.auth?.user // Attendee object, or `null` if logged out — same in dev and production
-store.getGroupSlugs() // ["speakers", "vip"] — portal-visible groups
-store.inGroup("vip") / store.inAnyGroup(["staff", "speakers"]) // boolean
-
-// DEV-ONLY (not on the platform — do not ship code that calls these):
-// store.user, store.getUser(), store.getUserName(), store.getUserEmail(), store.isAuthenticated()
-```
-
-`store.auth?.user` is null when no attendee is authenticated; always guard before dereferencing. In `gxdev dev` a dummy authenticated attendee may be provided; production supplies the authenticated attendee.
-
-## Real-Time Events
-
-Every plugin has two streams of real-time events, both surfaced through the store:
-
-1. **The `primary` channel** — a peer channel scoped to users of this plugin right now. Use it for in-app pub/sub (cursor positions, "someone just did X", remote controls).
-2. **Platform API events** — defined in AsyncAPI at `${apiDocsBaseUrl}/api-specs/asyncapi.json` under `components.messages`. Each message can declare `x-triggered-by` pointing at an OpenAPI operationId. When the server handles that operation, the event fires — you subscribe instead of polling.
-
-### The `primary` channel
-
-```javascript
-// Listen for a custom event from other users of this plugin
-const stopPeer = store.sockets.primary.listenForWhisper(
-	"cursor_moved",
-	(data) => {
-		console.log("Peer moved:", data)
-	},
-)
-
-// Broadcast to everyone else on the primary channel
-store.sockets.primary.broadcast("cursor_moved", { x: 42, y: 100 })
-```
-
-### Platform API events
-
-Declare the event in the correct manifest dependency using its AsyncAPI model/channel metadata. Once the admin binds that dependency and its listener is initialized, subscribe through its exact declared event key:
-
-```javascript
-const stopEvent = store.sockets[identifier][eventKey].listen((post) => {
-	console.log("New post on the destination stream:", post)
-})
-```
-
-`identifier` is the declared dependency identifier and `eventKey` is an exact key in that dependency’s `events` map. The wrapper selects the authorized bound model channel and server event. Missing bindings or listeners are unresolved configuration, not permission to use the primary/project channel instead. Call `stopPeer()` / `stopEvent()` when context changes or the component unmounts.
-
-For an initialized named socket use `store.listen(socketName, eventName, callback)` and its returned unsubscribe closure. A dependency identifier is not an arbitrary socket name. The event-first overload taking a permission identifier is development-only; do not ship code that depends on it. Discover the exact deployed contract with `describe_store_api`.
-
-### Rule: whenever you add a `callApi`, check for a matching event
-
-Before wiring polling or manual refresh after a mutation, ask: does this operation fire a socket event? Use the MCP:
-
-- `api_find_events_for_operation` — given an operationId, returns every AsyncAPI message whose `x-triggered-by` matches. If it returns one, subscribe to it instead of polling.
-- `api_list_events` — list every event, optionally filtered by `triggeredBy`.
-- `search_websocket_events` — keyword search across events + channels.
-
-Example: you just added `store.callApi("posts.store", "social_stream_two", {...})`. Run `api_find_events_for_operation({ operationId: "posts.store" })`, see `SocialStreamPostCreated`, declare the returned event under the correct bound dependency, then use `store.sockets[identifier][eventKey].listen(cb)`. Verify its authorized channel; do not substitute the primary channel. No polling.
-
-### Testing broadcasts locally
-
-```bash
-gxdev socket list                      # list available events
-gxdev socket send --event EventName    # fire a test broadcast
-```
-
-Payloads live under `socket-events/` — add or edit a JSON file to define a new one.
-
-## Vue Directives for Dynamic Content
-
-**Rule: every string literal a user sees in the UI must use `gxp-string`.** This is not optional. Button labels, headings, paragraph copy, tab names, empty-state messages, placeholder text, error strings, tooltip text — all of it. The only exceptions are text rendered directly from an API response and purely internal/debug strings. The fallback text inside the element is the default value and is never wasted.
-
-```html
-<!-- Heading -->
-<h1 gxp-string="welcome_title">Welcome</h1>
-
-<!-- Button label — the fallback is the default label -->
-<button><span gxp-string="start_button">Get Started</span></button>
-
-<!-- Paragraph / body copy -->
-<p gxp-string="intro_text">Complete the form below to register.</p>
-
-<!-- Empty-state message -->
-<p gxp-string="no_results_text">No results found.</p>
-
-<!-- Text from settings (pluginVars) -->
-<span gxp-string="company_name" gxp-settings>Company</span>
-
-<!-- Images from assets -->
-<img gxp-src="hero_image" src="/placeholder.jpg" alt="Hero" />
-```
-
-Strings that do NOT need `gxp-string`: values interpolated from API data (`{{ post.title }}`), v-for loop variables, computed display values derived from store state.
-
-### Analytics tracking (`gxp-track`)
-
-The platform provides a `gxp-track` directive and `window.gxp.track()` for analytics reporting. Add tracking to meaningful interactions — primary buttons, form submits, navigation, feature entry points:
-
-```html
-<!-- Click tracking: sends an "interaction" event named by the attribute -->
-<button gxp-track="checkin.submit" gxp-string="btn_submit">Check In</button>
-
-<!-- Extra properties as JSON — put record IDs here, not in the event name -->
-<button
-	gxp-track="session.join"
-	:gxp-track-props="JSON.stringify({ session_id: session.id })"
-	gxp-string="btn_join"
->
-	Join
-</button>
-```
-
-```javascript
-// Non-click milestones from script code — prefer the injected function
-const track = inject("gxpTrack")
-track("checkin.completed", { attendee_id: attendee.id })
-
-// Or from any JS context
-window.gxp.track("registration.started", { form_id: 123 })
-```
-
-Rules:
-
-- Event names are namespaced `feature.action` (lowercase, dot-separated) and low-cardinality — IDs and variable data go in `gxp-track-props` / the properties object.
-- `gxp-track` composes with `gxp-string` / `gxp-src` on the same element.
-- Every tracked event must be declared in `app-manifest.json` → `track-events` (the platform uses it for reporting). The extractor in Step 5 seeds it; refine prop types to allowed-value lists or `{ type, value }` relationship objects where applicable.
-- Don't build your own analytics transport (`fetch`, `axios`, custom endpoints). The directive handles delivery — in production it reports to the platform tracking endpoint; on the dev server events are broadcast on `window` as `gxp:track` CustomEvents and logged to the console as JSON, so you can verify payloads without touching production analytics.
-
-## Admin Configuration Form (`configuration.json`)
-
-`configuration.json` defines the form admins use to customize the plugin after it ships. Every string, asset, dependency, color, and setting your plugin exposes must have a matching field here.
-
-The full workflow — run it whenever you've added/changed a `callApi`, `listen`, `gxp-string`, or `gxp-src`:
-
-1. **Extract the configurable surface into `app-manifest.json`** — `config_extract_strings` with `writeTo: "app-manifest.json"` (same logic as `gxdev extract-config` on the CLI). It scans `src/` for directives and store usage and merges the new keys into the manifest, linter-guarded.
-2. **Add a form field in `configuration.json` for every manifest entry**, using the mapping below.
-3. **Validate** — `config_validate` on demand, or `gxdev lint --all` at the end.
-
-### Default field mapping
-
-| Manifest source                                  | `configuration.json` field                                                                  |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `strings.default.<key>`                          | `text` (short) or `textarea` (long)                                                         |
-| `assets.<key>` (driven by `gxp-src`)             | `selectAsset`                                                                               |
-| `dependencies[]` — each declared identifier      | `asyncSelect` bound to the matching resource list endpoint so the admin picks a real record |
-| `settings.<key>` representing a color            | `colorPicker`                                                                               |
-| `settings.<key>` representing a threshold/number | `number`                                                                                    |
-| `settings.<key>` representing a feature toggle   | `boolean`                                                                                   |
-| Any other setting discussed with the client      | Pick via `config_list_field_types` / `config_get_field_schema`                              |
-
-Group related fields into `fields_list` cards (`config_add_card` then `config_add_field`). Use the bucket-prefixed field names below, not bare manifest keys.
-
-Configuration field bindings (manifest keys remain in their original buckets):
+- Every string a user sees uses `gxp-string`, every image uses `gxp-src`, and meaningful interactions use `gxp-track` (namespaced `feature.action`, IDs in `gxp-track-props`). The only exceptions are API-rendered text and internal/debug strings.
+- Every manifest entry needs a matching `configuration.json` field. Configuration field bindings (manifest keys remain in their original buckets):
 
 - `strings.default.<key>` → `language_overrides.<key>`
 - `settings.<key>` → `custom_settings.<key>`
 - `assets.<key>` → `asset_list.<key>`
 - `dependencies[]` identifier → `dependency_list.<identifier>`
 
-Set each field's `default` to the shipped manifest value when one exists.
+Set each field's `default` to the shipped manifest value when one exists. Never pass `force: true` to a refused `config_*` mutation; fix the input.
 
-### Relevant tools
+- Plugins that call the form/quiz/survey API need `"formTemplate": true` in `app-manifest.json`. A `configuration.json` `formTemplate` array (starter questions) is optional and separate. See the skill's `references/form-apps.md`.
 
-- `config_list_card_types`, `config_list_field_types` — enumerate what's available.
-- `config_get_field_schema` — get the shape (required props, conditional rules) of a specific field type.
-- `config_add_card`, `config_add_field`, `config_move_field`, `config_remove_field`, `config_move_card`, `config_remove_card` — mutate the form. Linter-guarded; invalid writes are refused.
-- `config_extract_strings` — the manifest-sync entry point described above.
-- `config_validate` — validate a file on demand.
+## Done means linted
 
-If a mutation is refused, read the validation error and fix the input — do not reach for `force: true`.
-
-## Form / Quiz / Survey Apps — `formTemplate`
-
-`formTemplate` appears in **two** places and they mean **two different things**. Read this section carefully — treat the manifest flag and the configuration array as independent decisions.
-
-### The two keys
-
-**1. `app-manifest.json` → `"formTemplate": true` — the capability flag.**
-
-Set this any time the plugin calls the platform's form/quiz/survey API — creating a form, reading responses, submitting answers, listing questions. It tells the platform "this plugin owns or consumes a form resource" and opts the install into form-specific behavior (question editor in the admin UI, response viewer, auto-provisioned `ProjectForm`, etc.). **Required** whenever you're using form/quiz operationIds, regardless of whether you ship prepopulated questions.
-
-**2. `configuration.json` → `"formTemplate": [ ...cards ]` — the prepopulated questions.**
-
-A starter question set the platform seeds into the auto-provisioned form at install time, so the admin doesn't start from an empty form. Structured identically to `additionalTabs`: an array of cards (usually `fields_list`) whose `fieldsList` items are the questions. **Optional** — only set it when you actually want to ship starter content. If omitted, the platform provisions an empty form and the admin builds it from scratch.
-
-### The rule
-
-| Scenario                                                    | Manifest `formTemplate`                                        | Configuration `formTemplate` |
-| ----------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------- |
-| Plugin calls form/quiz API, ships no starter questions      | **`true`** (required)                                          | omit / leave empty           |
-| Plugin calls form/quiz API, ships starter questions         | **`true`** (required)                                          | `[ ...cards ]`               |
-| Plugin does **not** touch the form/quiz API                 | omit / `false`                                                 | must not be set              |
-| You want starter questions but didn't set the manifest flag | — fix this — the array is dead content unless the flag is true | —                            |
-
-Short version:
-
-- **Uses form/quiz API → manifest `formTemplate: true`.** Non-negotiable.
-- **Wants to prepopulate questions → configuration `formTemplate: [...]`.** Optional payload.
-
-### How the pieces connect at runtime
-
-1. At install time the platform sees `formTemplate: true` in the manifest and auto-provisions a `ProjectForm` for this plugin install.
-2. If `configuration.json` includes a `formTemplate` array, the platform seeds the new `ProjectForm` with those questions. If not, it creates an empty form.
-3. The plugin code still declares whichever form/quiz dependencies it needs in `app-manifest.json` (e.g. `quiz_form`, `response_stream`) and calls `store.callApi("forms.show", "quiz_form")` / `store.callApi("form_responses.store", "quiz_form", {...})` etc. Discover the right operationIds via the MCP (`search_api_endpoints quiz`, `api_list_operation_ids --tag Forms`).
-4. The admin can edit, add, or remove questions on the auto-provisioned form after install. Your `formTemplate` array is a starting point, not a lock — the admin owns the form once it's provisioned.
-
-So: the manifest flag wires up the form backing store; the configuration array pre-seeds its contents; the dependency bindings scope which form the plugin talks to at runtime. Three independent concerns, all of which you need for a proper form app.
-
-### Minimal example — form app with starter questions
-
-```json
-// app-manifest.json
-{
-	"name": "welcome-quiz",
-	"version": "0.1.0",
-	"formTemplate": true,
-	"settings": {},
-	"strings": { "default": { "title": "Welcome Quiz" } },
-	"assets": {},
-	"dependencies": [{ "identifier": "quiz_form", "model": "ProjectForm" }],
-	"permissions": [
-		{
-			"identifier": "quiz_form",
-			"description": "The quiz form — read questions and submit responses"
-		}
-	]
-}
-```
-
-```json
-// configuration.json
-{
-	"additionalTabs": [
-		/* admin-facing plugin config goes here as always */
-	],
-	"formTemplate": [
-		{
-			"type": "fields_list",
-			"title": "About You",
-			"fieldsList": [
-				{ "type": "text", "name": "full_name", "label": "Full name" },
-				{
-					"type": "radio",
-					"name": "experience",
-					"label": "Experience level",
-					"options": [
-						{ "label": "Beginner", "value": "beginner" },
-						{ "label": "Advanced", "value": "advanced" }
-					]
-				}
-			]
-		}
-	]
-}
-```
-
-### Building `formTemplate` with the MCP
-
-Use the same `config_*` tools you'd use for `additionalTabs`, pointed at the `/formTemplate` root:
-
-- `config_add_card` with `parent_path: "/formTemplate"` — the array is auto-initialized on first add, no seed step needed.
-- `config_add_card` with `parent_path: "/formTemplate/0/cards"` — nest sub-cards if you need a `card_list` grouping.
-- `config_add_field` with `card_path: "/formTemplate/0"` — add questions to a section.
-- `config_list_cards` — lists cards from both `/additionalTabs` and `/formTemplate` with their JSON pointers.
-
-Use the same field types as any other form (`text`, `textarea`, `number`, `radio`, `checkbox`, `select`, `asyncSelect`, `selectAsset`, etc.). Question names live under `fieldsList[].name` — these become the response keys the platform stores.
-
-### Don't confuse `formTemplate` with `additionalTabs`
-
-- `additionalTabs` — **admin** configuration form (every plugin has this). The person installing the plugin fills this in once.
-- `formTemplate` — **end-user** form questions (only form apps). Admins may tweak these before publishing; end users (attendees, staff) answer them at runtime.
-
-Strings, assets, dependencies, colors → `additionalTabs`. Quiz/survey questions that end users will answer → `formTemplate`.
-
-Finish with `gxdev lint --all`. The linter validates both roots against the same card/field schema, so malformed questions fail in the same way malformed admin fields do.
-
-## Component Kit
-
-Use `@gxp-dev/app-ui` for all UI components. Run `gxdev storybook` to browse available components and their stories at `http://localhost:6006`. When storybook is running, the `gxp-app-ui-storybook` MCP server (registered in `.mcp.json`) provides tools to inspect stories, documentation, and run story tests directly from your AI assistant.
-
-Key components: `GxButton`, `GxCard`, `GxInput`, `GxModal`, `GxSpinner`, `GxAlert`, `GxBadge`, `GxAvatar`, `GxProgress`, `GxTabs`, `GxAccordion`
-
-## Configuration Files
-
-- `app-manifest.json` — strings, assets, settings, dependencies, permissions. Hot-reloaded in dev.
-- `configuration.json` — admin-facing form definition (cards + fields).
-
-## Linting
-
-Run before declaring any change complete:
-
-```bash
-gxdev lint           # default targets
-gxdev lint --all     # everything
-gxdev lint --json    # machine-readable output
-```
-
-## Testing
-
-- Socket events: `gxdev socket send --event EventName` (add `--identifier <id>` to target a specific channel)
-- API calls against local mock: `test_api_route` MCP tool
-- Component tests: `test_scaffold_component_test` MCP tool
-- AppUI components: `gxdev storybook` — browse components at `http://localhost:6006`
-- Dev Tools: Press Ctrl+Shift+D
-- Console: `window.gxDevTools.store()` to inspect store
-
-## API Environments
-
-Set `VITE_API_ENV` in `.env`:
-
-- `mock` - Local mock server (default)
-- `local` - https://dashboard.eventfinity.test
-- `develop` - https://api.zenith-develop.env.eventfinity.app
-- `staging` - https://api.efz-staging.env.eventfinity.app
-- `production` - https://api.gramercy.cloud
-
-## API Documentation
-
-Prefer the MCP tools (`get_openapi_spec`, `search_api_endpoints`, `docs_search`, etc.) over fetching these URLs directly:
-
-- OpenAPI Spec: https://api.zenith-develop.env.eventfinity.app/api-specs/openapi.json
-- AsyncAPI Spec: https://api.zenith-develop.env.eventfinity.app/api-specs/asyncapi.json
-- Webhooks: https://api.zenith-develop.env.eventfinity.app/api-specs/webhooks.json
+Run `gxdev lint --all` and fix every error before declaring any change complete. Use `@gxp-dev/app-ui` components (`gxdev storybook` to browse them).

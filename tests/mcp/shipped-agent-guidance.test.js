@@ -1,11 +1,11 @@
 import { test } from "vitest"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { createRequire } from "node:module"
 const loadModule = createRequire(import.meta.url)
 const { handleToolCall } = loadModule("../../mcp/lib/server.js")
 
-test.each(["AGENTS.md", "GEMINI.md"])(
+test.each(["AGENTS.md"])(
 	"shipped %s agrees with the deployed store event contract",
 	async (file) => {
 		const guide = readFileSync(
@@ -36,7 +36,7 @@ test("Claude wrapper still includes the corrected shared instructions", () => {
 	)
 })
 
-test.each(["AGENTS.md", "GEMINI.md"])(
+test.each(["AGENTS.md"])(
 	"shipped %s preserves the platform PATCH helper without bypassing bindings",
 	async (file) => {
 		const guide = readFileSync(
@@ -58,7 +58,7 @@ test.each(["AGENTS.md", "GEMINI.md"])(
 	},
 )
 
-test.each(["AGENTS.md", "GEMINI.md"])(
+test.each(["AGENTS.md"])(
 	"shipped %s permits required plugin artifacts while protecting the runtime",
 	(file) => {
 		const guide = readFileSync(
@@ -77,7 +77,7 @@ test.each(["AGENTS.md", "GEMINI.md"])(
 	},
 )
 
-test.each(["AGENTS.md", "GEMINI.md"])(
+test.each(["AGENTS.md"])(
 	"shipped %s distinguishes manifest buckets from installed field bindings",
 	(file) => {
 		const guide = readFileSync(
@@ -108,3 +108,53 @@ test.each(["AGENTS.md", "GEMINI.md"])(
 		assert.doesNotMatch(guide, /name[^\n]*exactly match the manifest key/)
 	},
 )
+
+const skillDir = new URL("../../template/skills/gxp-plugin/", import.meta.url)
+const shippedGuidance = [
+	"AGENTS.md",
+	"CLAUDE.md",
+	".claude/agents/gxp-developer.md",
+	"codex/agents/gxp-developer.toml",
+	"skills/gxp-plugin/SKILL.md",
+	...readdirSync(new URL("references/", skillDir)).map(
+		(name) => `skills/gxp-plugin/references/${name}`,
+	),
+]
+const readShipped = (file) =>
+	readFileSync(new URL(`../../template/${file}`, import.meta.url), "utf8")
+
+test.each(shippedGuidance)("shipped %s avoids retired guidance", (file) => {
+	const guide = readShipped(file)
+	assert.doesNotMatch(guide, /event name first|permission identifier second/i)
+	assert.doesNotMatch(guide, /store\.listen\("SocialStreamPostCreated"/)
+	assert.doesNotMatch(guide, /store\.listen\("primary"/)
+	assert.doesNotMatch(guide, /`apiPatch` is development-only/)
+	assert.doesNotMatch(
+		guide,
+		/(?:ONLY modify files|Only edit files)(?: under| in)? (?:the )?`src\//,
+	)
+	assert.doesNotMatch(guide, /name[^\n]*exactly match the manifest key/)
+})
+
+test("skill references named in SKILL.md all exist and vice versa", () => {
+	const skill = readShipped("skills/gxp-plugin/SKILL.md")
+	assert.match(skill, /^---\nname: gxp-plugin\ndescription: .+\n---/)
+	const named = [...skill.matchAll(/`references\/([\w-]+\.md)`/g)].map(
+		(m) => m[1],
+	)
+	assert.deepEqual(
+		[...new Set(named)].sort(),
+		readdirSync(new URL("references/", skillDir)).sort(),
+	)
+})
+
+test("subagent wrappers delegate to the shared skill", () => {
+	const claude = readShipped(".claude/agents/gxp-developer.md")
+	assert.match(claude, /^skills:\n {2}- gxp-plugin$/m)
+	assert.doesNotMatch(claude, /^tools:/m)
+	const codex = readShipped("codex/agents/gxp-developer.toml")
+	for (const key of ["name", "description", "developer_instructions"]) {
+		assert.match(codex, new RegExp(`^${key} = `, "m"))
+	}
+	assert.match(codex, /gxp-plugin/)
+})
