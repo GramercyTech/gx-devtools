@@ -250,6 +250,17 @@ Put a Blob/File in \`data\` (or pass a FormData) and callApi sends multipart/for
 
 Full recipe: the gxp-plugin skill's \`references/media-uploads.md\`.
 
+### List endpoints and pagination
+
+callApi does not paginate. A list (index/search) call returns one page of
+\`{ data, meta: { current_page, last_page, per_page, total }, links }\`.
+
+- Index operations take \`page\`, \`limit\`, \`sort\`, \`include\` and endpoint-specific \`filter[field]\` query params (check get_endpoint_details). Search operations (POST) read \`limit\`/\`page\` from the body.
+- Orion routes default to 100 per page, max 1000 (some lower, e.g. social stream posts 200; custom routes differ). A \`limit\` above the cap fails with 422; it is not clamped.
+- Always pass \`limit\` sized to what is displayed and load further pages on demand from \`meta\`. Never fetch every page by default.
+- Index \`include\` must be a comma-separated string ("attendee,projectTags"); the spec types it as an array, but an array (include[]=) makes the request fail. Search bodies use \`includes: [{ relation: "attendee" }]\`.
+- Count with \`{ limit: 1 }\` and \`meta.total\`. Filter/sort on the server. Don't poll: subscribe to the operation's event and refresh one page.
+
 ## Project context, resource scope and response fields
 
 findDependency does not select the project context: it returns a configured resource

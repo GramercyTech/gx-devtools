@@ -35,7 +35,7 @@ First call `api_list_tags` to confirm the MCP is live. If the `api_*` / `config_
 
 ## Reference files — load on demand
 
-- `references/api-calls.md`: `store.callApi(operationId, identifier, data)`, permission identifiers, the `"project"` identifier, legacy helpers. **Read this before writing any API call.**
+- `references/api-calls.md`: `store.callApi(operationId, identifier, data)`, permission identifiers, the `"project"` identifier, **paginating list calls and requesting only needed data**, legacy helpers, hand-written dependencies. **Read this before writing any API call.**
 - `references/realtime-events.md`: the `primary` channel, platform API events via bound dependencies, unsubscribing, replacing polling, local broadcast testing.
 - `references/ui-strings-and-tracking.md`: `gxp-string`, `gxp-src`, `gxp-track` / `gxp.track()`, the component kit.
 - `references/admin-config.md`: manifest extraction, `configuration.json` field mapping and bindings, `config_*` tools.

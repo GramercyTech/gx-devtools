@@ -304,3 +304,25 @@ test("skill's uploadMedia module routes by size and keeps the full type", async 
 	assert.equal(calls[1].attachment.type, type)
 	assert.deepEqual([puts[0][0], puts[0][2]], ["https://put", type])
 })
+
+test("guidance requires paginated, minimal list calls", async () => {
+	const agents = readShipped("AGENTS.md")
+	assert.match(agents, /`callApi` does not paginate/)
+	assert.match(agents, /Always pass `limit`/)
+	assert.match(agents, /`limit: 1` and read `meta.total`/)
+	assert.match(agents, /Don't poll/)
+	const guide = readShipped("skills/gxp-plugin/references/api-calls.md")
+	assert.match(
+		guide,
+		/## List endpoints: paginate and request only what you need/,
+	)
+	assert.match(guide, /rejected with a 422/)
+	assert.match(guide, /include: "attendee"/)
+	assert.doesNotMatch(guide, /clamped, not rejected/)
+	const result = await handleToolCall("describe_store_api", {})
+	const { reference } = JSON.parse(
+		result.content.map((block) => block.text || "").join(""),
+	)
+	assert.match(reference, /### List endpoints and pagination/)
+	assert.match(reference, /fails with 422; it is not clamped/)
+})

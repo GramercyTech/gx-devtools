@@ -35,6 +35,19 @@ Generated platform calls must use declared `callApi` operation bindings. Do not 
 
 The `"project"` identifier selects project context; it does not grant project-wide permission. Do not treat an authorization failure as permission to fall back to a raw endpoint.
 
+## Keep API load small
+
+`callApi` does not paginate. A list (index/search) call returns one page, by default up to 100 records, so every list call must be deliberate:
+
+- Always pass `limit` sized to what the screen shows (e.g. 20), and `page`. Load more on demand using `meta.current_page` / `meta.last_page`. Never loop through every page by default.
+- Filter, sort and search on the server (`sort`, the endpoint's filters, search operations), not by downloading everything and filtering in the browser.
+- Request only the related data you render. Index `include` is a comma-separated string (an array makes the request fail); search bodies use `includes: [{ relation }]`.
+- For a count, request `limit: 1` and read `meta.total`. Don't fetch rows to count them.
+- Don't poll. Subscribe to the operation's socket event (`api_find_events_for_operation`), and re-fetch one page only when an event says data changed.
+- `visibleFields` on a dependency trims response fields only where the platform implements it (attendees and social stream posts today). It is not a general way to shrink responses.
+
+Details and examples: the skill's `references/api-calls.md`, "List endpoints".
+
 Write only to `store.triggerState`. `pluginVars`, `stringsList`, and `assetList` are platform-managed. `store.auth?.user` is `null` when logged out, so always guard it. `store.user`, `store.getUser*()` and `store.isAuthenticated()` are dev-only; do not ship code that calls them.
 
 ## Real-time events
