@@ -2,6 +2,38 @@
 
 Load this when the plugin records or uploads video/audio (especially from `MediaRecorder`), or uploads any file that can reach 20 MB.
 
+## Patch the duration of WebM recordings before uploading
+
+Browser `MediaRecorder` output (Firefox and Chrome) is streamed WebM with **no duration in the file header**. The platform's video transcoder reads it as 0 seconds and the job fails (`startTimeOffset is 0s ... minimum duration of all inputs ... (0s)`). The post then never gets a playable video, and on current platform builds the failure isn't reported back (EZ-3408).
+
+Patch the duration in the browser with `@fix-webm-duration/fix`, as the experience-builder app does. It returns a new Blob that keeps the original `type`, codecs included:
+
+```javascript
+import { fixWebmDuration } from "@fix-webm-duration/fix"
+
+let recordingStartTime = 0
+recorder.onstart = () => {
+	recordingStartTime = performance.now()
+}
+recorder.onstop = async () => {
+	let blob = new Blob(chunks, { type: recorder.mimeType })
+	const durationMs = performance.now() - recordingStartTime
+	if (blob.type.includes("webm")) {
+		try {
+			blob = await fixWebmDuration(blob, durationMs, { logger: false })
+		} catch (error) {
+			console.warn("Could not fix WebM duration; transcoding may fail", error)
+		}
+	}
+	// ...then upload with uploadMedia()
+}
+```
+
+- Only WebM needs this. MP4 recordings (Safari, or Chrome when you request `video/mp4`) already have a duration.
+- Adding the package is a new plugin dependency (`npm install @fix-webm-duration/fix`), so confirm with the user first.
+- Prefer `video/mp4` on iOS and WebM elsewhere, checking with `MediaRecorder.isTypeSupported()` in order: `video/webm;codecs=vp9,opus`, `video/webm;codecs=vp8,opus`, `video/webm`.
+- Portrait orientation is fine. The transcoder keeps the source's width and height, and handles rotation metadata.
+
 ## What the server expects
 
 A working upload part looks like this:

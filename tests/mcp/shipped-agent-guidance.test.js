@@ -181,3 +181,16 @@ test("skill documents the 20 MB large_upload presigned flow", () => {
 		/single exception is PUTting file bytes to a presigned storage URL/,
 	)
 })
+
+test("skill requires patching WebM duration before upload", () => {
+	const guide = readShipped("skills/gxp-plugin/references/media-uploads.md")
+	assert.match(
+		guide,
+		/import \{ fixWebmDuration \} from "@fix-webm-duration\/fix"/,
+	)
+	assert.match(
+		guide,
+		/fixWebmDuration\(blob, durationMs, \{ logger: false \}\)/,
+	)
+	assert.match(readShipped("skills/gxp-plugin/SKILL.md"), /fixWebmDuration/)
+})

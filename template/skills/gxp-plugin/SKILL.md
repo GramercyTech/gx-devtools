@@ -40,6 +40,6 @@ First call `api_list_tags` to confirm the MCP is live. If the `api_*` / `config_
 - `references/ui-strings-and-tracking.md`: `gxp-string`, `gxp-src`, `gxp-track` / `gxp.track()`, the component kit.
 - `references/admin-config.md`: manifest extraction, `configuration.json` field mapping and bindings, `config_*` tools.
 - `references/form-apps.md`: form/quiz/survey apps — manifest `formTemplate: true` vs. configuration `formTemplate: [...]`.
-- `references/media-uploads.md`: uploading recorded video/audio and any file that can reach 20 MB. Keep the full codec MIME type and set a plain extension via the data key (`attachment.webm`). Files of 20 MB or more use the two-step `large_upload` + presigned-PUT flow. **Read this before any file upload.**
+- `references/media-uploads.md`: uploading recorded video/audio and any file that can reach 20 MB. Patch WebM recordings with `fixWebmDuration` (otherwise transcoding fails on a 0 s duration), keep the full codec MIME type, and set a plain extension via the data key (`attachment.webm`). Files of 20 MB or more use the two-step `large_upload` + presigned-PUT flow. **Read this before any file upload.**
 - `references/store-reference.md`: getters, `triggerState`, logged-in user, dev-only helpers.
 - `references/testing-and-environments.md`: socket/mock-API testing, lint commands, `VITE_API_ENV`, spec URLs.
