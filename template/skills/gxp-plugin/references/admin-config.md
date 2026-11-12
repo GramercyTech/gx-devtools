@@ -64,6 +64,55 @@ Configuration field bindings (manifest keys remain in their original buckets):
 
 Set each field's `default` to the shipped manifest value when one exists.
 
+## Field value shapes the plugin reads at runtime
+
+Most fields store a plain value at their `name` path (for example `custom_settings.headline` → `store.getSetting("headline")`). Two field types are different:
+
+### `dynamic_options` (admin-editable repeating list, e.g. a button list)
+
+```json
+{
+	"type": "dynamic_options",
+	"name": "buttons",
+	"column": "custom_settings",
+	"options": {
+		"orderable": true,
+		"max": 6,
+		"addOptionButtonLabel": "Add button",
+		"optionConfig": [
+			{ "type": "text", "name": "label", "label": "Label" },
+			{ "type": "text", "name": "url", "label": "Link" }
+		]
+	}
+}
+```
+
+The value is **not** stored as an array. The platform writes two things:
+
+- `custom_settings.buttons_order`: `{ "<uuid>": <order>, … }`. A removed option keeps its uuid with `order: null`.
+- `custom_settings.buttons.<uuid>.<optionField>`, one entry per option field (an option with its own `column` is stored under `<option.column>.buttons.<uuid>.<field>` instead).
+
+Rebuild the list in the plugin:
+
+```javascript
+const order = store.getSetting("buttons_order", {}) || {}
+const items = store.getSetting("buttons", {}) || {}
+const buttons = Object.entries(order)
+	.filter(([, position]) => position !== null)
+	.sort(([, a], [, b]) => a - b)
+	.map(([uuid]) => ({ id: uuid, ...items[uuid] }))
+```
+
+Mirror this shape in `app-manifest.json` `settings` so the dev server has sample data.
+
+### `icon-selector`
+
+Stores a Font Awesome string `"<style>.<name>"`, for example `"far.chevron-up"`. Styles are `fas`, `far`, `fal`, `fat`. `@gxp-dev/app-ui` renders icons with Lucide, not Font Awesome, so a plugin can't display this value with app-ui alone. Unless the plugin ships its own Font Awesome renderer, use a `select` of Lucide icon names (or a `text` field holding a Lucide name) instead of `icon-selector`.
+
+## When docs lookup fails
+
+If `docs_search` / `docs_get_page` errors or returns nothing, don't guess a field's stored shape. Check `config_get_field_schema` for the type and this reference first. If it's still unconfirmed, list it as an open question in the plan instead of building on an assumption.
+
 ## Relevant tools
 
 - `config_list_card_types`, `config_list_field_types` — enumerate what's available.
