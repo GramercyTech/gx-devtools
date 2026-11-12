@@ -68,6 +68,8 @@ Write only to `store.triggerState`. `pluginVars`, `stringsList`, and `assetList`
 - `assets.<key>` → `asset_list.<key>`
 - `dependencies[]` identifier → `dependency_list.<identifier>`
 
+`configuration.json` → `additionalTabs` is an array of **tabs**: each item is a `card_list` (with `cards`), a `fields_list`, or a `{title, cards}` tab. Never put a `tabs_list` directly in `additionalTabs` (the platform drops its contents); nest it inside a tab's `cards`.
+
 Set each field's `default` to the shipped manifest value when one exists. Never pass `force: true` to a refused `config_*` mutation; fix the input.
 
 - Plugins that call the form/quiz/survey API need `"formTemplate": true` in `app-manifest.json`. A `configuration.json` `formTemplate` array (starter questions) is optional and separate. See the skill's `references/form-apps.md`.

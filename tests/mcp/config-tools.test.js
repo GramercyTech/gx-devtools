@@ -100,6 +100,15 @@ describe("config_list_field_types / list_card_types", () => {
 		)
 		expect(out.field_types).toContain("text")
 		expect(out.field_types).toContain("select")
+		for (const builder of [
+			"form-builder",
+			"form_builder",
+			"quiz_builder",
+			"reactive-canvas-builder",
+			"dependency-list-builder",
+		]) {
+			expect(out.field_types).not.toContain(builder)
+		}
 	})
 	it("returns a non-empty list of card types", async () => {
 		const out = parseResult(

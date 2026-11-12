@@ -182,6 +182,68 @@ describe("lint configuration.json — platform templating sync", () => {
 		expect(result.ok).toBe(true)
 	})
 
+	it("accepts the platform's canonical tabs_list tab ({type: tabs_list, title, cards})", () => {
+		const result = lintData(
+			{
+				additionalTabs: [
+					{
+						id: "t1",
+						tabId: "t1",
+						title: "General",
+						type: "tabs_list",
+						cards: [{ type: "fields_list", fieldsList: [] }],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(result.ok).toBe(true)
+	})
+
+	it("accepts a tabs_list nested inside a tab's cards", () => {
+		const result = lintData(
+			{
+				additionalTabs: [
+					{
+						type: "card_list",
+						cards: [
+							{
+								type: "tabs_list",
+								tabsList: [
+									{
+										title: "Sub",
+										cards: [{ type: "fields_list", fieldsList: [] }],
+									},
+								],
+							},
+						],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(result.ok).toBe(true)
+	})
+
+	it("rejects a top-level tabs_list card in additionalTabs (platform drops its contents)", () => {
+		const result = lintData(
+			{
+				additionalTabs: [
+					{
+						type: "tabs_list",
+						tabsList: [
+							{ title: "T", cards: [{ type: "fields_list", fieldsList: [] }] },
+						],
+					},
+				],
+			},
+			"configuration.json",
+		)
+		expect(result.ok).toBe(false)
+		expect(result.errors[0].code).toBe("additional-tabs-item-not-a-tab")
+		expect(result.errors[0].instancePath).toBe("/additionalTabs/0")
+	})
+
 	it("accepts platform field types and aliases added from the templating reference", () => {
 		const result = lintData(
 			{
@@ -229,6 +291,39 @@ describe("lint configuration.json — platform templating sync", () => {
 				"configuration.json",
 			)
 			expect(result.ok, `${type} should be rejected`).toBe(false)
+		}
+	})
+
+	it("rejects builder field types with a clear message, at any depth", () => {
+		for (const type of [
+			"form-builder",
+			"form_builder",
+			"quiz_builder",
+			"quiz-builder",
+			"reactive-canvas-builder",
+			"reactive-canvas-builder-copy",
+			"dependency-list-builder",
+		]) {
+			const result = lintData(
+				{
+					additionalTabs: [
+						{
+							type: "card_list",
+							cards: [
+								{ type: "fields_list", fieldsList: [{ type, name: "x" }] },
+							],
+						},
+					],
+				},
+				"configuration.json",
+			)
+			expect(result.ok, `${type} should be rejected`).toBe(false)
+			const err = result.errors.find(
+				(e) => e.code === "builder-field-not-allowed",
+			)
+			expect(err?.instancePath).toBe(
+				"/additionalTabs/0/cards/0/fieldsList/0/type",
+			)
 		}
 	})
 

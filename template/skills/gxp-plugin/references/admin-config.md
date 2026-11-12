@@ -14,6 +14,27 @@ Analytics events land under `track-events`, with every `gxp-track-props` key see
 
 `configuration.json` defines the form admins use to customize the plugin after it ships. Every string, asset, dependency, color, and setting your plugin exposes must have a matching field here.
 
+**Shape: `additionalTabs` is an array of TABS, not cards.** The platform treats every item as a tab and only reads its `cards` (or `fieldsList`). Each item must be one of:
+
+- a `card_list` with `cards: [...]` (the cards become the tab body),
+- a `fields_list` with `fieldsList: [...]`, or
+- a tab object `{ "title": "...", "cards": [...] }`.
+
+Never use builder field types (`form-builder`, `quiz_builder`, `reactive-canvas-builder`, `dependency-list-builder`). They are platform-admin editors, and the linter rejects them. Every other type from `config_list_field_types` is fine.
+
+Never put a `tabs_list` (or any other card type) directly in `additionalTabs`. Its contents are silently dropped. For sub-tabs, nest the `tabs_list` inside a tab's `cards`:
+
+```json
+{
+	"additionalTabs": [
+		{
+			"type": "card_list",
+			"cards": [{ "type": "fields_list", "title": "General", "fieldsList": [] }]
+		}
+	]
+}
+```
+
 The full workflow — run it whenever you've added/changed a `callApi`, `listen`, `gxp-string`, or `gxp-src`:
 
 1. **Extract the configurable surface into `app-manifest.json`** — `config_extract_strings` with `writeTo: "app-manifest.json"` (same logic as `gxdev extract-config` on the CLI). It scans `src/` for directives and store usage and merges the new keys into the manifest, linter-guarded.
