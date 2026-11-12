@@ -222,7 +222,7 @@ Run `gxdev extract-config` to scan `src/` for directives and store calls and mer
 
 ## `configuration.json` — admin form
 
-This file defines the configuration form operators see when installing/configuring your plugin in the admin panel. It follows the GxP templating system (`additionalTabs` → cards → fields). A minimal example:
+This file defines the configuration form operators see when installing/configuring your plugin in the admin panel. It follows the GxP templating system (`additionalTabs` → tabs → cards → fields). Every item in `additionalTabs` IS a tab: use a `card_list` (with `cards`), a `fields_list`, or a `{title, cards}` tab object. Never put a `tabs_list` (or any other card type) directly in `additionalTabs` — the platform drops its contents. For sub-tabs, nest the `tabs_list` inside a tab's `cards`. A minimal example:
 
 ```json
 {

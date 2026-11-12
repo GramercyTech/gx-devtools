@@ -13,10 +13,20 @@
 		},
 		"additionalTabs": {
 			"type": "array",
-			"description": "Top-level tab definitions. Each item is either a tab object ({title, icon, cards}) or a card (card_list/fields_list) rendered under the plugin's configuration panel.",
+			"description": "Top-level TABS of the plugin's configuration panel. Every item is a tab — the platform (mod-ui v1TabsToV2) reads only each item's `cards` or `fieldsList`. Valid items: a tab object ({title, icon, cards}), a `card_list` card (its `cards` become the tab body), or a `fields_list` card (its fields become the tab body). Do NOT put a `tabs_list` (or any other card type) directly in this array — its contents are silently dropped. To get sub-tabs, nest the `tabs_list` inside a tab's `cards`.",
 			"items": {
 				"anyOf": [
-					{ "$ref": "card.schema.json" },
+					{
+						"allOf": [
+							{ "$ref": "card.schema.json" },
+							{
+								"required": ["type"],
+								"properties": {
+									"type": { "enum": ["card_list", "fields_list"] }
+								}
+							}
+						]
+					},
 					{ "$ref": "#/$defs/tabDefinition" }
 				]
 			}
@@ -33,10 +43,11 @@
 	"$defs": {
 		"tabDefinition": {
 			"type": "object",
-			"description": "A complete tab: title plus the cards it renders. Distinguished from a card by the absence of `type`.",
+			"description": "A complete tab: title plus the cards it renders. `type` is optional; when present it must be `tabs_list` (the platform's canonical tab marker) — the tab body is always `cards`, never `tabsList`.",
 			"required": ["title", "cards"],
-			"not": { "required": ["type"] },
 			"properties": {
+				"type": { "const": "tabs_list" },
+				"id": { "type": ["string", "null"] },
 				"title": { "type": "string" },
 				"tabId": { "type": ["string", "null"] },
 				"icon": { "type": ["string", "null"] },

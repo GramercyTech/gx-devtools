@@ -160,6 +160,42 @@ describe("init command", () => {
 			expect(fileNames).toContain("app-manifest.json")
 		})
 
+		it("copies the gxp-plugin skill to Claude and .agents skill dirs, plus agent files", () => {
+			const os = require("os")
+			const fs = require("fs")
+			const { copyBundleFiles } = require("../../bin/lib/commands/init.js")
+			const templateDir = path.resolve(__dirname, "../../template")
+			const projectPath = fs.mkdtempSync(path.join(os.tmpdir(), "gxp-init-"))
+			try {
+				copyBundleFiles(projectPath, { templateDir })
+				const skillSrc = path.join(templateDir, "skills/gxp-plugin")
+				const rels = fs
+					.readdirSync(skillSrc, { recursive: true })
+					.filter((rel) => fs.statSync(path.join(skillSrc, rel)).isFile())
+				expect(rels).toContain("SKILL.md")
+				for (const root of [".claude/skills", ".agents/skills"]) {
+					for (const rel of rels) {
+						expect(
+							fs.readFileSync(
+								path.join(projectPath, root, "gxp-plugin", rel),
+								"utf8",
+							),
+						).toBe(fs.readFileSync(path.join(skillSrc, rel), "utf8"))
+					}
+				}
+				expect(
+					fs.readFileSync(path.join(projectPath, "GEMINI.md"), "utf8"),
+				).toBe(fs.readFileSync(path.join(templateDir, "AGENTS.md"), "utf8"))
+				expect(
+					fs.existsSync(
+						path.join(projectPath, ".codex/agents/gxp-developer.toml"),
+					),
+				).toBe(true)
+			} finally {
+				fs.rmSync(projectPath, { recursive: true, force: true })
+			}
+		})
+
 		it("should include AI agent configuration files", () => {
 			const filesToCopy = [
 				{ src: "AGENTS.md", dest: "AGENTS.md" },

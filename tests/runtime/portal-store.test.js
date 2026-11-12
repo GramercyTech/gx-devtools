@@ -400,6 +400,42 @@ describe("callApi request paths", () => {
 		expect(opts.headers["X-Portal-Page-Token"]).toBeTruthy()
 	})
 
+	it.each([
+		[
+			"MIME codec params stripped",
+			"attachment",
+			new Blob(["v"], { type: "video/webm;codecs=vp8,opus" }),
+			"file.webm",
+		],
+		[
+			"key extension wins",
+			"attachment.mp4",
+			new File(["v"], "clip.webm", { type: "video/webm" }),
+			"file.mp4",
+		],
+		[
+			"File name preserved",
+			"attachment",
+			new File(["v"], "video-1.webm", { type: "video/webm;codecs=vp8,opus" }),
+			"video-1.webm",
+		],
+		["no type falls back to bin", "attachment", new Blob(["v"]), "file.bin"],
+	])(
+		"names multipart files correctly: %s",
+		async (_label, key, part, filename) => {
+			// happy-dom's FormData drops the filename for plain Blobs (browsers
+			// keep it), so assert on what the store passes to append().
+			const append = vi.spyOn(FormData.prototype, "append")
+			const store = await freshStore()
+			await store.callApi("portal.v1.project.photo.upload", null, {
+				[key]: part,
+			})
+			const call = append.mock.calls.find(([name]) => name === "attachment")
+			expect(call[2]).toBe(filename)
+			expect(call[1].type).toBe(part.type)
+		},
+	)
+
 	it("passes FormData through untouched", async () => {
 		const store = await freshStore()
 		const fd = new FormData()

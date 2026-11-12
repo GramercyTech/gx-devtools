@@ -228,6 +228,7 @@ my-plugin/
 ├── .claude/
 │   ├── agents/
 │   │   └── gxp-developer.md # Claude Code subagent
+│   ├── skills/gxp-plugin/  # Claude Code skill (build workflow + references)
 │   └── settings.json        # MCP server configuration
 ├── socket-events/           # Socket event templates
 ├── scripts/
@@ -237,7 +238,9 @@ my-plugin/
 ├── app-instructions.md      # Plugin instructions
 ├── default-styling.css      # Default CSS styles
 ├── AGENTS.md                # Codex/AI agent instructions
-├── GEMINI.md                # Gemini Code Assist instructions
+├── .agents/skills/gxp-plugin/ # Same skill for Codex + Antigravity
+├── .codex/agents/gxp-developer.toml # Codex custom agent
+├── GEMINI.md                # Copy of AGENTS.md for Gemini/Antigravity
 ├── .env                     # Environment variables
 ├── .env.example             # Environment template
 ├── .gitignore

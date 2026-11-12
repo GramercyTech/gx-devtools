@@ -12,12 +12,17 @@ The GxP Toolkit includes pre-configured agent files for popular AI coding assist
 
 When you create a new project with `gxdev init`, the following AI configuration files are automatically included:
 
-| File                              | AI Tool       | Purpose                      |
-| --------------------------------- | ------------- | ---------------------------- |
-| `.claude/agents/gxp-developer.md` | Claude Code   | Subagent for GxP development |
-| `.claude/settings.json`           | Claude Code   | MCP server configuration     |
-| `AGENTS.md`                       | OpenAI Codex  | Agent instructions           |
-| `GEMINI.md`                       | Google Gemini | Code Assist instructions     |
+| File                               | AI Tool                     | Purpose                                                      |
+| ---------------------------------- | --------------------------- | ------------------------------------------------------------ |
+| `.claude/agents/gxp-developer.md`  | Claude Code                 | Subagent for GxP development                                 |
+| `.claude/settings.json`            | Claude Code                 | MCP server configuration                                     |
+| `AGENTS.md`                        | OpenAI Codex                | Agent instructions                                           |
+| `GEMINI.md`                        | Google Gemini / Antigravity | Copy of `AGENTS.md`                                          |
+| `.claude/skills/gxp-plugin/`       | Claude Code                 | `gxp-plugin` skill (workflow + references, loaded on demand) |
+| `.agents/skills/gxp-plugin/`       | Codex, Antigravity          | Same `gxp-plugin` skill                                      |
+| `.codex/agents/gxp-developer.toml` | OpenAI Codex                | Custom agent that uses the skill                             |
+
+`AGENTS.md` holds only the always-on rules (ownership, file scope, authorization). The step-by-step workflow and detailed references live in the `gxp-plugin` skill, which each tool loads only when a task needs it. All copies come from one source in the toolkit's `template/skills/gxp-plugin/`.
 
 ## What the Agents Know
 
@@ -34,7 +39,7 @@ All agents are configured to understand:
 
 ### Subagent
 
-The `.claude/agents/gxp-developer.md` file defines a specialized GxP developer subagent. Claude Code automatically discovers this agent and can use it when working on your project.
+The `.claude/agents/gxp-developer.md` file defines a specialized GxP developer subagent with the `gxp-plugin` skill preloaded. Claude Code automatically discovers this agent and can use it when working on your project.
 
 To invoke the agent:
 
@@ -91,7 +96,7 @@ Key sections in the agent file:
 
 ## Google Gemini Setup
 
-The `GEMINI.md` file provides concise instructions for Gemini Code Assist. This format is optimized for Gemini's context handling.
+`GEMINI.md` is a copy of `AGENTS.md`. Antigravity also picks up the `gxp-plugin` skill from `.agents/skills/`.
 
 ## API Documentation URLs
 

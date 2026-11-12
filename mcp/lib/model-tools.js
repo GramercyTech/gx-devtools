@@ -191,6 +191,7 @@ const store = useGxpStore()
 | \`store.theme\` | Object | Computed theme from pluginVars: \`{ background_color, text_color, primary_color, start_background_color, start_text_color, final_background_color, final_text_color }\` |
 | \`store.manifestLoaded\` | boolean | true once app-manifest.json has been processed |
 | \`store.portal\` | Object\|null | Platform portal context (injected by platform) |
+| \`store.userSession\` | string\|null | The attendee's portal session identifier (platform-injected; \`"dev-session"\` in gxdev dev). Send it as \`user_session\` when creating social stream posts so the post is credited to the attendee. |
 | \`store.form\` | Store\|null | Form store for form-backed apps (see "Form Store" below). Attached when \`app-manifest.json → form\` (or \`settings.formId\`) exists; on-platform the page's ProjectForm attaches it automatically. |
 
 ## Data Getters
@@ -207,13 +208,14 @@ store.findDependency(identifier)        // returns the bound resource ID for an 
 ## User / Auth Getters
 
 \`\`\`javascript
-store.getUser()                    // user object or null
-store.getUserName(fallback = null) // display name: user.name → first_name+last_name → fallback
-store.getUserEmail(fallback = null)// user.email or fallback
-store.isAuthenticated()            // boolean
+const user = store.auth?.user      // authenticated attendee or null; guard before dereferencing
+store.getGroupSlugs()              // portal-visible group slugs
+store.inGroup("vip")              // group membership
+// DEV-ONLY — not exported by the platform; do not ship calls to these helpers:
+// store.user, store.getUser(), store.getUserName(), store.getUserEmail(), store.isAuthenticated()
 \`\`\`
 
-user is null when not authenticated — always guard before dereferencing. In gxdev dev a dummy user is provided; in production the platform injects the real authenticated user.
+store.auth?.user is null when not authenticated — always guard before dereferencing. In gxdev dev a dummy attendee may be provided; production supplies the authenticated attendee.
 
 ## Platform API — store.callApi
 
@@ -235,6 +237,29 @@ hasPermission reads global UI flags; it does not inspect dependency/model grants
 Never gate callApi on that flag: a granted API operation may work when the global
 flag is absent. Declare the supported dependency grant and let the server enforce
 it; show a safe denied state on 403/404 instead of treating a UI flag as authority.
+
+### File uploads
+
+Put a Blob/File in \`data\` (or pass a FormData) and callApi sends multipart/form-data automatically.
+
+- **Filename:** each part is named \`file.<ext>\`. On the deployed platform, \`<ext>\` is everything after "/" in the MIME type, and the File's own name is ignored (EZ-3408). A recorder type such as \`video/webm;codecs=vp8,opus\` becomes \`file.webm;codecs=vp8,opus\` and breaks transcoding. Always set the extension in the key: \`{ "attachment.webm": file }\` sends field \`attachment\` with filename \`file.webm\`.
+- **Content-Type:** keep the full MIME type, codecs included, on the File. The server expects it.
+- **20 MB or more** (\`filesystems.large_upload_threshold\`): callApi does not handle this. Send \`{ attachment: { filename, size, type, last_modified, large_upload: true } }\` instead of bytes, (sent as JSON), then PUT the bytes to \`response.data.upload_urls[filename]\` with \`Content-Type\` exactly equal to \`type\`, using a bare XHR/fetch with no GxP credentials. The signed URL expires in 10 minutes. If no URL comes back or the PUT fails, the record already exists in \`waiting_for_upload\`; retrying creates a duplicate.
+- **Recorded WebM** (MediaRecorder) has no duration header and fails transcoding. Patch it with \`fixWebmDuration\` from \`@fix-webm-duration/fix\` before uploading.
+- **Social stream posts:** include \`user_session: store.userSession\`.
+
+Full recipe: the gxp-plugin skill's \`references/media-uploads.md\`.
+
+### List endpoints and pagination
+
+callApi does not paginate. A list (index/search) call returns one page of
+\`{ data, meta: { current_page, last_page, per_page, total }, links }\`.
+
+- Index operations take \`page\`, \`limit\`, \`sort\`, \`include\` and endpoint-specific \`filter[field]\` query params (check get_endpoint_details). Search operations (POST) read \`limit\`/\`page\` from the body.
+- Orion routes default to 100 per page, max 1000 (some lower, e.g. social stream posts 200; custom routes differ). A \`limit\` above the cap fails with 422; it is not clamped.
+- Always pass \`limit\` sized to what is displayed and load further pages on demand from \`meta\`. Never fetch every page by default.
+- Index \`include\` must be a comma-separated string ("attendee,projectTags"); the spec types it as an array, but an array (include[]=) makes the request fail. Search bodies use \`includes: [{ relation: "attendee" }]\`.
+- Count with \`{ limit: 1 }\` and \`meta.total\`. Filter/sort on the server. Don't poll: subscribe to the operation's event and refresh one page.
 
 ## Project context, resource scope and response fields
 

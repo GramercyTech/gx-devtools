@@ -129,6 +129,84 @@ function locateInSource(source, instancePath) {
  * Returns error objects shaped like AJV-derived ones (line/column filled in
  * by the caller).
  */
+/**
+ * Platform-shape checks for configuration.json the schema's anyOf errors
+ * explain poorly. The platform (mod-ui `v1TabsToV2`) treats every
+ * `additionalTabs` item as a tab and only reads its `cards` / `fieldsList`, so
+ * a root-level `tabs_list` (or other card type) renders as an empty tab and
+ * its contents are silently dropped.
+ */
+const BUILDER_FIELD_TYPES = new Set([
+	"form-builder",
+	"form_builder",
+	"quiz_builder",
+	"quiz-builder",
+	"reactive-canvas-builder",
+	"reactive-canvas-builder-copy",
+	"dependency-list-builder",
+])
+
+/**
+ * Walk every field in a configuration document (fieldsList at any depth) and
+ * flag builder field types — platform-admin editors that plugin configuration
+ * forms must not use.
+ */
+function builderFieldErrors(node, pointer, errors) {
+	if (Array.isArray(node)) {
+		node.forEach((child, i) =>
+			builderFieldErrors(child, `${pointer}/${i}`, errors),
+		)
+		return
+	}
+	if (!node || typeof node !== "object") {
+		return
+	}
+	if (
+		pointer.includes("/fieldsList/") &&
+		/\/fieldsList\/\d+$/.test(pointer) &&
+		BUILDER_FIELD_TYPES.has(node.type)
+	) {
+		errors.push({
+			code: "builder-field-not-allowed",
+			message: `${pointer} uses builder field type "${node.type}". Builder fields are platform-admin editors and can't be used in plugin configuration forms — use a regular input field (text, select, asyncSelect, selectAsset, …) instead.`,
+			instancePath: `${pointer}/type`,
+		})
+	}
+	for (const [key, value] of Object.entries(node)) {
+		if (value && typeof value === "object") {
+			builderFieldErrors(value, `${pointer}/${key}`, errors)
+		}
+	}
+}
+
+function semanticConfigurationErrors(data) {
+	const errors = []
+	for (const root of ["additionalTabs", "settings", "formTemplate"]) {
+		if (data && typeof data === "object" && data[root] !== undefined) {
+			builderFieldErrors(data[root], `/${root}`, errors)
+		}
+	}
+	const tabs = Array.isArray(data?.additionalTabs) ? data.additionalTabs : []
+	tabs.forEach((tab, i) => {
+		if (!tab || typeof tab !== "object") {
+			return
+		}
+		const hasBody = Array.isArray(tab.cards) || Array.isArray(tab.fieldsList)
+		const badType =
+			tab.type !== undefined &&
+			!["card_list", "fields_list"].includes(tab.type) &&
+			!(tab.type === "tabs_list" && Array.isArray(tab.cards))
+		if (badType || !hasBody) {
+			errors.push({
+				code: "additional-tabs-item-not-a-tab",
+				message: `/additionalTabs/${i} must be a tab — the platform only reads each item's \`cards\` or \`fieldsList\`${tab.type ? ` (got type "${tab.type}")` : ""}. Use a {title, cards} tab, a card_list with cards, or a fields_list. To show sub-tabs, nest the tabs_list inside a tab's cards.`,
+				instancePath: `/additionalTabs/${i}`,
+			})
+		}
+	})
+	return errors
+}
+
 function semanticManifestErrors(data) {
 	const errors = []
 	const deps = Array.isArray(data?.dependencies) ? data.dependencies : []
@@ -380,6 +458,14 @@ function lintFile(filePath) {
 		}
 	}
 
+	if (schemaKey === "configuration.schema.json") {
+		for (const err of semanticConfigurationErrors(data)) {
+			result.ok = false
+			const { line, column } = locateInSource(source, err.instancePath)
+			result.errors.unshift({ ...err, line, column })
+		}
+	}
+
 	if (schemaKey === "app-manifest.schema.json") {
 		for (const err of semanticManifestErrors(data)) {
 			result.ok = false
@@ -460,6 +546,13 @@ function lintData(data, pathHint) {
 				schemaPath: err.schemaPath,
 				params: err.params,
 			})
+		}
+	}
+
+	if (schemaKey === "configuration.schema.json") {
+		for (const err of semanticConfigurationErrors(data)) {
+			result.ok = false
+			result.errors.unshift({ ...err, line: 1, column: 1 })
 		}
 	}
 

@@ -163,7 +163,9 @@ function moveItem(doc, fromPointer, targetArrayPointer, position = "end") {
  * cards with their JSON pointer, type, title, and a summary of children.
  *
  * Cards are discovered under:
- *   additionalTabs[]                          (root array of cards — admin form)
+ *   additionalTabs[]                          (root array of TABS — admin form;
+ *                                              each item is a card_list,
+ *                                              fields_list, or {title, cards} tab)
  *   formTemplate[]                            (root array of cards — starter
  *                                              form/quiz/survey questions; only
  *                                              present on form apps where

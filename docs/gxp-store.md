@@ -283,6 +283,8 @@ await store.callApi("photos.store", null, {
 })
 ```
 
+**Upload filenames:** each `Blob`/`File` part is sent with the filename `file.<ext>`. To choose the extension, put it in the key: `{ "attachment.webm": file }` sends field `attachment` with filename `file.webm`. Without it, the dev store uses the `File`'s own name, or else the MIME subtype with parameters stripped. The platform store currently uses everything after the `/` in the MIME type, so a recorder type like `video/webm;codecs=vp8,opus` becomes `file.webm;codecs=vp8,opus` and breaks transcoding. For recorded media, always use the key extension, and keep the full MIME type (codecs included) on the `File`. The server expects it.
+
 **How it works:**
 
 1. Looks up the dependency by `identifier` in `dependencyList`
@@ -309,6 +311,89 @@ try {
 :::tip Define Dependencies First
 Before using `callApi`, make sure you've added the dependency to your `app-manifest.json`. Use `gxdev add-dependency` to generate the configuration automatically.
 :::
+
+### Paginating list calls
+
+`callApi` does not paginate. A list (index or search) call returns one page.
+Standard Orion routes return this envelope; custom routes may use another
+shape, so check `get_endpoint_details` before relying on `meta`:
+
+```json
+{
+	"data": [],
+	"meta": { "current_page": 1, "last_page": 7, "per_page": 20, "total": 131 },
+	"links": { "next": "…" }
+}
+```
+
+Index operations accept `page`, `limit`, `sort` (`-field` for descending),
+`include` and endpoint-specific `filter[field]` query parameters. Standard
+routes default to 100 records per page and accept `limit` up to 1,000
+(inclusive). Some set a lower cap: social stream posts accept up to 200.
+Custom routes set their own. A `limit` above the cap fails with **422**; it is
+not clamped. Treat a 422 as a bug in the request, not something to retry.
+
+A feed with "Load more":
+
+```javascript
+const PAGE_SIZE = 20 // what the screen shows
+const posts = ref([])
+const hasMore = ref(true)
+let loadedPage = 0
+
+async function loadMore() {
+	if (!hasMore.value) return
+	const result = await store.callApi(
+		"social-streams.posts.index",
+		"social_stream",
+		{
+			page: loadedPage + 1,
+			limit: PAGE_SIZE,
+			sort: "-created_at",
+			include: "attendee", // comma-separated string; an array makes the request fail
+		},
+	)
+	posts.value.push(...result.data) // append, don't replace
+	loadedPage = result.meta.current_page
+	hasMore.value = result.meta.current_page < result.meta.last_page
+}
+```
+
+Hide "Load more" when `hasMore` is false.
+
+A search operation takes everything in the body, including `limit`, `page` and
+`includes` (plural, an array of objects):
+
+```javascript
+const result = await store.callApi(
+	"social-streams.posts.search",
+	"social_stream",
+	{
+		filters: [{ field: "is_approved", operator: "=", value: true }],
+		sort: [{ field: "created_at", direction: "desc" }],
+		includes: [{ relation: "attendee" }],
+		limit: 20,
+		page: 1,
+	},
+)
+```
+
+To keep load on the platform low:
+
+- Always pass a `limit` sized to the screen and fetch more pages on demand.
+  Never loop through every page by default.
+- Filter and sort on the server, not by downloading everything.
+- `include`/`includes` only the relations you render.
+- For a count, request `limit: 1` with the same filters as the list, read
+  `meta.total`, and validate it as described above
+  (`Number.isSafeInteger(total) && total >= 0`).
+- Don't poll. Index operations don't have their own events: declare the
+  resource's events on the dependency (e.g. `"created": "SocialStreamPostCreated"`)
+  and listen through `store.sockets[identifier][eventKey].listen(...)` (see
+  [Sockets](#sockets)). When an event fires, insert
+  the payload if it contains the record, or refetch **page 1 only** and merge by
+  `id`. Don't reload pages you already have, and debounce bursts of events.
+  Refresh a displayed count the same way.
 
 ## Low-Level API Client
 

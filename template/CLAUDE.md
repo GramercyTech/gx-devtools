@@ -3,14 +3,17 @@
 This is a GxP plugin project for the GxP kiosk platform. Use the shared
 project guidelines below for everything you do here.
 
-## Project guidelines (shared with Codex/Cursor)
+## Project guidelines (shared with Codex/Antigravity/Gemini)
 
 @AGENTS.md
 
 ## Claude Code specifics
 
+- **Skill:** `.claude/skills/gxp-plugin/` — the build workflow and detailed
+  references. Load it before any feature work.
 - **Subagent:** `.claude/agents/gxp-developer.md` — auto-invoked for GxP
-  plugin tasks. Use it for any non-trivial Vue/store/`callApi` work.
+  plugin tasks, with the `gxp-plugin` skill preloaded. Use it for any
+  non-trivial Vue/store/`callApi` work.
 - **MCP servers:** wired in `.mcp.json` at the project root.
   - `gxp-api` (via `mcp-serve` on PATH) — API specs, data models,
     config/manifest editing, docs search, test helpers.

@@ -16,7 +16,7 @@ import { useGxpFormStore, disposeGxpFormStore } from "./gxpFormStore.js"
  * the platform store gains a member, add it here (and to
  * tests/runtime/portal-store.test.js, which asserts the surface).
  *
- * Dev-only extras (`user`, `getUser*`, `manifest*`, `apiPatch`,
+ * Dev-only extras (`user`, `getUser*`, `manifest*`,
  * `updateSetting`, `updateState`) are kept for the DevTools UI and existing
  * templates; they are NOT available on the platform.
  */
@@ -160,15 +160,35 @@ function dataNeedsMultipart(data) {
 	return false
 }
 
+/**
+ * Filename for a multipart Blob part. Precedence: an extension encoded in the
+ * key (`attachment.webm`), then the File's own name when it has an extension,
+ * then the MIME subtype with parameters stripped (MediaRecorder reports
+ * "video/webm;codecs=vp8,opus", which must become "webm"), then `bin`.
+ * The part's Content-Type is left untouched — servers expect the full type.
+ */
+function multipartFilename(blob, keyExt) {
+	if (keyExt) return `file.${keyExt}`
+	if (
+		typeof File !== "undefined" &&
+		blob instanceof File &&
+		/\.\w+$/.test(blob.name || "")
+	) {
+		return blob.name
+	}
+	const subtype = String(blob.type || "")
+		.split(";")[0]
+		.trim()
+		.toLowerCase()
+		.split("/")[1]
+	return `file.${subtype || "bin"}`
+}
+
 function appendField(fd, key, value) {
 	if (value === undefined || value === null) return
 	if (typeof Blob !== "undefined" && value instanceof Blob) {
-		// Filename hint: caller can encode the extension into the key as
-		// `field.ext`; otherwise derive from the blob's MIME type, falling
-		// back to `bin`.
 		const [name, ext] = key.split(".")
-		const finalExt = ext ?? value.type?.split("/")[1] ?? "bin"
-		fd.append(name, value, `file.${finalExt}`)
+		fd.append(name, value, multipartFilename(value, ext))
 		return
 	}
 	if (Array.isArray(value)) {

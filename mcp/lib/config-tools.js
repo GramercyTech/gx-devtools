@@ -101,7 +101,7 @@ const CONFIG_TOOLS = [
 	{
 		name: "config_list_field_types",
 		description:
-			"List every field type the linter accepts (e.g. 'text', 'select', 'asyncSelect').",
+			"List every field type usable in a plugin configuration form (e.g. 'text', 'select', 'asyncSelect'). Builder field types (form-builder, quiz_builder, …) are excluded — they are platform-admin editors, not plugin config fields.",
 		inputSchema: { type: "object", properties: {}, required: [] },
 	},
 	{
@@ -224,7 +224,7 @@ const CONFIG_TOOLS = [
 	{
 		name: "config_add_card",
 		description:
-			"Add a card under a parent container (additionalTabs, formTemplate, a card_list's cards[], or a tabs_list tab). The `/additionalTabs` and `/formTemplate` root arrays are auto-initialized if missing, so the first add works without seeding.",
+			"Add a card under a parent container (additionalTabs, formTemplate, a card_list's cards[], or a tabs_list tab). The `/additionalTabs` and `/formTemplate` root arrays are auto-initialized if missing, so the first add works without seeding. Every item in `additionalTabs` IS a tab: use a `card_list` (with `cards`), a `fields_list`, or a `{title, cards}` tab object. Never put a `tabs_list` (or any other card type) directly in `additionalTabs` — the platform drops its contents. For sub-tabs, nest the `tabs_list` inside a tab's `cards`.",
 		inputSchema: {
 			type: "object",
 			properties: {
@@ -232,7 +232,7 @@ const CONFIG_TOOLS = [
 				parent_path: {
 					type: "string",
 					description:
-						"JSON pointer to the parent array of cards. Top-level options: '/additionalTabs' (admin configuration form) or '/formTemplate' (starter form/quiz questions for form apps). Nested options: '/additionalTabs/0/cards', '/formTemplate/0/cards', etc.",
+						"JSON pointer to the parent array of cards. Top-level options: '/additionalTabs' (admin configuration form — each card added here becomes a TAB, so use card_list or fields_list, never tabs_list) or '/formTemplate' (starter form/quiz questions for form apps). Nested options: '/additionalTabs/0/cards', '/formTemplate/0/cards', etc.",
 				},
 				card: {
 					type: "object",

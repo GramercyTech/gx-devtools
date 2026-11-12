@@ -1012,7 +1012,7 @@ function buildInteractiveInitialPrompt(projectName, description, provider) {
 		"",
 		"Step 5 is not optional. Every time you add or change a `store.callApi`, `store.listen`, `gxp-string`, or `gxp-src`, close the loop:",
 		'- Call `config_extract_strings` with `writeTo: "app-manifest.json"` — it scans `src/` and merges every directive, store getter, and dependency identifier into the manifest (same logic as `gxdev extract-config`, linter-guarded).',
-		"- For every entry now in the manifest, add a matching field in `configuration.json` using the MCP `config_*` tools. Default mapping: `strings.default.*` → `text`/`textarea`, `assets.*` → `selectAsset`, each declared `dependencies[]` identifier → `asyncSelect` bound to the resource's list endpoint, colors → `colorPicker`, numbers → `number`, toggles → `boolean`. Field `name` must match the manifest key exactly.",
+		"- For every entry now in the manifest, add a matching field in `configuration.json` using the MCP `config_*` tools. Default mapping: `strings.default.*` → `text`/`textarea`, `assets.*` → `selectAsset`, each declared `dependencies[]` identifier → `asyncSelect` bound to the resource's list endpoint, colors → `colorPicker`, numbers → `number`, toggles → `boolean`. Field `name` must match the manifest key exactly. Every item in `additionalTabs` IS a tab: use a `card_list` (with `cards`), a `fields_list`, or a `{title, cards}` tab object. Never put a `tabs_list` (or any other card type) directly in `additionalTabs` — the platform drops its contents. For sub-tabs, nest the `tabs_list` inside a tab's `cards`.",
 		"- Run `gxdev lint --all` before moving on.",
 		"",
 		"Do NOT start implementing until you have enough detail. Keep asking me clarifying questions until you know:",

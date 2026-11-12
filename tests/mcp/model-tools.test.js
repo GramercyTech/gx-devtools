@@ -242,6 +242,28 @@ describe("handleModelToolCall", () => {
 })
 
 describe("describe_store_api", () => {
+	it("uses deployed auth.user and explicitly excludes development auth helpers", async () => {
+		const { reference } = parseResult(
+			await handleModelToolCall("describe_store_api", {}),
+		)
+		const auth = reference
+			.split("## User / Auth Getters")[1]
+			.split("## Platform API")[0]
+		expect(auth).toContain("const user = store.auth?.user")
+		expect(auth).toContain("guard before dereferencing")
+		const [production, development] = auth.split("// DEV-ONLY")
+		for (const method of [
+			"getUser",
+			"getUserName",
+			"getUserEmail",
+			"isAuthenticated",
+		]) {
+			expect(production).not.toContain(`store.${method}(`)
+			expect(development).toContain(`store.${method}()`)
+		}
+		expect(development).toContain("not exported by the platform")
+	})
+
 	it("distinguishes project context, resource bindings and response filtering", async () => {
 		const { reference } = parseResult(
 			await handleModelToolCall("describe_store_api", {}),
